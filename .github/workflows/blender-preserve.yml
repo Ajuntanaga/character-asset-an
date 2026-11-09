@@ -42,6 +42,9 @@ jobs:
           run = json.loads(gh('run', 'view', run_id, '--json', 'conclusion,headSha,url,workflowName'))
           assert run['conclusion'] == 'success', run
           assert run['workflowName'] == 'Blender scene check and preview', run
+          tag = f'checkpoint-{version}'
+          tagged_sha = gh('api', f'repos/{{owner}}/{{repo}}/commits/{tag}', '--jq', '.sha').strip()
+          assert tagged_sha == run['headSha'], 'Checkpoint tag must identify the successful build commit'
           subprocess.run(['gh', 'run', 'download', run_id, '--pattern', 'blender-build-review-*', '--dir', 'download'], check=True)
           candidates = list(pathlib.Path('download').rglob(f'current-{version}.delta.zst'))
           assert len(candidates) == 1, candidates
@@ -60,6 +63,6 @@ jobs:
           assets = [delta, checksum, *sorted(delta.parent.glob('*.png')), *sorted(delta.parent.glob('*.json'))]
           notes = pathlib.Path('release-notes.md')
           notes.write_text(f"Work-in-progress checkpoint; not production-ready.\n\nBuilt and rendered on GitHub Actions: {run['url']}\n\nRestore the delta against `{expected['base']}`. See README and scene-manifest.json for the exact base and output checksums. Preview images use reduced detail.\n")
-          subprocess.run(['gh', 'release', 'create', f'checkpoint-{version}', '--target', run['headSha'], '--title', f'{version.upper()} reference revision working checkpoint', '--notes-file', str(notes), *map(str, assets)], check=True)
+          subprocess.run(['gh', 'release', 'create', tag, '--verify-tag', '--title', f'{version.upper()} reference revision working checkpoint', '--notes-file', str(notes), *map(str, assets)], check=True)
           print(f'Preserved {len(assets)} assets; delta SHA256 {digest}')
           PY
