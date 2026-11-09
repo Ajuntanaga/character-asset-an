@@ -197,7 +197,6 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             obj.hide_render = False
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-    # V564 adds upper-lid volume, so check its full interpolated blink again.
     if args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
@@ -223,7 +222,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             # Inspect the corneal clearance and closure from a different angle.
             camera.location = (.8, -1.6, 1.66)
             camera.rotation_euler = (Vector((0, 0, 1.655)) - camera.location).to_track_quat('-Z', 'Y').to_euler()
-            for value in (.5, 1.):
+            for value in (() if args.mode == 'combined-build' else (.5, 1.)):
                 for side in ('L', 'R'):
                     head['Blink.' + side] = value
                 rig.update_tag(); bpy.context.view_layer.update()
@@ -234,5 +233,34 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         finally:
             for side, value in original.items():
                 head['Blink.' + side] = value
+            rig.update_tag(); bpy.context.view_layer.update()
+    if args.mode == 'combined-build':
+        head = rig.pose.bones['Head']
+        original = {name: head[name] for name in ('MouthPucker', 'JawOpen')}
+        report['mouth_checks'] = []
+        camera.data.ortho_scale = .15
+        scene.render.resolution_x = scene.render.resolution_y = 640
+        scene.cycles.samples = 48
+        try:
+            for label, pucker, jaw, position in (
+                    ('mouth-neutral', 0., 0., (0, -2, 1.565)),
+                    ('mouth-pucker', .45, 0., (0, -2, 1.565)),
+                    ('mouth-pucker-jaw-oblique', .45, .2, (.3, -1.6, 1.60))):
+                head['MouthPucker'], head['JawOpen'] = pucker, jaw
+                rig.update_tag(); bpy.context.view_layer.update()
+                actual = {name: bpy.data.objects[name].data.shape_keys.key_blocks['MouthPucker'].value
+                          for name in ('V416_BODY_CLEAN_JOIN', 'V363_LIPS',
+                                       'V363_MOUTH_CAVITY', 'V395_BEARD_FIBERS')}
+                assert all(abs(v - pucker) < 1e-6 for v in actual.values()), actual
+                camera.location = position
+                camera.rotation_euler = (Vector((0, 0, 1.565)) - camera.location).to_track_quat('-Z', 'Y').to_euler()
+                scene.render.filepath = str(out / f'{label}-preview.png')
+                bpy.ops.render.render(write_still=True)
+                report['mouth_checks'].append({'view': label, 'pucker': pucker,
+                                               'jaw': jaw, 'shape_values': actual})
+                (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
+        finally:
+            for name, value in original.items():
+                head[name] = value
             rig.update_tag(); bpy.context.view_layer.update()
 print(json.dumps(report))

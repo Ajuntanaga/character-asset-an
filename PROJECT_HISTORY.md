@@ -2273,3 +2273,18 @@ V562 six views and V563 five views downloaded/reviewed. V563 direct original-pho
 V564 increases overlapping curl volume and fiber count together, keeps actual fiber radii, and adds a0.45mm upper-lid convex fold with zero displacement at margin/join/canthi. Exact closed targets unchanged; frontal0/.5/1 and oblique.5/1 blink views return. Face views64samples; new collar closeups expose current fused V416 geometry. Read-only MCP confirms current jacket is V416 material6, not removed V345 object; export18445upper-cloth vertices in local_diagnostics/collar_2026-11-09.
 
 Five V455/452/450/449/448 scenes became exact-restorable deltas after decoded SHA match;1,675,272,697bytes reclaimed. Cumulative16,638,733,260bytes across47full scenes plus already-recorded redundant installers/rejected deltas. Latest cleanup manifest local_archive_cleanup_2026-11-09_pre456.json.47successful BCA_task pings through10:40UTC. LiveV554 clean,workspace7,1957drivers10:41UTC.
+
+
+2026-11-09 10:47UTC: V56472293aa dispatched as Actions42602946616; remote rendering, no local heavy job. Five more obsolete scenes V447/446/445/444/443 archived against retained V528 with decoded SHA256 equality, reclaiming1,385,537,671B. Cumulative18,024,270,931B,52scenes.48successful BCA_task notifications after transient DNS retry;88GiB disk free. Current collar mesh front diagnostic generated from read-only export, no geometry change yet.
+
+
+## 2026-11-09 V564 reviewed and V566 expression/collar trial prepared
+
+V56442602946616 succeeded10:53:50UTC; all11 previews reviewed. Denser groom still reads as shiny coils; eyelid closure continuous from both angles. Pale oval boundary diagnosed as independent V369 margin tubes, using glossy waterline for both upper/lower slots; combined trial hides them after alignment/lash construction, preserving geometry and controls. Collar wings inflated; rear-neck/pin texture patches persist. Full artifact remains remote.
+
+V565 adds a reversible collar key confined to current V416 jacket material:7156 moved vertices,max29.91mm. Regional triangle check found no normal flip and minimum area ratio.2478; render acceptance pending. V566 transfers retained donor mouthPucker to body/lips/cavity and attaches existing beard to pucker and V560 central-face deformation. Exact aperture-delta seam,1536lid exclusions,1957main-driver and control parity assertions retained. New neutral/pucker/pucker+jaw renders will test deformation. No final quality claim.
+
+Cleanup remains18,024,270,931B reclaimed;51successful BCA_task notifications through~11:04UTC after DNS retry. No local render or archive process.
+
+
+2026-11-09 11:12UTC: V441/440/439/438/437 converted to decoded-SHA-verified deltas;1,368,955,276B reclaimed. Cumulative19,393,226,207B/57scenes. Manifest local_archive_cleanup_2026-11-09_pre443.json.52successful BCA_task notifications. Jacket diagnosis distinguishes upper rear collar faces incorrectly assigned skin abovez1.528 from the saturation-mask baked-light patches. V561 copy now uses its clean cloth branch; hardware and shirt retain separate materials.
