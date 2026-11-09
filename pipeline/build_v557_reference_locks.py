@@ -68,6 +68,9 @@ def _anchor(block, bvh):
 
 def generate(roots, bvh):
     rng, nprng = random.Random(557), np.random.default_rng(557)
+    # Keep the established root, radius and undercoat random streams intact.
+    subclump_rng = random.Random(582)
+    subclumps = 5
     # Thin once after Poisson sampling; retrying rejected candidates would fill
     # the part again. Individual fibers can overlap this interrupted scalp lane.
     dense_roots = [entry for entry in roots if rng.random() >= .72 * part_strength(entry[0])]
@@ -132,11 +135,36 @@ def generate(roots, bvh):
         offsets = (np.cos(disk_angle)[:, None, None] * u[None, :, :]
                    + np.sin(disk_angle)[:, None, None] * v[None, :, :])
         block = center[None, :, :] + offsets * disk_radius[:, None, None] * spread[None, :, None]
+        # Hundreds of fibers on one identical trajectory read as a molded C.
+        # Split that trajectory into five related locks, preserving each root
+        # and the existing density, fiber radii and macro guide distribution.
+        # The smooth departure also avoids a kink at the anchored first point.
+        departure = (1. - np.exp(-t / .10))**2
+        fiber_v = np.broadcast_to(v, block.shape).copy()
+        for group in range(subclumps):
+            selected = np.arange(group, children, subclumps)
+            group_amplitude = amplitude * subclump_rng.uniform(.85, 1.15)
+            group_turn = turn * subclump_rng.uniform(.88, 1.12)
+            phase_warp = subclump_rng.uniform(-.35, .35) * np.sin(math.pi * t)
+            group_angle = phase + math.tau * group_turn * warped_t + phase_warp
+            group_radial = (radial_u[None, :] * np.cos(group_angle)[:, None]
+                            + radial_v[None, :] * np.sin(group_angle)[:, None])
+            group_center = (np.asarray(root)[None, :] + normal[None, :] * .0004
+                            + axis[None, :] * (length * t)[:, None]
+                            + group_radial * (group_amplitude * envelope)[:, None])
+            _clear_center(group_center, bvh, width * spread)
+            group_u, group_v = _transport_frames(group_center, normal)
+            group_offsets = (np.cos(disk_angle[selected])[:, None, None] * group_u[None, :, :]
+                             + np.sin(disk_angle[selected])[:, None, None] * group_v[None, :, :])
+            group_block = (group_center[None, :, :]
+                           + group_offsets * disk_radius[selected, None, None] * spread[None, :, None])
+            block[selected] += (group_block - block[selected]) * departure[None, :, None]
+            fiber_v[selected] = group_v
         # Small, tapered child departures avoid the perfectly parallel bands
         # without returning to the previously rejected independent wire coils.
         wave = nprng.uniform(.00010, .00030, children)[:, None] * np.sin(
             nprng.uniform(0., math.tau, children)[:, None] + math.tau * 1.4 * t[None, :])
-        block += v[None, :, :] * (wave * np.sin(math.pi * t)[None, :])[:, :, None]
+        block += fiber_v * (wave * np.sin(math.pi * t)[None, :])[:, :, None]
         _anchor(block, bvh)
         radius = nprng.uniform(.000034, .000048, children)[:, None] * (1. - .85 * t**2)[None, :]
         radius[:, -1] = .000003
@@ -180,7 +208,7 @@ def generate(roots, bvh):
     points, radii, uvs = np.concatenate(points), np.concatenate(radii), np.concatenate(uvs).astype(np.float32)
     assert np.isfinite(points).all() and np.isfinite(radii).all()
     assert 100 < len(macro_roots) < len(dense_roots)
-    report = {'geometry_model': 'V577_compact_scalp_following_partial_curls',
+    report = {'geometry_model': 'V582_five_related_subclump_trajectories',
               'guides': len(macro_roots), 'undercoat_guides': len(dense_roots),
               'primary_strands': macro_strands, 'undercoat_strands': len(dense_roots) * base_children,
               'top_root_spacing_m': .0095, 'side_root_spacing_m': .0075,
@@ -194,6 +222,10 @@ def generate(roots, bvh):
               'undercoat_fibers_per_guide': base_children,
               'undercoat_lift_m': [.0008, .0018],
               'child_departure_amplitude_m': [.00010, .00030],
+              'trajectory_subclumps_per_guide': subclumps,
+              'subclump_amplitude_factor': [.85, 1.15],
+              'subclump_turn_factor': [.88, 1.12],
+              'subclump_phase_warp_radians': [-.35, .35],
               'independent_fiber_coils': False,
               'fiber_frames': 'parallel_transport', 'part_maximum_root_thinning': .72}
     return points, radii, uvs, report
