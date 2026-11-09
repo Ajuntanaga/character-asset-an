@@ -90,11 +90,11 @@ def build(root, out, *, coherent=False):
         across = normal.cross(tangent).normalized()
         curl_axis, curl_normal, curl_across = tangent, normal, across
         if coherent:
-            # Vary the plane over clump-sized patches. Tangential axes made all
-            # ringlets stand like parallel hoops; tilt them into rounded groups.
+            # Reference ringlets lie along the head surface. A mostly tangent
+            # axis turns their loops edge-on and makes the crown read as wire.
             clump = (.60 * math.sin(root.x * math.tau / .021 + root.y * math.tau / .027)
                      + .40 * math.sin(root.x * math.tau / .014 - root.y * math.tau / .019 + 1.7))
-            tilt = .65 + .35 * clump
+            tilt = 1.25 + .22 * clump
             curl_axis = (tangent*math.cos(tilt) + normal*math.sin(tilt)).normalized()
             curl_normal = (normal-curl_axis*normal.dot(curl_axis)).normalized()
             curl_across = curl_normal.cross(curl_axis).normalized()
@@ -106,9 +106,9 @@ def build(root, out, *, coherent=False):
         turns = rng.uniform(.85,1.65)*(1.-.30*side_weight)
         if coherent:
             curl_radius = (.0055 + .0015 * size_field) * (.60 + .40 * topness) * (1. - .68 * side_weight)
-            # Compact ringlets: the former 18-22mm advance stretched the
-            # 11-14mm loops into visible parallel springs.
-            axial_length = (.004 + .003 * size_field) * (.50 + .50 * topness) * (1. - .55 * side_weight)
+            # With the axis pointing mostly outward, keep pitch shallow so the
+            # curl forms a low ringlet rather than a stack projecting off scalp.
+            axial_length = (.0015 + .0015 * size_field) * (.50 + .50 * topness) * (1. - .55 * side_weight)
             turns = (1.05 + .15 * size_field) * (1. - .30 * side_weight)
         if in_part and abs(root.x-part)<.012:
             curl_radius *= .77
@@ -264,6 +264,9 @@ def build(root, out, *, coherent=False):
     report['points_per_strand'] = steps
     report['coherent_flow'] = coherent
     report['local_direction_variation_radians'] = .28 if coherent else .40
+    if coherent:
+        report['curl_axis_tilt_radians'] = [1.03, 1.47]
+        report['top_curl_pitch_m'] = [.0015, .003]
     report['version'] = version
     (out/'groom-report.json').write_text(json.dumps(report,indent=2))
     return report

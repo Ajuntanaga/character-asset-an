@@ -2185,3 +2185,8 @@ MCP Python: `/home/ajuntanaga/Documents/Codex/Blender-MCP/.venv/bin/python pipel
 Workflow `.github/workflows/blender-preview.yml`: Ubuntu24.04, pinned Blender5.2.2, CPU2threads, concurrency1, 20minute limit, artifacts7days. Modes `hand-build`, `groom-build`, `blink-build`, `guitar-build` restore V544 and save full detail before preview simplification. SHA256 checks and delta manifests are mandatory. `github_assets/scene-manifest.json` records retained bases. `github_release/` includes hardlinks: removing a hardlink does not reclaim its target and editing one in place changes every link.
 
 Authoritative hand targets: `references/m3/m3_chord_mapping_v2.json`; rig fit `pipeline/build_v545_fretting_hand.py`. Groom `pipeline/build_v544_reference_groom.py` plus V546 wrapper. Blink `pipeline/build_v547_blink_alignment.py`. Actions orchestration `pipeline/github_scene_job.py`.
+
+
+## 2026-11-08: own-digit sampling and latest visual review
+
+Own-distal BVH sampling replaces global first-hit rays; live copies verify pad identity and anchors within0.09–0.20mm. Contact pose still fails (I12.15/M4.00/R14.47/P8.16/T10.41mm). Moving-pulp and flex-axis probes saved in local_diagnostics/hand_fit_2026-11-08; positive flex signs correct. Groom42576959425 still wire/spring-like; guitar42577808048 still muddy/faint despite contrast curve. All previews downloaded, viewed and rejected; no new branch promoted. Next groom rotates loop axes outward and reduces pitch. Authorized mapping unchanged; earlier crossed-finger concern at V469 is already known.
