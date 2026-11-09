@@ -81,11 +81,11 @@ def build(root, out, *, coherent=False):
         across = normal.cross(tangent).normalized()
         theta = rng.uniform(-.40,.40)
         if coherent:
-            # Smooth spatial field: adjacent roots share direction and curl size.
-            # Coordinates are metres; wavelengths span several root spacings.
+            # Keep the broad flow, but vary neighboring curl planes. Purely
+            # coherent directions made the compact curls read as rows of wire.
             flow = math.sin(root.x * math.tau / .045 + root.y * math.tau / .060)
             size_field = .5 + .5 * math.sin(root.x * math.tau / .055 - root.y * math.tau / .070)
-            theta = .16 * flow
+            theta = .16 * flow + .70 * theta
         tangent = (tangent*math.cos(theta)+across*math.sin(theta)).normalized()
         across = normal.cross(tangent).normalized()
         curl_axis, curl_normal, curl_across = tangent, normal, across
@@ -263,6 +263,7 @@ def build(root, out, *, coherent=False):
 
     report['points_per_strand'] = steps
     report['coherent_flow'] = coherent
+    report['local_direction_variation_radians'] = .28 if coherent else .40
     report['version'] = version
     (out/'groom-report.json').write_text(json.dumps(report,indent=2))
     return report
