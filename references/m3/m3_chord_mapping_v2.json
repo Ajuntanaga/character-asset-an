@@ -1,0 +1,194 @@
+{
+  "version": 2,
+  "coordinate_convention": {
+    "fret": "F0 is open; F7 is the neutral physical fret; F24 is the last modeled fret.",
+    "string": "S8 is top/high-A in the M3 diagram; S1 is bottom/low-B.",
+    "tuning_low_to_high": [
+      "B",
+      "F",
+      "A#",
+      "D",
+      "G",
+      "C",
+      "F",
+      "A"
+    ]
+  },
+  "instrument_geometry": {
+    "type": "Strandberg Boden 8 multiscale",
+    "frets": 24,
+    "neutral_fret": 7,
+    "nut_string_spread_mm": 49.0,
+    "bridge_string_spacing_mm": 10.5,
+    "scale_lengths_by_m3_string_in": {
+      "S8": 26.5,
+      "S7": 26.71,
+      "S6": 26.93,
+      "S5": 27.14,
+      "S4": 27.36,
+      "S3": 27.57,
+      "S2": 27.79,
+      "S1": 28.0
+    },
+    "fret_formula": "distance_from_nut = scale_length * (1 - 2^(-fret/12))",
+    "official_sources": [
+      "https://support.strandbergguitars.com/article/40-guitar-strings",
+      "https://strandbergguitars.com/jp/multi-scale-guitars/"
+    ]
+  },
+  "harmonic_context": {
+    "root": "B",
+    "name": "I Susb2bb5 add #9, b14 with optional drop b7",
+    "pitch_content": [
+      "1",
+      "b2",
+      "4/bb5",
+      "#9",
+      "b14/#13"
+    ]
+  },
+  "note_targets": [
+    {
+      "string": "S4",
+      "fret": 10,
+      "interval": "b2",
+      "finger": null,
+      "status": "coordinate-reconstructed; fingering-unresolved"
+    },
+    {
+      "string": "S5",
+      "fret": 9,
+      "interval": "4 / bb5",
+      "finger": null,
+      "status": "coordinate-reconstructed; fingering-unresolved"
+    },
+    {
+      "string": "S6",
+      "fret": 11,
+      "interval": "1",
+      "finger": "index",
+      "status": "coordinate-reconstructed"
+    },
+    {
+      "string": "S7",
+      "fret": 9,
+      "interval": "#9",
+      "finger": "ring",
+      "status": "user-verified"
+    },
+    {
+      "string": "S8",
+      "fret": 11,
+      "interval": "b14 / #13",
+      "finger": "pinky",
+      "status": "user-verified"
+    }
+  ],
+  "visible_pose_targets": [
+    {
+      "string": "S6",
+      "fret": 11,
+      "finger": "index",
+      "contact": true
+    },
+    {
+      "string": "S6",
+      "fret": 10,
+      "finger": "middle",
+      "contact": false
+    },
+    {
+      "string": "S7",
+      "fret": 9,
+      "finger": "ring",
+      "contact": true
+    },
+    {
+      "string": "S8",
+      "fret": 11,
+      "finger": "pinky",
+      "contact": true
+    }
+  ],
+  "hand_posture_constraints": {
+    "home_fret_positions": [
+      9,
+      10,
+      11,
+      12
+    ],
+    "home_span": "four consecutive fret spaces",
+    "extension_rule": "Only index and/or pinky may extend one fret below or above the home box (F8 or F13).",
+    "thumb": {
+      "role": "rear-neck support",
+      "visible_from_fretboard_camera": false,
+      "may_cross_top_edge": false
+    },
+    "visible_digits": [
+      "index",
+      "middle",
+      "ring",
+      "pinky"
+    ]
+  },
+  "verification": {
+    "user_verified": [
+      "F9,S7 = #9",
+      "F11,S8 = b14/#13",
+      "S8 is the top string"
+    ],
+    "reconstructed_coordinates": [
+      "F10,S4 = b2",
+      "F9,S5 = 4/bb5",
+      "F11,S6 = root"
+    ],
+    "fingering_conflict_resolved_in_v2": "The former visible-thumb assignment on S4/F10 and S5/F9 is not used. Those note coordinates remain pitch-valid, but their finger assignment is unresolved pending a playable voicing decision.",
+    "pitch_check": [
+      {
+        "string": "S4",
+        "fret": 10,
+        "interval": "b2",
+        "finger": null,
+        "status": "coordinate-reconstructed; fingering-unresolved",
+        "sounding_note": "C"
+      },
+      {
+        "string": "S5",
+        "fret": 9,
+        "interval": "4 / bb5",
+        "finger": null,
+        "status": "coordinate-reconstructed; fingering-unresolved",
+        "sounding_note": "E"
+      },
+      {
+        "string": "S6",
+        "fret": 11,
+        "interval": "1",
+        "finger": "index",
+        "status": "coordinate-reconstructed",
+        "sounding_note": "B"
+      },
+      {
+        "string": "S7",
+        "fret": 9,
+        "interval": "#9",
+        "finger": "ring",
+        "status": "user-verified",
+        "sounding_note": "D"
+      },
+      {
+        "string": "S8",
+        "fret": 11,
+        "interval": "b14 / #13",
+        "finger": "pinky",
+        "status": "user-verified",
+        "sounding_note": "G#"
+      }
+    ]
+  },
+  "optional_drop_b7": {
+    "candidate": "F0,S8 (open A relative to B)",
+    "status": "alternate/layered voicing only",
+    "constraint": "It occupies S8, so it cannot sound simultaneously with F11,S8 on a conventional single-course string. Confirm whether the M3 realization layers it, replaces b14/#13, or uses a re-entrant/alternate pitch assignment."
+  }
+}

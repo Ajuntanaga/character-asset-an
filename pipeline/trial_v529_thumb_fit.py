@@ -1,0 +1,114 @@
+"""Attach unwarped native donor rig to existing wrist; save isolated integration trial."""
+import bpy,json,math
+from pathlib import Path
+from mathutils import Vector,Matrix
+root=Path(__file__).resolve().parents[1];out=root/'production_v529_native_integration';out.mkdir(exist_ok=True)
+main=bpy.data.objects['V357_CLOUDRIG_CONTROLS'];old=bpy.data.objects['V357_ANATOMICAL_HAND.R'];scene=bpy.context.scene
+assert len(main.animation_data.drivers)==1957 and not bpy.app.is_job_running('RENDER')
+with bpy.data.libraries.load(str(root/'production_v522_native_donor/Antonia_native_hand_rig_v522.blend'),link=False) as (src,dst):dst.objects=['V522_NATIVE_HAND','V522_NATIVE_RIG']
+for obj in dst.objects:scene.collection.objects.link(obj)
+o=next(x for x in dst.objects if x.type=='MESH');rig=next(x for x in dst.objects if x.type=='ARMATURE');o.name='V529_NATIVE_HAND.R';rig.name='V529_NATIVE_RIG.R'
+def frame(w,m,i,p):
+ y=(m-w).normalized();x=i-p;x=(x-y*x.dot(y)).normalized();z=x.cross(y).normalized()
+ return Matrix((x,y,z)).transposed(),(m-w).length
+s=rig.data.bones;t=main.data.bones
+sf,sl=frame(s['DEF-Hand.R'].head_local,s['DEF-Finger_Middle1.R'].head_local,s['DEF-Finger_Index1.R'].head_local,s['DEF-Finger_Pinky1.R'].head_local)
+tf,tl=frame(t['DEF-Hand.R'].head_local,t['DEF-Finger_Middle1.R'].head_local,t['DEF-Finger_Index1.R'].head_local,t['DEF-Finger_Pinky1.R'].head_local)
+# The source is a left hand: reflect depth consistently for the right hand.
+tf.col[2]=-tf.col[2]
+posed=main.matrix_world@main.pose.bones['DEF-Hand.R'].matrix@t['DEF-Hand.R'].matrix_local.inverted()
+source_length=s['DEF-Finger_Middle3.R'].tail_local-s['DEF-Hand.R'].head_local
+scale=.205/(posed.to_3x3()@(tf@sf.inverted())@source_length).length
+alignment=(tf@sf.inverted()).to_4x4()@Matrix.Scale(scale,4)
+alignment.translation=t['DEF-Hand.R'].head_local-alignment.to_3x3()@s['DEF-Hand.R'].head_local
+world=main.matrix_world@main.pose.bones['DEF-Hand.R'].matrix@t['DEF-Hand.R'].matrix_local.inverted()@alignment
+rig.parent=main;rig.parent_type='BONE';rig.parent_bone='DEF-Hand.R';bpy.context.view_layer.update();rig.matrix_world=world
+o.parent=rig;o.matrix_parent_inverse=Matrix.Identity(4);o.matrix_basis=Matrix.Identity(4)
+# Remove only donor forearm extension beyond the cuff; preserve source asset.
+import bmesh
+bm=bmesh.new();bm.from_mesh(o.data)
+bmesh.ops.bisect_plane(bm,geom=list(bm.verts)+list(bm.edges)+list(bm.faces),dist=1e-6,plane_co=s['DEF-Hand.R'].head_local-sf.col[1]*.012,plane_no=sf.col[1],clear_inner=True,clear_outer=False)
+bm.to_mesh(o.data);bm.free();o.data.update()
+normal=sf.col[2]
+for f in ('Index','Middle','Ring','Pinky'):
+ for j in (1,2,3):
+  name=f'DEF-Finger_{f}{j}.R';b=rig.pose.bones[name];axis=normal.cross(b.bone.tail_local-b.bone.head_local).normalized();axis=b.bone.matrix_local.to_3x3().inverted()@axis
+  b.rotation_mode='AXIS_ANGLE';b.rotation_axis_angle=(0,*axis)
+  d=b.driver_add('rotation_axis_angle',0).driver;v=d.variables.new();v.name='flex';v.type='SINGLE_PROP';v.targets[0].id=main;v.targets[0].data_path=f'pose.bones["FK-Finger_{f}{j}.R"].rotation_euler[0]';d.expression='flex'
+o.data.materials.clear()
+for mat in old.data.materials:o.data.materials.append(mat)
+for poly in o.data.polygons:poly.material_index=1 if poly.material_index in (5,6) else 0
+control=main.pose.bones['IK-Hand.R'];control_backup=control.matrix_basis.copy()
+pick=bpy.data.objects['V361_NYLON_PICK'];pick_backup=pick.matrix_world.copy()
+visibility=(old.hide_render,old.hide_get());old.hide_render=True;old.hide_set(True)
+bpy.context.view_layer.update()
+# Translate the arm control to the stationary pick instead of stretching anatomy.
+tip=rig.matrix_world@rig.pose.bones['DEF-Finger_Index3.R'].tail
+pick_eval=pick.evaluated_get(bpy.context.evaluated_depsgraph_get())
+pick_center=sum((pick_eval.matrix_world@v.co for v in pick_eval.data.vertices),Vector())/len(pick_eval.data.vertices)
+shift=pick_center-tip
+cm=control.matrix.copy();cm.translation+=main.matrix_world.to_3x3().inverted()@shift
+control.matrix=cm;bpy.context.view_layer.update();pick.matrix_world=pick_backup;bpy.context.view_layer.update()
+# Resolve actual control response with a small measured Jacobian.
+import numpy as np
+def index_tip():return rig.matrix_world@rig.pose.bones['DEF-Finger_Index3.R'].tail
+for iteration in range(6):
+ base=control.location.copy();point=index_tip();residual=pick_center-point
+ if residual.length<.0003:break
+ columns=[]
+ for k in range(3):
+  control.location=base;control.location[k]+=.001;bpy.context.view_layer.update()
+  columns.append(np.array(index_tip()-point)/.001)
+ control.location=base
+ delta=np.linalg.lstsq(np.array(columns).T,np.array(residual),rcond=None)[0]
+ if np.linalg.norm(delta)>.025:delta*=.025/np.linalg.norm(delta)
+ control.location=base+Vector(delta);bpy.context.view_layer.update();pick.matrix_world=pick_backup;bpy.context.view_layer.update()
+# Pick thickness axis from its evaluated geometry, independent of object origin.
+pick_points=np.array([list(pick_eval.matrix_world@v.co) for v in pick_eval.data.vertices])
+_,_,vt=np.linalg.svd(pick_points-pick_points.mean(axis=0),full_matrices=False)
+pick_normal=Vector(vt[-1]);thumb_bones=[rig.pose.bones[f'DEF-Finger_Thumb{j}.R'] for j in (1,2,3)]
+for bone in thumb_bones:bone.rotation_mode='XYZ';bone.rotation_euler=(0,0,0)
+bpy.context.view_layer.update()
+if pick_normal.dot(rig.matrix_world@thumb_bones[0].head-pick_center)<0:pick_normal=-pick_normal
+thumb_target=pick_center+pick_normal*.005
+# Bounded damped least squares for thumb chain; skin contact still needs visual review.
+def thumb_tip():return rig.matrix_world@thumb_bones[-1].tail
+for iteration in range(24):
+ point=thumb_tip();residual=thumb_target-point
+ if residual.length<.0005:break
+ values=[b.rotation_euler.copy() for b in thumb_bones];columns=[]
+ for b,angles in zip(thumb_bones,values):
+  for k in range(3):
+   b.rotation_euler[k]+=.005;bpy.context.view_layer.update();columns.append(np.array(thumb_tip()-point)/.005)
+   b.rotation_euler=angles;bpy.context.view_layer.update()
+ jac=np.array(columns).T
+ delta=jac.T@np.linalg.solve(jac@jac.T+np.eye(3)*.00002,np.array(residual))
+ delta=np.clip(delta,-.12,.12)
+ for j,b in enumerate(thumb_bones):
+  b.rotation_euler=[max(-1.2,min(1.2,values[j][k]+float(delta[j*3+k]))) for k in range(3)]
+ bpy.context.view_layer.update()
+(out/'thumb_fit.json').write_text(json.dumps({'normal':list(pick_normal),'target':list(thumb_target),'tail':list(thumb_tip()),'error_m':(thumb_tip()-thumb_target).length,'angles':[list(b.rotation_euler) for b in thumb_bones],'note':'bone endpoint solve only, not verified surface contact'},indent=2))
+(out/'placement.json').write_text(json.dumps({'wrist_shift_m':list(shift),'index_tip_before':list(tip),'pick_center':list(pick_center),'index_tip_after':list(rig.matrix_world@rig.pose.bones['DEF-Finger_Index3.R'].tail)},indent=2))
+try:
+ f=root/'pipeline/review_v492_isolated_palm.py';code=f.read_text().replace("bpy.data.objects['V357_ANATOMICAL_HAND.R']","bpy.data.objects['V529_NATIVE_HAND.R']").replace('production_v492_palm_review','production_v529_native_integration')
+ code=code.replace('points=[obj.matrix_world@v.co for v in mesh.vertices]', 'bpy.context.window.scene=scene; bpy.context.view_layer.update()\npoints=[obj.matrix_world@v.co for v in mesh.vertices]')
+ exec(compile(code,str(f),'exec'),{'__file__':str(f)})
+ # Context review uses the actual character and instrument, with temporary render settings.
+ camera=scene.camera;camera_matrix=camera.matrix_world.copy();camera_scale=camera.data.ortho_scale
+ settings=(scene.render.engine,scene.render.resolution_x,scene.render.resolution_y,scene.render.resolution_percentage,scene.render.filepath)
+ try:
+  scene.render.engine='BLENDER_WORKBENCH';scene.render.resolution_percentage=100
+  for label,position,target,ortho,res in [('instrument',(-.00624775,-.645,.74370837),(-.10234958,-.27,1.0314399),.42,(900,900)),('character',(.35,-3.5,1.3),(0,0,.94),2.12,(800,1100))]:
+   camera.location=position;camera.rotation_euler=(Vector(target)-camera.location).to_track_quat('-Z','Y').to_euler();camera.data.ortho_scale=ortho
+   scene.render.resolution_x,scene.render.resolution_y=res;scene.render.filepath=str(out/(label+'.png'));bpy.ops.render.render(write_still=True)
+ finally:
+  camera.matrix_world=camera_matrix;camera.data.ortho_scale=camera_scale
+  scene.render.engine,scene.render.resolution_x,scene.render.resolution_y,scene.render.resolution_percentage,scene.render.filepath=settings
+ # Save a review-only full integration copy; retain the existing authoritative file.
+ bpy.ops.wm.save_as_mainfile(filepath=str(out/'Character_An_native_hand_integration_TRIAL_v529.blend'),copy=True)
+ (out/'integration.json').write_text(json.dumps({'uniform_rest_scale':scale,'main_drivers':len(main.animation_data.drivers),'donor_drivers':len(rig.animation_data.drivers),'source_character':bpy.data.filepath,'thumb':'bounded endpoint fit, surface contact unverified','status':'TRIAL_REQUIRES_VISUAL_REVIEW'},indent=2))
+finally:
+ control.matrix_basis=control_backup;bpy.context.view_layer.update();pick.matrix_world=pick_backup
+ old.hide_render=visibility[0];old.hide_set(visibility[1])
+ bpy.data.objects.remove(o,do_unlink=True);bpy.data.objects.remove(rig,do_unlink=True);bpy.context.view_layer.update()
+print('V529 integration copy saved; original character restored')

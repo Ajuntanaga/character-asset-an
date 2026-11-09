@@ -1,0 +1,22 @@
+Blender Human Base Meshes bundle v1.4.1
+
+License: Creative Commons CC0 1.0 Universal (public-domain dedication)
+License text: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+Official archive:
+https://download.blender.org/demo/asset-bundles/human-base-meshes/human-base-meshes-bundle-v1.4.1.zip
+
+Official Blender evidence:
+- https://download.blender.org/demo/asset-bundles/human-base-meshes/
+  lists the v1.4.1 archive, timestamp, and byte size.
+- https://developer.blender.org/docs/release_notes/3.6/asset_bundles/
+  documents the Human Base Meshes bundle and its quad topology, UV/UDIM, and
+  multiresolution properties.
+- https://developer.blender.org/docs/features/asset_system/asset_bundles/guidelines/
+  states that accepted Blender asset-bundle content is CC0-licensed.
+
+Local archive SHA-256:
+811f43accbb31a88266d932f8f5563b2d13586fca0ba2693aad1f5fe582b3515
+
+Vendored for Character Asset_An on 2026-10-03. This note records source and
+license evidence; it does not replace the CC0 legal code at the URL above.

@@ -1,0 +1,52 @@
+name: Blender scene check and preview
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Bounded scene check or CPU preview
+        type: choice
+        options: [check, preview]
+        default: check
+permissions:
+  contents: read
+concurrency:
+  group: character-blender-processing
+  cancel-in-progress: false
+jobs:
+  blender:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      MODE: ${{ inputs.mode }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pinned scene
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p scenes results
+          gh release download checkpoint-v528 --pattern current-v528.blend --dir scenes
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          p=pathlib.Path('scenes/current-v528.blend')
+          expected=json.loads(pathlib.Path('github_assets/scene-manifest.json').read_text())['current-v528.blend']['sha256']
+          with p.open('rb') as f: actual=hashlib.file_digest(f,'sha256').hexdigest()
+          assert actual == expected, (actual, expected)
+          PY
+      - name: Install pinned Blender
+        run: |
+          curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://download.blender.org/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
+          echo '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168  /tmp/blender.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/blender.tar.xz -C /tmp
+      - name: Check scene and optionally render
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec scenes/current-v528.blend --threads 2 --python-exit-code 1 --python pipeline/github_scene_job.py -- --mode "$MODE" --output results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: blender-${{ inputs.mode }}-${{ github.run_number }}
+          path: results/
+          if-no-files-found: warn
+          retention-days: 7
