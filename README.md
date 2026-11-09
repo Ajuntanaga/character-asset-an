@@ -14,6 +14,8 @@ Blender 5.2.2 LTS. Current scene textures are packed and there are no linked lib
 
 Run **Blender scene check and preview** manually in Actions. It downloads the pinned release scene and Blender version, validates the scene, and optionally makes a 512-pixel, 8-sample CPU preview. Two threads, one job at a time, 20-minute job timeout, seven-day result retention. The preview reduces subdivision and hair children to fit standard hosted runner memory; it is not a final quality render or animation certification.
 
+[First successful remote preview](https://github.com/Ajuntanaga/character-asset-an/actions/runs/42549182718): scene checksum passed, 169 objects, 1,957 main-rig drivers, no missing images; returned PNG visually inspected.
+
 No scheduled rendering, paid GPU runner, Modal job, or automatic batch fan-out. Private Actions consumes included usage and may be billable under account settings after quota; account billing/spending limits remain authoritative. Kaggle free GPU may be considered separately for a small explicitly bounded render, with no paid expansion.
 
 ## Remaining work
