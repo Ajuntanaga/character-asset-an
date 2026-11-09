@@ -176,6 +176,20 @@ def build(out):
     assert thumb_target is not None, 'Rear neck target missing'
     targets['Thumb'] = thumb_target - normal * .0003
     target_meta['Thumb'] = {'role': 'rear-neck support', 'world': list(targets['Thumb'])}
+    # Palm surface and wrist interior must clear the actual neck, not just
+    # satisfy fingertip targets. These vertices are rigidly weighted to Hand.
+    palm_group = hand.vertex_groups['DEF-Hand.R'].index
+    palm_samples = [v.co.copy() for v in hand.data.vertices
+                    if any(g.group == palm_group and g.weight > .98 for g in v.groups)]
+    assert palm_samples, 'No rigid palm collision samples'
+    # Include the cut wrist interior: surface-only samples can surround a neck
+    # while leaving an undetected intersection through the open boundary.
+    wrist_samples = [wrist_source + sf.col[1] * offset for offset in (-.012, 0., .012)]
+    def neck_clearance(point):
+        near, outward, _, _ = neck_tree.find_nearest(point)
+        assert near is not None
+        return (point - near).dot(outward)
+
     rest = {b.name: b.matrix_local.copy() for b in source}
     relative = {b.name: rest[b.parent.name].inverted() @ rest[b.name] if b.parent else rest[b.name] for b in source}
     # Variables: guitar-local wrist, world rotation, four flex/flex/flex/splay sets,
@@ -183,9 +197,9 @@ def build(out):
     prior = np.r_[[center_x, .125, -.060], [0., 0., 0.],
                   np.radians([45, 75, 40, 0] * 4 + [20, 20, 30, 15])]
     low = np.r_[[center_x - .09, .045, -.125], [-1.5] * 3,
-                np.radians([0, 10, 0, -25] * 4 + [-45, -70, -20, -20])]
+                np.radians([0, 10, 0, -25] * 4 + [-45, -60, -10, -10])]
     high = np.r_[[center_x + .09, .185, .025], [1.5] * 3,
-                 np.radians([95, 105, 80, 25] * 4 + [70, 90, 80, 75])]
+                 np.radians([95, 105, 80, 25] * 4 + [60, 60, 60, 55])]
 
     def matrices(values):
         linear = Euler(tuple(values[3:6]), 'XYZ').to_matrix() @ initial_linear
@@ -247,6 +261,17 @@ def build(out):
                 p = guitar_inv @ world @ pose[name] @ Vector((0, source[name].length * .5, 0))
                 edge = max(0., min(1., (.045 - abs(p.y)) / .008))
                 r.append(min(0., p.z - .031) * edge)
+        # Keep a fixed residual size and balance dense palm samples against
+        # five contact constraints. Interior wrist samples use a small radius.
+        weight = math.sqrt(8. / len(palm_samples))
+        r.extend(min(0., neck_clearance(world @ p) - .001) * weight
+                 for p in palm_samples)
+        r.extend(min(0., neck_clearance(world @ p) - .008) * 2.
+                 for p in wrist_samples)
+        for j in (1, 2, 3):
+            name = f'DEF-Finger_Thumb{j}.R'
+            point = world @ pose[name] @ Vector((0, source[name].length * .5, 0))
+            r.append(min(0., neck_clearance(point) - .004))
         r.extend((values[:3] - prior[:3]) * .025)
         r.extend((values[3:] - prior[3:]) * .00035)
         return np.array(r)
@@ -322,11 +347,17 @@ def build(out):
     actual_palm = (rig.matrix_world.to_3x3() @ source_palm).length
     pick_error = max(abs(pick.matrix_world[i][j] - pick_before[i][j]) for i in range(4) for j in range(4))
     assert pick_error < 1e-5 and len(main.animation_data.drivers) == 1957
+    palm_clearance = min(neck_clearance(rig.matrix_world @ p) for p in palm_samples)
+    wrist_clearance = min(neck_clearance(rig.matrix_world @ p) - .008 for p in wrist_samples)
     fit_status = ('TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW' if
-                  max(c['distance_m'] for c in final.values()) < .003 else
+                  max(c['distance_m'] for c in final.values()) < .003 and
+                  min(palm_clearance, wrist_clearance) >= -.0005 else
                   'REJECTED_CONTACT_FIT')
     report = {'status': fit_status, 'main_drivers': 1957,
               'native_drivers': len(rig.animation_data.drivers), 'targets': target_meta,
+              'palm_neck_clearance_m': palm_clearance,
+              'wrist_neck_clearance_m': wrist_clearance,
+              'palm_collision_samples': len(palm_samples),
               'contacts': final, 'left_palm_m': actual_palm, 'right_palm_m': right_palm,
               'wrist_anchor_error_m': wrist_error, 'pick_matrix_error': pick_error,
               'values': values.tolist(), 'coarse_loss': coarse_history, 'surface_loss': surface_history,
