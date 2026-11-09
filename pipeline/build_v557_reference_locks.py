@@ -1,4 +1,4 @@
-"""Generate compact irregular locks and a wavy undercoat on the current scalp."""
+"""Generate shared ringlet guides and a wavy undercoat on the current scalp."""
 from collections import defaultdict
 import math
 import random
@@ -77,7 +77,7 @@ def generate(roots, bvh):
         root = entry[0]
         nape = np.clip((1.675 - root.z) / .055, 0., 1.) if root.y > -.022 else 0.
         top = np.clip((root.z - 1.69) / .08, 0., 1.)
-        spacing = (.009 + .005 * top) * (1. - nape) + .0045 * nape
+        spacing = (.0075 + .002 * top) * (1. - nape) + .0045 * nape
         cell = tuple(math.floor(c / cell_size) for c in root)
         neighbors = (item for x in range(cell[0]-1, cell[0]+2)
                      for y in range(cell[1]-1, cell[1]+2)
@@ -89,24 +89,36 @@ def generate(roots, bvh):
         grid[cell].append((root, spacing))
         macro_roots.append(entry)
 
-    steps = 33
+    steps = 41
     t = np.linspace(0., 1., steps)
     points, radii, uvs = [], [], []
     macro_strands = 0
     for root, face, weights in macro_roots:
         normal, tangent, across, nape, side, top = _frame(root, face, rng)
         children = round((80 + 48 * top) * (1. - nape) + 28 * nape)
-        length = rng.uniform(.023, .035) * (.65 + .35 * top) * (1. - .40 * side)
-        length = length * (1. - nape) + rng.uniform(.0025, .004) * nape
-        amplitude = rng.uniform(.003, .005) * (.55 + .45 * top) * (1. - .40 * side) * (1. - .90 * nape)
+        length = rng.uniform(.011, .018) * (.70 + .30 * top) * (1. - .15 * side)
+        length = length * (1. - nape) + rng.uniform(.003, .006) * nape
+        amplitude = rng.uniform(.0032, .0048) * (.65 + .35 * top) * (1. - .18 * side) * (1. - .75 * nape)
         phase = rng.uniform(-math.pi, math.pi)
-        turn = rng.uniform(.75, 1.05) * (-1 if rng.random() < .45 else 1)
-        angle = phase + math.tau * turn * t
-        envelope = np.sin(math.pi * t)**1.15
-        height = .0004 + amplitude * envelope * (.9 + .7 * np.sin(angle)) + .0012 * t
-        lateral = amplitude * envelope * np.cos(angle)
-        center = (np.asarray(root)[None, :] + tangent[None, :] * (length * t)[:, None]
-                  + normal[None, :] * height[:, None] + across[None, :] * lateral[:, None])
+        turn = rng.uniform(1.25, 1.75) * (1. - .35 * nape) * (-1 if rng.random() < .45 else 1)
+        # The prior centerline traversed 23–35 mm along the scalp while making
+        # less than one wave. Reference curls instead turn around an axis that
+        # rises from the scalp. Fibers still share one transported guide; they
+        # do not become the independent, hollow wire coils rejected in V546.
+        tilt = rng.uniform(math.radians(35), math.radians(55))
+        tilt = tilt * (1. - nape) + math.radians(65) * nape
+        axis = normal * math.cos(tilt) + tangent * math.sin(tilt)
+        radial_u = tangent - axis * np.dot(tangent, axis)
+        radial_u /= np.linalg.norm(radial_u)
+        radial_v = np.cross(axis, radial_u)
+        warped_t = t + rng.uniform(-.035, .035) * np.sin(math.pi * t)
+        angle = phase + math.tau * turn * warped_t
+        envelope = (1. - np.exp(-t / .07)) * (1. - .15 * t**2)
+        radial = (radial_u[None, :] * np.cos(angle)[:, None]
+                  + radial_v[None, :] * np.sin(angle)[:, None])
+        center = (np.asarray(root)[None, :] + normal[None, :] * .0004
+                  + axis[None, :] * (length * t)[:, None]
+                  + radial * (amplitude * envelope)[:, None])
         # V557's 3.6–5.6mm bundles merged into thick ropes at render distance.
         # Keep the real fiber radius; reduce the visible lock cross-section.
         width = rng.uniform(.0006, .0011) * (1. - .35 * side) * (1. - .72 * nape)
@@ -166,14 +178,15 @@ def generate(roots, bvh):
     points, radii, uvs = np.concatenate(points), np.concatenate(radii), np.concatenate(uvs).astype(np.float32)
     assert np.isfinite(points).all() and np.isfinite(radii).all()
     assert 100 < len(macro_roots) < len(dense_roots)
-    report = {'geometry_model': 'V559_compact_locks_with_wavy_undercoat',
+    report = {'geometry_model': 'V562_shared_rising_ringlets_with_wavy_undercoat',
               'guides': len(macro_roots), 'undercoat_guides': len(dense_roots),
               'primary_strands': macro_strands, 'undercoat_strands': len(dense_roots) * base_children,
-              'top_root_spacing_m': .014, 'side_root_spacing_m': .009,
+              'top_root_spacing_m': .0095, 'side_root_spacing_m': .0075,
               'posterior_root_spacing_m': .0045, 'posterior_guides': sum(
                   root.z < 1.655 and root.y > -.022 for root, _, _ in macro_roots),
-              'top_lock_length_m': [.023, .035], 'partial_turns': [.75, 1.05],
-              'top_lock_amplitude_m': [.003, .005],
+              'top_lock_axial_length_m': [.011, .018], 'partial_turns': [1.25, 1.75],
+              'top_lock_amplitude_m': [.0032, .0048],
+              'axis_tilt_from_scalp_normal_degrees': [35, 55],
               'top_bundle_radius_m': [.0006, .0011],
               'child_departure_amplitude_m': [.00010, .00030],
               'independent_fiber_coils': False,

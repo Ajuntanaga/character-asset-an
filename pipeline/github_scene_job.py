@@ -120,14 +120,15 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         shots = [('guitar-front', guitar.matrix_world @ Vector((.625, 0, 1.)),
                   guitar.matrix_world @ Vector((.625, 0, 0)), .55), shots[0]]
     if args.mode == 'combined-build':
+        guitar = bpy.data.objects['V206_GUITAR_ROOT']
         shots = [
             ('character', (.35, -3.5, 1.3), (0, 0, .94), 2.12),
             ('face-front', (0, -2, 1.68), (0, 0, 1.65), .40),
             ('face-profile', (2, 0, 1.65), (0, 0, 1.65), .40),
-            ('face-photo90-front', (0, -2, 1.68), (0, 0, 1.65), .40),
-            ('face-photo90-profile', (2, 0, 1.65), (0, 0, 1.65), .40),
-            ('wardrobe-front', (0, -3, 1.24), (0, 0, 1.24), .94),
-            ('wardrobe-detail', (.16, -2, 1.30), (.02, 0, 1.30), .44),
+            ('face-oblique', (.70, -1.7, 1.78), (0, 0, 1.67), .40),
+            ('guitar-front', guitar.matrix_world @ Vector((.625, 0, 1.)),
+             guitar.matrix_world @ Vector((.625, 0, 0)), .55),
+            ('pick-grip', center + Vector((.13, -.2, .04)), center, .16),
         ]
         if args.delit_face:
             shots = [shots[1],
@@ -195,7 +196,9 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             obj.hide_render = False
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-    if args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
+    # V561 already rendered frontal/oblique blink closure. Repeat that suite
+    # when eyelids change, not for the V562 hair-only combined trial.
+    if args.mode in ('review', 'build-review', 'blink-build'):
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
         original = {side: head['Blink.' + side] for side in ('L', 'R')}

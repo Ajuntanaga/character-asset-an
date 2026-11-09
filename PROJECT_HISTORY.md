@@ -2249,3 +2249,12 @@ All nine V560 previews reviewed. Nose correction is modest; the full chin field 
 V561 adds a26/30mm subtle cool check in garment rest coordinates, upper lid6.9mm, a darker55mm scalp part with0.5mm core/2.3mm total width, and matched.65/.90 photo-mask gain front/profile previews. Full scene retains.65 pending actual comparison. Oblique half/full blink images added. Main1957drivers retained by build assertions; actual runtime pending.
 
 Cleanup total13,254,980,777bytes after five more exact-restorable V477/476/475/473/471 scenes; manifest local_archive_cleanup_2026-11-09_pre478.json. Forty BCA_task notifications delivered, latest~09:56UTC. No local heavy jobs.
+
+
+## 2026-11-09 V561 reviewed and V562 curl trial
+
+V56142597328082 succeeded; all12 actual previews reviewed. Photo gain.90 does not remove pale cheek/temple etching; saved.65 retained. Chin35% removes worst V560 ledge. Front and oblique half/full blink close continuously; open eyes still artificial. Jacket check too faint, collar rubbery and pocket detail stretched. Part darker/narrower, hair still flat waves. No whole-character acceptance.
+
+V562 changes shared guides to rising ringlets with35–55degree axes,11–18mm axial length,1.25–1.75turns and3.2–4.8mm lobes. Six focused previews replace redundant A/B/blink repeats. Root preserves main1957drivers and existing hands. Actual live picking probe found the9.253mm centroid offset entirely along intentional exposed-tip axis, normal/transverse errors below0.001mm; proposed centroid shift rejected. Gap1.005mm/pick thickness.840mm; deformation/contact still unaccepted.
+
+Five V466/460/459/458/456 scenes converted to exact-restorable deltas; cumulative14,963,460,563bytes reclaimed,42full scenes. Latest cleanup manifest local_archive_cleanup_2026-11-09_pre468.json.43 BCA_task pings through10:12UTC. Existing workspace7 Blender Image Editor now shows V561 whole-character render; live scene remains V554 clean.
