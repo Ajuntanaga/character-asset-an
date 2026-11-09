@@ -8,13 +8,17 @@ import bpy
 from mathutils import Vector
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review'), default='check')
+parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build'), default='check')
 parser.add_argument('--output', default='results')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
 if args.mode == 'build-review':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v544_reference_revision import build
+    build(out)
+if args.mode == 'hand-build':
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from build_v545_fretting_hand import build
     build(out)
 scene = bpy.context.scene
 rig = bpy.data.objects.get('V357_CLOUDRIG_CONTROLS')
@@ -30,8 +34,8 @@ report = {'blender': bpy.app.version_string, 'scene': Path(bpy.data.filepath).na
           'objects': len(scene.objects), 'main_drivers': count, 'missing_images': missing,
           'mode': args.mode, 'quality_status': 'WORK_IN_PROGRESS_NOT_ACCEPTED'}
 (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-if args.mode in ('preview', 'review', 'build-review'):
-    review = args.mode in ('review', 'build-review')
+if args.mode in ('preview', 'review', 'build-review', 'hand-build'):
+    review = args.mode in ('review', 'build-review', 'hand-build')
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
     scene.cycles.samples = 32 if review else 8
@@ -57,18 +61,36 @@ if args.mode in ('preview', 'review', 'build-review'):
             ('character', (.35, -3.5, 1.3), (0, 0, .94), 2.12),
             ('portrait', (.30, -2, 1.7), (0, 0, 1.64), .58),
         ])
+    if args.mode == 'hand-build':
+        shots = [s for s in shots if s[0] != 'portrait']
+        fit = json.loads((out / 'hand-fit-report.json').read_text())
+        center = sum((Vector(fit['contacts'][d]['target_world']) for d in ('Index', 'Middle', 'Ring', 'Pinky')), Vector()) / 4
+        guitar = bpy.data.objects['V206_GUITAR_ROOT'].matrix_world
+        offset = guitar.to_3x3()
+        shots.extend([
+            ('fretting-front', center + offset @ Vector((0, 0, .6)), center, .27),
+            ('fretting-oblique', center + offset @ Vector((.12, .20, .4)), center, .27),
+            ('fretting-rear', center + offset @ Vector((-.02, .14, -.4)), center, .27),
+        ])
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'
     for label, position, target, scale in shots:
+        hidden = []
+        if label == 'fretting-rear':
+            for obj in scene.objects:
+                if obj.type in {'MESH', 'CURVE', 'CURVES'} and not obj.hide_render and not obj.name.startswith(('V206_', 'V545_')):
+                    hidden.append(obj); obj.hide_render = True
         camera.location = position
         camera.rotation_euler = (Vector(target) - camera.location).to_track_quat('-Z', 'Y').to_euler()
         camera.data.ortho_scale = scale
         scene.render.filepath = str(out / f'{label}-preview.png')
         bpy.ops.render.render(write_still=True)
+        for obj in hidden:
+            obj.hide_render = False
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-    if review:
+    if args.mode in ('review', 'build-review'):
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
         original = {side: head['Blink.' + side] for side in ('L', 'R')}

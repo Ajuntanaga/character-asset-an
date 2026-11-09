@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: Successful build-review run containing the checkpoint
+        description: Successful build-review or hand-build run containing the checkpoint
         required: true
         type: string
       version:
@@ -45,7 +45,7 @@ jobs:
           tag = f'checkpoint-{version}'
           tagged_sha = gh('api', f'repos/{{owner}}/{{repo}}/commits/{tag}', '--jq', '.sha').strip()
           assert tagged_sha == run['headSha'], 'Checkpoint tag must identify the successful build commit'
-          subprocess.run(['gh', 'run', 'download', run_id, '--pattern', 'blender-build-review-*', '--dir', 'download'], check=True)
+          subprocess.run(['gh', 'run', 'download', run_id, '--pattern', 'blender-*-*', '--dir', 'download'], check=True)
           candidates = list(pathlib.Path('download').rglob(f'current-{version}.delta.zst'))
           assert len(candidates) == 1, candidates
           delta = candidates[0]
