@@ -67,11 +67,14 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build'):
         center = sum((Vector(fit['contacts'][d]['target_world']) for d in ('Index', 'Middle', 'Ring', 'Pinky')), Vector()) / 4
         guitar = bpy.data.objects['V206_GUITAR_ROOT'].matrix_world
         offset = guitar.to_3x3()
-        shots.extend([
+        context_shots = shots
+        if fit['status'] == 'REJECTED_CONTACT_FIT':
+            context_shots = [s for s in shots if s[0] == 'character']
+        shots = [
             ('fretting-front', center + offset @ Vector((0, 0, .6)), center, .27),
             ('fretting-oblique', center + offset @ Vector((.12, .20, .4)), center, .27),
             ('fretting-rear', center + offset @ Vector((-.02, .14, -.4)), center, .27),
-        ])
+        ] + context_shots
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'
