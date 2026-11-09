@@ -14,7 +14,7 @@ Updated 2026-11-08. The character is unfinished. Continue the active reference-l
 ## Current files and branches
 
 Project: `/home/ajuntanaga/Projects/Blender/Character Asset_An`.
-Remote: https://github.com/Ajuntanaga/character-asset-an . HEAD `53408a2` is pushed with thumb axial-roll trials and compact-ringlet geometry.
+Remote: https://github.com/Ajuntanaga/character-asset-an . `bc7863f` is pushed with a reversible 5mm hairline feather and pupil dilation reduced from 0.90 to 0.60. Preview PNG/JSON artifacts are now separated from scene deltas to shorten the visual feedback loop.
 
 - Preserved main character: V514. Native hand foundation: V522. V528 remains a retained delta base.
 - Working reference branch V544: `production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend`; SHA256 `6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02`. Its release and remote restore are verified. Do not redo that verification.
@@ -29,7 +29,9 @@ Remote: https://github.com/Ajuntanaga/character-asset-an . HEAD `53408a2` is pus
 
 **Blink run 42569037176 succeeded.** Results: `github_results/run-42569037176/blender-blink-build-11/`. Viewed frontal open/half/closed closeups: lids close continuously with no apparent corneal pop-through. Full-surface, oblique and animation deformation remain unreviewed. Scene has 170 objects, 1957 main drivers, no missing images. Local full-detail scene: `production_v547_blink_alignment/arc_trial/Character_An_blink_alignment_TRIAL_v547.blend`. Arc diagnostic at 0/0.25/0.5/0.75/1 had zero penetrating boundary samples and minimum clearance 0.1999mm, compared with the earlier half-blink -0.4273/-0.4165mm. Do not repeat the completed frontal check.
 
-Active submissions at 2026-11-09 06:06UTC: hand run **42571049144**, groom run **42571052107**, both at `53408a2`. Hand succeeded; artifact download is underway. Groom is now running. Resume these jobs, do not duplicate. Syntax and diff checks passed before dispatch. The face reviewer recommended pupil dilation 0.90 to 0.60, verified live on both eyes. Next trial implements that without moving the eyes/lids; the groom wrapper adds a reversible 5mm material hairline feather using nearby clean skin UVs and photo weights. Neither new correction has rendered yet.
+**Hand run 42571049144 completed and is rejected.** Artifacts at `github_results/run-42571049144/blender-hand-build-12/`. All four previews inspected: thumb remains U-shaped; index/ring/pinky contact errors 3.840/4.039/4.126mm. Thumb contact 0.809mm alone is insufficient. Main/native drivers 1957/48, palms94mm, wrist anchor0.000137mm, pick unchanged. Three axial-roll seeds converged to the same bad basin; do not repeat them. A focused read-only solver review is investigating the pad/normal objective and anatomical pose constraints.
+
+**Groom run 42571052107 succeeded at `53408a2`.** Artifact download is active, destination `github_results/run-42571052107/`. This tests compact curls only, without the new feathered hairline. **Blink run 42571894509 is running at `bc7863f`**, testing the smaller pupils plus a full frontal face image. The new hairline correction has not rendered yet. Keep one running and one pending job; a new submission can replace the pending job even with cancel-in-progress false.
 
 ## Cleanup and notifications completed
 

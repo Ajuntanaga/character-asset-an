@@ -138,10 +138,18 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: blender-${{ inputs.mode }}-${{ github.run_number }}
+          name: previews-${{ inputs.mode }}-${{ github.run_number }}
           path: |
             results/*.png
             results/*.json
+          if-no-files-found: warn
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: blender-${{ inputs.mode }}-${{ github.run_number }}
+          path: |
+            results/build-manifest.json
             results/*.zst
           if-no-files-found: warn
           retention-days: 7
