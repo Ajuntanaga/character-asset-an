@@ -13,9 +13,9 @@ Updated 2026-11-09 UTC. The character is unfinished. Continue the active referen
 
 ## Current state (2026-11-09 UTC)
 
-Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://github.com/Ajuntanaga/character-asset-an . Source through `81f8443` pushed; V556 combined correction prepared for the next commit. V554 run42585046848 and V555 run42586200698 succeeded; all ten preview images reviewed. Main rig remains V357_CLOUDRIG_CONTROLS with 1,957 drivers. Root is sole writer. Read-only children completed posterior-mask geometry and archive-candidate checks; root remains sole writer.
+Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://github.com/Ajuntanaga/character-asset-an . Source through `d2bd151` pushed. V556 run42589302878 succeeded09:03UTC; all seven actual preview images reviewed. V557 shared-lock groom and lower synthetic skin relief are prepared for cloud execution. Main rig remains V357_CLOUDRIG_CONTROLS with 1,957 drivers. Root is sole writer; no children or local heavy jobs active.
 - Preserved main V514, native hand V522, delta base V528. Reference branch V544: `production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend`; SHA256 `6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02`. Release and remote restore verified; do not repeat.
-- Live GUI on workspace7: `production_v545_fretting_hand/run-42568146113/Character_An_fretting_hand_TRIAL_v545.blend`. Main1957 drivers, dirty=false at08:40UTC. Check again before replacing the scene. V554 delta download completed08:52UTC in `github_results/run-42585046848/blender-combined-build-31/`; restore and GUI load pending.
+- Live GUI on workspace7: `production_v554_combined_reference/run-42585046848/Character_An_combined_reference_TRIAL_v554.blend`. Restored SHA256 `384976aaed800dced83dece932b6717bea29cbe51235990601d9b9bd55d6f9a3` matches cloud manifest. Main1957 drivers, dirty=false at08:56UTC,247 datablock objects. Textured SOLID viewport; existing second Blender window is an Image Editor. Check dirty state before replacing scene.
 - V545 hands, V546 groom, V547 face/blinks, V550 guitar, V551 beard are INDEPENDENT V544 trials. None is merged or production accepted.
 
 ## Latest visual results and V554 trial
@@ -31,12 +31,16 @@ V554 combined trial42585046848 at39896d7 succeeded08:28UTC. `pipeline/build_v554
 - New `refine_v554_scalp_surface.py`: weld coincident UV seam coordinates, select456-group outer hairline, flood its interior, smooth120 passes with fixed boundary and7mm movement cap. Apply identical displacement to every shape key. Fill internal skin-labelled holes. Root sampling and collision use this same current smoothed scalp, triangulated with original UVMap; never use the archived lumpy V371 surface for this trial. Offline actual-mesh topology confirmed15536 interior groups and no face flood.
 - Remove global strand x-clamp. Replace170mm straight part with70mm irregular tapered part and pigmented scalp shader. Vary curl axes/radius/handedness; no claim of natural hair until rendered.
 - Replace only continuous upper-margin slot0 black material with copied warm waterline tissue; individual V394 lashes retain dark material.
-- V554 raised jacket light albedo to(.045,.050,.048), worsening broad baked-light bands. V556 pending correction replaces only the ramp factor with existing rest-position V384_Weave_height, narrow charcoal range(.008,.009,.009)–(.018,.021,.020). Retains colored-detail saturation mask, roughness and bump. No render of this correction yet.
+- V554 raised jacket light albedo to(.045,.050,.048), worsening broad baked-light bands. V556 replaces only the ramp factor with existing rest-position V384_Weave_height, narrow charcoal range(.008,.009,.009)–(.018,.021,.020). Broad gray bands reduced in actual render; jacket remains too leathery and smooth. Retains colored-detail saturation mask, roughness and bump.
 - Python syntax, YAML and git diff whitespace passed including triangulation correction. V554 must preserve1957 drivers and save full detail before simplified previews.
 
 V555 de-lit face run42586200698 at81f8443 succeeded08:33UTC. All four views inspected: baked shading reduced but face remains soft/waxy, and profile has temple/sideburn smearing. Rejected as a final texture. Original4K atlas preserved. Generated1254px derivative SHA256 `fa8bbf0db871b3b77461fae8f728025a045498a374c6a4a3fb7912e79aa0af1a`, provenance `assets/generated/face_delit_v555/`. Keep optional `delit_face=false` for ordinary combined trials. No V555 full-scene download needed.
 
-V556 prepared08:53UTC, not rendered yet. Dark lower nape is raw Tripo hair baked into V377 skin faces, outside the old V371 mask (whose minimum z1.655 is ear-top height). Extend only the connected posterior skin region with center z1.575–1.668 and y>=.035, excluding the ear ellipse, seeded once at maximum-y hair-touch face. Independent snapshot replay selects5264 faces, no front/lateral islands. Runtime perimeter and interior-size gates still apply. Shorten nape fibers toward2–4mm with3.8mm root spacing; preserve ordinary6.5mm spacing elsewhere. Narrow reopened lid height from8/3.8mm to6.2/2.3mm and power from.52/.58 to.82/.95. Jacket uses weave height as narrow charcoal albedo factor. Combined job renders face, profile, character, wardrobe and blink0/.5/1; full scene saved before preview simplification. Keep delit_face=false.
+V556 run42589302878 atd2bd151 succeeded09:03UTC. Previews downloaded to `github_results/run-42589302878/previews-combined-build-33/`; all seven viewed. Posterior nape now covered, but lower edge blunt; hair remains repetitive coils. Narrower lids reduce excessive eye white; eye corners remain unnaturally flat/dark and facial texture waxy. Frontal blink0/.5/1 closes continuously, actual control values verified. Full character still has unequal-looking hands and unresolved contact. 209scene objects,1957drivers,zero missing images. Full-scene artifact not downloaded; do not promote as finished.
+
+V556 posterior extension selects only connected back skin y>=.035,z>=1.575, ear exclusion, one max-y hair-touch seed;5264faces, no front/lateral islands. Nape fibers2–4mm, root spacing3.8mm; elsewhere6.5mm. Lid heights6.2/2.3mm, powers.82/.95. Keep delit_face=false.
+
+V557 `pipeline/build_v557_reference_locks.py` replaces independent fiber coils with shared partial-lock centerlines, parallel-transport bundle frames, and dense short wavy undercoat. Sparse macro guides9–14mm, nape4.5mm;33points per strand; variable partial turns. Part thinning occurs once after root sampling, rather than filling the lane through retries. Native curves and existing bone parenting retained. Original photo atlas unchanged; inherited synthetic pore strength drops.18→.04 and distance55→20µm on face/photo/lid materials. Python syntax and diff whitespace pass; visual result pending cloud execution.
 
 ## Hand diagnosis and next change
 
@@ -56,12 +60,14 @@ Archived V530–V541 (12 obsolete full trials) as Zstandard deltas against retai
 
 Additionally archived V500/501/506/507/508/523–527 with streamed restoration SHA256 verification, reclaiming3,547,257,288bytes. Aggregate `local_archive_cleanup_2026-11-09_older.json`; every folder has exact restore metadata. **Cumulative7,970,308,260bytes (7.97GB/7.42GiB) reclaimed.** V542 hardlink preserved. Never delete retained V528 base or designated checkpoints.
 
-Twenty-seven BCA_task notifications delivered HTTP200; continue milestone and5–10minute updates. Continue every5–10minutes or milestones; no daemon. Approximately79GiB disk free,19GiB memory available, swap1.9GiB; keep heavy rendering remote. Local viewers `chafa`, `image` available. Manual compaction unavailable; keep this handoff current.
+Additionally archived V497/495/494/493/491/490/484/482/481/478 with streamed restoration SHA256 verification, reclaiming3,529,332,789bytes. Manifest `local_archive_cleanup_2026-11-09_pre500.json`. **Cumulative11,499,641,049bytes (11.50GB/10.71GiB) reclaimed.** V483 designated checkpoint retained. No archive job is running.
+
+Thirty BCA_task notifications delivered HTTP200, latest09:06UTC. Continue every5–10minutes or milestones; no daemon. Approximately82GiB disk free,15GiB memory available, swap2.0GiB; keep heavy rendering remote. Local viewers `chafa`, `image` available. Manual compaction unavailable; keep this handoff current.
 
 ## Next work
 
-1. Validate/commit/push V556 and dispatch one combined-build without de-lit face. Review seven actual renders; keep hand and reference targets unchanged.
-2. Restore downloaded V554 against V544 and verify SHA, check GUI dirty state, then load on workspace7. Preserve prior scenes and keep trial status.
+1. Commit/push and dispatch V557 combined-build with delit_face=false; inspect actual previews before accepting hair changes. Keep hand targets unchanged pending user answer.
+2. V554 restored and loaded on workspace7; show actual cloud images in existing Blender Image Editor. Restore a newer verified delta only if it improves the result.
 3. Correct face proportions/texture from reference comparison. Native hand pose remains unresolved; do not rerun stopped solver sweeps. Continue reference-led corrections.
 
 ## Commands and important details

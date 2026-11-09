@@ -50,7 +50,7 @@ def build(root, out, *, coherent=False, scalp=None):
         weights = (1.-u,u*(1.-v),u*v)
         root = a*weights[0]+b*weights[1]+c*weights[2]
         part = part_center(root.y) if scalp is not None else .040+.13*(root.y+.070)
-        skip = (part_strength(root) > .15 if scalp is not None else
+        skip = (False if scalp is not None else
                 root.z>1.720 and -.105<root.y<.065 and abs(root.x-part)<part_root_half_width)
         if skip:
             continue
@@ -64,6 +64,13 @@ def build(root, out, *, coherent=False, scalp=None):
             continue
         grid[cell].append((root, root_spacing))
         roots.append((root,face,weights))
+
+    if coherent and scalp is not None:
+        from build_v557_reference_locks import generate
+        points, radii, uvs, metadata = generate(roots, bvh)
+        return _install_groom(out, rig, body, version, roots, points, radii, uvs,
+                              points.shape[1], spacing, coherent, scalp, source,
+                              started, part_root_half_width, metadata)
 
     children,steps = 48,25
     t = np.linspace(0.,1.,steps,dtype=np.float32)
@@ -255,6 +262,16 @@ def build(root, out, *, coherent=False, scalp=None):
     radii = np.concatenate((radii,base_radii),axis=1)
     uvs = np.concatenate((uvs,base_uvs),axis=1)
     children += base_children
+    return _install_groom(out, rig, body, version, roots, points, radii, uvs,
+                          steps, spacing, coherent, scalp, source, started,
+                          part_root_half_width)
+
+
+def _install_groom(out, rig, body, version, roots, points, radii, uvs,
+                   steps, spacing, coherent, scalp, source, started,
+                   part_root_half_width, metadata=None):
+    points = points.reshape(-1, steps, 3)
+    strands = len(points)
     # Stop the underlying scan from producing a broad plastic highlight.
     underlay = bpy.data.materials['V371_DARK_HAIR_UNDERLAY']
     for shader in underlay.node_tree.nodes:
@@ -271,7 +288,7 @@ def build(root, out, *, coherent=False, scalp=None):
             old.hide_set(True)
     (out/'previous_visibility_b.json').write_text(json.dumps(visibility,indent=2))
     curves = bpy.data.hair_curves.new(version + '_LOOSE_CURL_STRANDS')
-    curves.add_curves([steps]*(len(roots)*children))
+    curves.add_curves([steps]*strands)
     curves.set_types(type='CATMULL_ROM')
     curves.position_data.foreach_set('vector',points.ravel())
     curves.attributes.new('radius','FLOAT','POINT').data.foreach_set('value',radii.ravel())
@@ -292,16 +309,15 @@ def build(root, out, *, coherent=False, scalp=None):
     obj.parent,obj.parent_type,obj.parent_bone = rig,'BONE','DEF-Head'
     obj.matrix_parent_inverse = frame.inverted()
     obj.matrix_basis = Matrix.Identity(4)
-    obj['guide_count'],obj['strand_count'] = len(roots),len(roots)*children
+    obj['guide_count'],obj['strand_count'] = len(roots),strands
     obj['reference'] = 'character_an_front_v1.png'
     curves.update_tag()
     bpy.context.view_layer.update()
-    report = {'guides':len(roots),'strands':len(roots)*children,'points':len(curves.points),
+    report = {'guides':len(roots),'strands':strands,'points':len(curves.points),
               'root_spacing_m':spacing,'build_seconds':time.monotonic()-started,
               'posterior_root_spacing_m': .0038 if scalp is not None else spacing,
               'posterior_guides': sum(root.z < 1.655 and root.y > -.022 for root, _, _ in roots),
               'rig_drivers':len(rig.animation_data.drivers)}
-    (out/'groom_report_b.json').write_text(json.dumps(report,indent=2))
 
     report['points_per_strand'] = steps
     report['coherent_flow'] = coherent
@@ -323,6 +339,14 @@ def build(root, out, *, coherent=False, scalp=None):
         report['mixed_curl_handedness'] = True
         report['top_curl_pitch_m'] = [.007, .012]
         report['visible_part_half_width_m'] = .0022
+    if metadata:
+        for key in ('curl_axis_tilt_radians', 'top_curl_pitch_m', 'bundle_radius_m',
+                    'fiber_trajectory_variation', 'part_root_half_width_m'):
+            report.pop(key, None)
+        report.update(metadata)
+        obj['guide_count'] = report['guides']
+        obj['geometry_model'] = report['geometry_model']
     report['version'] = version
+    (out/'groom_report_b.json').write_text(json.dumps(report,indent=2))
     (out/'groom-report.json').write_text(json.dumps(report,indent=2))
     return report

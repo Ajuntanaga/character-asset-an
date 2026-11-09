@@ -12,7 +12,9 @@ def build(output, delit_face=False):
     from build_v547_blink_alignment import build as build_eyes
     from refine_v550_maple_density import build as build_guitar
 
-    report = {'revision': 'V556', 'groom': build_groom(out, save=False, clean_scalp=True)}
+    from build_v557_reference_locks import reduce_skin_microrelief
+    report = {'revision': 'V557', 'skin_microrelief': reduce_skin_microrelief()}
+    report['groom'] = build_groom(out, save=False, clean_scalp=True)
     report['eyes'] = build_eyes(root, out)
     report['guitar'] = build_guitar(out, save=False)
     if delit_face:

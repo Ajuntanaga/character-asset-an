@@ -2212,3 +2212,15 @@ V554 run42585046848 succeeded; all six renders reviewed and remain unaccepted. V
 V556 connects the posterior nape mask only (y>=.035,z>=1.575), with one max-y hair-touch seed and ear exclusion. Snapshot replay selected5264 faces without former lateral islands; actual Blender runtime and visual results still pending. Short nape fibers, narrower6.2/2.3mm eyelid aperture, and weave-driven charcoal jacket albedo are combined. Main1957-driver rig unchanged. Seven remote previews include open/half/closed blink.
 
 Additional10 old scenes V500/501/506/507/508/523–527 were converted to exact-restorable Zstandard deltas, reclaiming3,547,257,288bytes. Cumulative cleanup7,970,308,260bytes. V528 base and designated checkpoints retained. Named-finger chord assignment remains unchanged pending the already-sent user question.
+
+## 2026-11-09 V556 dispatched, V554 restored, archive batch complete
+
+V556 combined run42589302878 atd2bd151 started08:54UTC; seven previews pending. V554 restored with SHA256384976aaed800dced83dece932b6717bea29cbe51235990601d9b9bd55d6f9a3 and loaded in existing Blender on workspace7,1957drivers,dirty=false08:56UTC. Optional MATERIAL viewport setting was unsupported by Workbench; corrected to textured SOLID.
+
+Ten superseded V497/495/494/493/491/490/484/482/481/478 full scenes became exact-restorable deltas against retained V528;3,529,332,789bytes reclaimed. Every decoded SHA matched before unlink; local_archive_cleanup_2026-11-09_pre500.json plus per-scene metadata record restoration. Cumulative11,499,641,049bytes reclaimed. V483 and designated checkpoints retained. BCA_task notification28 deliveredHTTP200.
+
+## 2026-11-09 V556 reviewed and V557 shared-lock groom prepared
+
+V556 run42589302878 succeeded09:03UTC; all seven actual images reviewed. Posterior hair coverage and eye aperture improved; frontal blink closes continuously. Uniform coils, blunt nape, dark flat eye corners, waxy face and leathery jacket remain. Hand size/contact still unresolved.209scene objects,1957drivers,no missing images. Preview artifact retained; full scene not downloaded.
+
+V557 groups fibers along shared partial locks with transported cross-sections, varied lengths and density; dense short waves cover the underlay. Part roots thinned after sampling so rejected candidates cannot refill it. Original photo atlas kept; synthetic face/lid microrelief reduced. Local syntax/diff checks pass; render pending. Thirty successful BCA_task notifications through09:06UTC. Cleanup total remains11,499,641,049bytes; no local archive job active.
