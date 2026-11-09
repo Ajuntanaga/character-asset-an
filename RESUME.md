@@ -13,9 +13,9 @@ Updated 2026-11-09 UTC. The character is unfinished. Continue the active referen
 
 ## Current state (2026-11-09 UTC)
 
-Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://github.com/Ajuntanaga/character-asset-an . Source through `d2bd151` pushed. V556 run42589302878 succeeded09:03UTC; all seven actual preview images reviewed. V557 shared-lock groom and lower synthetic skin relief are prepared for cloud execution. Main rig remains V357_CLOUDRIG_CONTROLS with 1,957 drivers. Root is sole writer; no children or local heavy jobs active.
+Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://github.com/Ajuntanaga/character-asset-an . Source through `ac84650` pushed. V556 run42589302878 succeeded09:03UTC; all seven actual preview images reviewed. V557 shared-lock groom/lower skin relief run42591243696 started09:09UTC and is rendering. V558 eye-surface correction prepared. Main rig remains V357_CLOUDRIG_CONTROLS with 1,957 drivers. Root is sole writer; one read-only child measures current hand proportions through MCP. No local heavy job active.
 - Preserved main V514, native hand V522, delta base V528. Reference branch V544: `production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend`; SHA256 `6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02`. Release and remote restore verified; do not repeat.
-- Live GUI on workspace7: `production_v554_combined_reference/run-42585046848/Character_An_combined_reference_TRIAL_v554.blend`. Restored SHA256 `384976aaed800dced83dece932b6717bea29cbe51235990601d9b9bd55d6f9a3` matches cloud manifest. Main1957 drivers, dirty=false at08:56UTC,247 datablock objects. Textured SOLID viewport; existing second Blender window is an Image Editor. Check dirty state before replacing scene.
+- Live GUI on workspace7: `production_v554_combined_reference/run-42585046848/Character_An_combined_reference_TRIAL_v554.blend`. Restored SHA256 `384976aaed800dced83dece932b6717bea29cbe51235990601d9b9bd55d6f9a3` matches cloud manifest. Main1957 drivers, dirty=false at09:13UTC,247 datablock objects. Textured SOLID viewport; existing second Blender window is an Image Editor. Check dirty state before replacing scene.
 - V545 hands, V546 groom, V547 face/blinks, V550 guitar, V551 beard are INDEPENDENT V544 trials. None is merged or production accepted.
 
 ## Latest visual results and V554 trial
@@ -40,7 +40,9 @@ V556 run42589302878 atd2bd151 succeeded09:03UTC. Previews downloaded to `github_
 
 V556 posterior extension selects only connected back skin y>=.035,z>=1.575, ear exclusion, one max-y hair-touch seed;5264faces, no front/lateral islands. Nape fibers2–4mm, root spacing3.8mm; elsewhere6.5mm. Lid heights6.2/2.3mm, powers.82/.95. Keep delit_face=false.
 
-V557 `pipeline/build_v557_reference_locks.py` replaces independent fiber coils with shared partial-lock centerlines, parallel-transport bundle frames, and dense short wavy undercoat. Sparse macro guides9–14mm, nape4.5mm;33points per strand; variable partial turns. Part thinning occurs once after root sampling, rather than filling the lane through retries. Native curves and existing bone parenting retained. Original photo atlas unchanged; inherited synthetic pore strength drops.18→.04 and distance55→20µm on face/photo/lid materials. Python syntax and diff whitespace pass; visual result pending cloud execution.
+V557 `pipeline/build_v557_reference_locks.py` replaces independent fiber coils with shared partial-lock centerlines, parallel-transport bundle frames, and dense short wavy undercoat. Sparse macro guides9–14mm, nape4.5mm;33points per strand; variable partial turns. Part thinning occurs once after root sampling, rather than filling the lane through retries. Native curves and existing bone parenting retained. Original photo atlas unchanged; inherited synthetic pore strength drops.18→.04 and distance55→20µm on face/photo/lid materials. Python syntax and diff whitespace pass; visual result pending run42591243696 at ac84650.
+
+V558 `pipeline/refine_v558_eye_surface.py` copies the imported eye material and node group. Live mesh inspection confirms increasing Dilation contracts the pupil (the old V547 comment was reversed). Trial uses .90 instead of .60. The imported shader has seven Bump nodes at5m distance, 30cm Ambient Occlusion baked into Base Color, and Specular IOR Level0. V558 bypasses only that AO color path, sets bump distance20µm, restores specular .5 and roughness .24. Iris colors, separate corneal cap and globe/lid geometry retained. Actual improvement must be judged from rendered previews. Original materials retained; main1957 drivers unchanged. Diagnostic exports under `local_diagnostics/eyes_2026-11-09/`.
 
 ## Hand diagnosis and next change
 
@@ -62,11 +64,11 @@ Additionally archived V500/501/506/507/508/523–527 with streamed restoration S
 
 Additionally archived V497/495/494/493/491/490/484/482/481/478 with streamed restoration SHA256 verification, reclaiming3,529,332,789bytes. Manifest `local_archive_cleanup_2026-11-09_pre500.json`. **Cumulative11,499,641,049bytes (11.50GB/10.71GiB) reclaimed.** V483 designated checkpoint retained. No archive job is running.
 
-Thirty BCA_task notifications delivered HTTP200, latest09:06UTC. Continue every5–10minutes or milestones; no daemon. Approximately82GiB disk free,15GiB memory available, swap2.0GiB; keep heavy rendering remote. Local viewers `chafa`, `image` available. Manual compaction unavailable; keep this handoff current.
+Thirty-two BCA_task notifications delivered HTTP200, latest09:16UTC. Continue every5–10minutes or milestones; no daemon. Approximately82GiB disk free,15GiB memory available, swap2.0GiB; keep heavy rendering remote. Local viewers `chafa`, `image` available. Manual compaction unavailable; keep this handoff current.
 
 ## Next work
 
-1. Commit/push and dispatch V557 combined-build with delit_face=false; inspect actual previews before accepting hair changes. Keep hand targets unchanged pending user answer.
+1. Inspect V557 run42591243696 actual previews; V558 physical eye-surface correction prepared for the next combined-build with delit_face=false. Keep hand targets unchanged pending user answer.
 2. V554 restored and loaded on workspace7; show actual cloud images in existing Blender Image Editor. Restore a newer verified delta only if it improves the result.
 3. Correct face proportions/texture from reference comparison. Native hand pose remains unresolved; do not rerun stopped solver sweeps. Continue reference-led corrections.
 

@@ -130,8 +130,9 @@ def build(root, out):
         report[side]['arc_maximum_displacement_m'] = corrections
     rig.update_tag()
     bpy.context.view_layer.update()
-    # Keep the established globe/lid geometry. The previous 0.90 dilation
-    # obscured most of the brown iris visible in the frontal reference.
+    # Historical V547 trial value. Actual source-mesh inspection established
+    # that raising this control CONTRACTS the pupil; V558 corrects the combined
+    # trial after this build. Keep this independent trial reproducible.
     report['pupils'] = {}
     for side in ('L', 'R'):
         dilation = bpy.data.objects['V374_EYE.' + side].data.shape_keys.key_blocks['Dilation']

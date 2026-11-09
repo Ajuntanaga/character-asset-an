@@ -13,9 +13,11 @@ def build(output, delit_face=False):
     from refine_v550_maple_density import build as build_guitar
 
     from build_v557_reference_locks import reduce_skin_microrelief
-    report = {'revision': 'V557', 'skin_microrelief': reduce_skin_microrelief()}
+    report = {'revision': 'V558', 'skin_microrelief': reduce_skin_microrelief()}
     report['groom'] = build_groom(out, save=False, clean_scalp=True)
     report['eyes'] = build_eyes(root, out)
+    from refine_v558_eye_surface import build as build_eye_surface
+    report['eye_surface'] = build_eye_surface(out)
     report['guitar'] = build_guitar(out, save=False)
     if delit_face:
         from refine_v555_face_albedo import build as build_face
