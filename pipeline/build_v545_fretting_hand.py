@@ -34,6 +34,41 @@ def tree_for(obj):
         evaluated.to_mesh_clear()
 
 
+def pad_trees_for(obj):
+    """Keep each pad on its own distal skin, excluding nails and other digits."""
+    evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    mesh = evaluated.to_mesh()
+    try:
+        groups = {obj.vertex_groups[f'DEF-Finger_{d}3.R'].index: d for d in DIGITS}
+        owners = {v.index: next((groups[g.group] for g in v.groups
+                                if g.group in groups and g.weight > .95), None)
+                  for v in mesh.vertices}
+        faces = {d: [] for d in DIGITS}
+        ids = {d: [] for d in DIGITS}
+        for polygon in mesh.polygons:
+            digit = owners[polygon.vertices[0]]
+            if (polygon.material_index == 0 and digit is not None and
+                    all(owners[i] == digit for i in polygon.vertices)):
+                faces[digit].append(list(polygon.vertices))
+                ids[digit].append(polygon.index)
+        vertices = [evaluated.matrix_world @ v.co for v in mesh.vertices]
+        assert all(faces.values()), 'Missing weighted distal skin region'
+        return {d: (BVHTree.FromPolygons(vertices, faces[d]), ids[d]) for d in DIGITS}
+    finally:
+        evaluated.to_mesh_clear()
+
+
+def sample_pad(trees, digit, matrix, pad):
+    anchor = matrix @ pad[0]
+    expected_normal = (matrix.to_3x3().inverted().transposed() @ pad[1]).normalized()
+    tree, polygon_ids = trees[digit]
+    point, normal, index, distance = tree.find_nearest(anchor, .004)
+    assert point is not None, f'{digit} pad lost its persistent skin anchor'
+    if normal.dot(expected_normal) < 0:
+        normal.negate()
+    return point, normal, polygon_ids[index], distance
+
+
 def minimize(residual, initial, low, high, iterations=40):
     x = np.clip(initial, low, high)
     history = []
@@ -124,9 +159,9 @@ def build(out):
         modifier.levels = 1
     bpy.context.view_layer.update()
     # Identify each pad opposite its nail, including the rounded distal pulp.
-    rest_tree = tree_for(hand)
+    rest_trees = pad_trees_for(hand)
     nail_vertices = {i for p in hand.data.polygons if p.material_index == 1 for i in p.vertices}
-    pads = {}; radials = {}; nail_directions = {}; axes = {}; spreads = {}
+    pads = {}; nail_directions = {}; axes = {}; spreads = {}
     for digit in DIGITS:
         name = f'DEF-Finger_{digit}3.R'
         bone = source[name]; group = hand.vertex_groups[name].index
@@ -139,13 +174,12 @@ def build(out):
         radial = (radial - along * radial.dot(along)).normalized()
         direction = (radial * .8 + along * .6).normalized()
         origin = bone.head_local.lerp(bone.tail_local, .6)
-        point, normal, _, _ = rest_tree.ray_cast(origin, direction, .04)
+        point, normal, _, _ = rest_trees[digit][0].ray_cast(origin, direction, .04)
         assert point is not None, f'Missing {digit} pad surface'
         if normal.dot(direction) < 0:
             normal.negate()
         pads[digit] = (bone.matrix_local.inverted() @ point,
                        bone.matrix_local.to_3x3().inverted() @ normal)
-        radials[digit] = bone.matrix_local.to_3x3().inverted() @ direction
         # Keep the dorsal nail direction independent of the ray-hit normal.
         # A rounded/lateral surface can face the string with the nail sideways.
         nail_directions[digit] = bone.matrix_local.to_3x3().inverted() @ -radial
@@ -237,20 +271,14 @@ def build(out):
             for name, q in rotations.items():
                 b = rig.pose.bones[name]; b.rotation_mode = 'QUATERNION'; b.rotation_quaternion = q
             bpy.context.view_layer.update()
-            tree = tree_for(hand)
+            trees = pad_trees_for(hand)
         result = {}
         for digit in DIGITS:
             name = f'DEF-Finger_{digit}3.R'
             matrix = world @ pose[name]
             if evaluated:
                 matrix = rig.matrix_world @ rig.pose.bones[name].matrix
-                direction = (matrix.to_3x3() @ radials[digit]).normalized()
-                center = matrix @ Vector((0, source[name].length * .6, 0))
-                point, n, _, _ = tree.ray_cast(center, direction, .035)
-                if point is None:
-                    raise RuntimeError(f'No evaluated {digit} pad')
-                if n.dot(direction) < 0:
-                    n.negate()
+                point, n, _, _ = sample_pad(trees, digit, matrix, pads[digit])
             else:
                 point = matrix @ pads[digit][0]
                 n = (matrix.to_3x3().inverted().transposed() @ pads[digit][1]).normalized()
@@ -364,22 +392,21 @@ def build(out):
         modifier.levels = level
     main.update_tag(); bpy.context.view_layer.update()
     # Check final evaluated skin after parenting, controls and full subdivision.
-    final_tree = tree_for(hand)
+    final_trees = pad_trees_for(hand)
     final = {}
     for digit in DIGITS:
         bone = rig.pose.bones[f'DEF-Finger_{digit}3.R']
         matrix = rig.matrix_world @ bone.matrix
-        direction = (matrix.to_3x3() @ radials[digit]).normalized()
-        point, n, _, _ = final_tree.ray_cast(matrix @ Vector((0, bone.bone.length * .6, 0)), direction, .035)
-        assert point is not None
-        if n.dot(direction) < 0:
-            n.negate()
+        point, n, polygon, anchor_distance = sample_pad(final_trees, digit, matrix, pads[digit])
         desired = normal if digit == 'Thumb' else -normal
         nail_direction = (matrix.to_3x3() @ nail_directions[digit]).normalized()
         final[digit] = {'pad_world': list(point), 'target_world': list(targets[digit]),
                         'distance_m': (point - targets[digit]).length, 'normal': list(n),
                         'pad_alignment': n.dot(desired),
-                        'nail_alignment': nail_direction.dot(-desired)}
+                        'nail_alignment': nail_direction.dot(-desired),
+                        'surface_region': f'DEF-Finger_{digit}3.R',
+                        'evaluated_polygon_index': polygon,
+                        'anchor_distance_m': anchor_distance}
     actual_palm = (rig.matrix_world.to_3x3() @ source_palm).length
     pick_error = max(abs(pick.matrix_world[i][j] - pick_before[i][j]) for i in range(4) for j in range(4))
     assert pick_error < 1e-5 and len(main.animation_data.drivers) == 1957
@@ -402,6 +429,7 @@ def build(out):
               'thumb_axial_roll_degrees': math.degrees(values[26]),
               'thumb_distal_flexion_degrees': np.degrees(values[24:26]).tolist(),
               'orientation_limits': {'pad_min_dot': PAD_MIN_DOT, 'nail_min_dot': NAIL_MIN_DOT},
+              'pad_sampling': 'nearest own distal skin to persistent pad; weight > 0.95; radius 4mm',
               'contact_ok': contact_ok, 'orientation_ok': orientation_ok,
               'nail_polygons': sum(p.material_index == 1 for p in hand.data.polygons)}
     (out / 'hand-fit-report.json').write_text(json.dumps(report, indent=2))
