@@ -12,6 +12,8 @@ from mathutils.bvhtree import BVHTree
 from guitar_geometry import GuitarGeometry, load_authoritative_mapping
 
 DIGITS = ('Index', 'Middle', 'Ring', 'Pinky', 'Thumb')
+PAD_MIN_DOT = math.cos(math.radians(35.))
+NAIL_MIN_DOT = math.cos(math.radians(60.))
 
 
 def frame(bones, side):
@@ -124,7 +126,7 @@ def build(out):
     # Identify each pad opposite its nail, including the rounded distal pulp.
     rest_tree = tree_for(hand)
     nail_vertices = {i for p in hand.data.polygons if p.material_index == 1 for i in p.vertices}
-    pads = {}; radials = {}; axes = {}; spreads = {}
+    pads = {}; radials = {}; nail_directions = {}; axes = {}; spreads = {}
     for digit in DIGITS:
         name = f'DEF-Finger_{digit}3.R'
         bone = source[name]; group = hand.vertex_groups[name].index
@@ -144,6 +146,9 @@ def build(out):
         pads[digit] = (bone.matrix_local.inverted() @ point,
                        bone.matrix_local.to_3x3().inverted() @ normal)
         radials[digit] = bone.matrix_local.to_3x3().inverted() @ direction
+        # Keep the dorsal nail direction independent of the ray-hit normal.
+        # A rounded/lateral surface can face the string with the nail sideways.
+        nail_directions[digit] = bone.matrix_local.to_3x3().inverted() @ -radial
         for j in (1, 2, 3):
             b = source[f'DEF-Finger_{digit}{j}.R']
             direction = (b.tail_local - b.head_local).normalized()
@@ -196,11 +201,11 @@ def build(out):
     # then thumb flex/opposition/flex/flex/axial roll. The donor is already a
     # left hand despite its .R bone names. Native joint lengths never change.
     prior = np.r_[[center_x, .125, -.060], [0., 0., 0.],
-                  np.radians([45, 75, 40, 0] * 4 + [20, 20, 20, 15, 0])]
+                  np.radians([45, 75, 40, 0] * 4 + [20, 20, 10, 5, 0])]
     low = np.r_[[center_x - .09, .045, -.125], [-1.5] * 3,
                 np.radians([0, 10, 12, -25] * 4 + [-45, -75, -10, -10, -90])]
     high = np.r_[[center_x + .09, .185, .025], [1.5] * 3,
-                 np.radians([95, 105, 80, 25] * 4 + [60, 75, 45, 40, 90])]
+                 np.radians([95, 105, 80, 25] * 4 + [60, 75, 20, 15, 90])]
 
     def matrices(values):
         linear = Euler(tuple(values[3:6]), 'XYZ').to_matrix() @ initial_linear
@@ -249,16 +254,22 @@ def build(out):
             else:
                 point = matrix @ pads[digit][0]
                 n = (matrix.to_3x3().inverted().transposed() @ pads[digit][1]).normalized()
-            result[digit] = (point, n)
+            nail_direction = (matrix.to_3x3() @ nail_directions[digit]).normalized()
+            result[digit] = (point, n, nail_direction)
         return result, world, pose
 
     def residual(values, evaluated=False):
         points, world, pose = contacts(values, evaluated)
         r = []
-        for digit, (point, n) in points.items():
+        for digit, (point, n, nail_direction) in points.items():
             r.extend(point - targets[digit])
             desired = normal if digit == 'Thumb' else -normal
-            r.extend((n - desired) * (.006 if digit == 'Thumb' else .003))
+            r.extend((n - desired) * .002)
+            # Orientation is an explicit acceptance condition below. The
+            # high-weight cone penalties guide the fit without demanding a
+            # perfectly flat pad/nail on the rounded fingertip.
+            r.append(max(0., PAD_MIN_DOT - n.dot(desired)) * .08)
+            r.append(max(0., NAIL_MIN_DOT - nail_direction.dot(-desired)) * .08)
         # Keep non-thumb knuckles and shafts on the front/edge of the fretboard.
         for digit in DIGITS[:4]:
             for j in (1, 2, 3):
@@ -299,14 +310,9 @@ def build(out):
                        rig.matrix_world @ b.head).length for b in rig.pose.bones)
     assert joint_error < 1e-5, f'Analytic/evaluated joint mismatch: {joint_error}'
     print('Fitting native left hand: analytic joints', flush=True)
-    # Compare a small bounded set of CMC orientations analytically before the
-    # expensive skin refinement; opposition can have different local minima.
-    candidates = []
-    for roll_degrees in (-45., 0., 45.):
-        seed = prior.copy(); seed[26] = math.radians(roll_degrees)
-        candidate, history = minimize(residual, seed, low, high, 70)
-        candidates.append((history[-1], candidate, history, roll_degrees))
-    _, values, coarse_history, selected_roll_seed = min(candidates, key=lambda item: item[0])
+    # Earlier axial-roll seeds all converged to the same hooked pose. Solve
+    # once with the revised pad frame and extended thumb joint limits.
+    values, coarse_history = minimize(residual, prior, low, high, 90)
     print(f'Coarse fit loss: {coarse_history[-1]}; refining evaluated skin', flush=True)
     values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 24)
     print(f'Surface fit loss: {surface_history[-1]}; attaching to main arm', flush=True)
@@ -366,17 +372,25 @@ def build(out):
         direction = (matrix.to_3x3() @ radials[digit]).normalized()
         point, n, _, _ = final_tree.ray_cast(matrix @ Vector((0, bone.bone.length * .6, 0)), direction, .035)
         assert point is not None
+        if n.dot(direction) < 0:
+            n.negate()
+        desired = normal if digit == 'Thumb' else -normal
+        nail_direction = (matrix.to_3x3() @ nail_directions[digit]).normalized()
         final[digit] = {'pad_world': list(point), 'target_world': list(targets[digit]),
-                        'distance_m': (point - targets[digit]).length, 'normal': list(n)}
+                        'distance_m': (point - targets[digit]).length, 'normal': list(n),
+                        'pad_alignment': n.dot(desired),
+                        'nail_alignment': nail_direction.dot(-desired)}
     actual_palm = (rig.matrix_world.to_3x3() @ source_palm).length
     pick_error = max(abs(pick.matrix_world[i][j] - pick_before[i][j]) for i in range(4) for j in range(4))
     assert pick_error < 1e-5 and len(main.animation_data.drivers) == 1957
     palm_clearance = min(neck_clearance(rig.matrix_world @ p) for p in palm_samples)
     wrist_clearance = min(neck_clearance(rig.matrix_world @ p) - .008 for p in wrist_samples)
-    fit_status = ('TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW' if
-                  max(c['distance_m'] for c in final.values()) < .003 and
-                  min(palm_clearance, wrist_clearance) >= -.0005 else
-                  'REJECTED_CONTACT_FIT')
+    orientation_ok = all(c['pad_alignment'] >= PAD_MIN_DOT and
+                         c['nail_alignment'] >= NAIL_MIN_DOT for c in final.values())
+    contact_ok = (max(c['distance_m'] for c in final.values()) < .003 and
+                  min(palm_clearance, wrist_clearance) >= -.0005)
+    fit_status = ('TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW' if contact_ok and orientation_ok
+                  else 'REJECTED_CONTACT_OR_ORIENTATION_FIT')
     report = {'status': fit_status, 'main_drivers': 1957,
               'native_drivers': len(rig.animation_data.drivers), 'targets': target_meta,
               'palm_neck_clearance_m': palm_clearance,
@@ -386,8 +400,9 @@ def build(out):
               'wrist_anchor_error_m': wrist_error, 'pick_matrix_error': pick_error,
               'values': values.tolist(), 'coarse_loss': coarse_history, 'surface_loss': surface_history,
               'thumb_axial_roll_degrees': math.degrees(values[26]),
-              'selected_roll_seed_degrees': selected_roll_seed,
-              'coarse_seed_losses': [{'roll_degrees': item[3], 'loss': item[0]} for item in candidates],
+              'thumb_distal_flexion_degrees': np.degrees(values[24:26]).tolist(),
+              'orientation_limits': {'pad_min_dot': PAD_MIN_DOT, 'nail_min_dot': NAIL_MIN_DOT},
+              'contact_ok': contact_ok, 'orientation_ok': orientation_ok,
               'nail_polygons': sum(p.material_index == 1 for p in hand.data.polygons)}
     (out / 'hand-fit-report.json').write_text(json.dumps(report, indent=2))
     # Appending retains a weak origin-library record even with all IDs local.
