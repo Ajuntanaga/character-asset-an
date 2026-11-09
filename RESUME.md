@@ -14,7 +14,7 @@ Updated 2026-11-08. The character is unfinished. Continue the active reference-l
 ## Current files and branches
 
 Project: `/home/ajuntanaga/Projects/Blender/Character Asset_An`.
-Remote: https://github.com/Ajuntanaga/character-asset-an . `bc7863f` is pushed with a reversible 5mm hairline feather and pupil dilation reduced from 0.90 to 0.60. Preview PNG/JSON artifacts are now separated from scene deltas to shorten the visual feedback loop.
+Remote: https://github.com/Ajuntanaga/character-asset-an . `bb84612` added explicit fingertip-pad/nail orientation checks and tighter thumb limits. The next commit adds rounder eyelid apertures, reduced baked-photo influence on skin, varied curl planes and outer-boundary-only hairline feathering. Pupil dilation is 0.60. Preview PNG/JSON artifacts are separated from scene deltas to shorten the visual feedback loop.
 
 - Preserved main character: V514. Native hand foundation: V522. V528 remains a retained delta base.
 - Working reference branch V544: `production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend`; SHA256 `6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02`. Its release and remote restore are verified. Do not redo that verification.
@@ -23,26 +23,34 @@ Remote: https://github.com/Ajuntanaga/character-asset-an . `bc7863f` is pushed w
 
 ## Jobs: resume these, do not duplicate
 
-**Hand run 42568146113 succeeded but is visually rejected.** Results: `github_results/run-42568146113/blender-hand-build-9/`. Viewed front/oblique/rear/character. Palms both 94mm; main/native drivers 1957/48; wrist anchor error 0.000149mm; pick unchanged. Palm/wrist clearance 12.70/3.734mm. Contact errors index 2.030, middle hover 0.101, ring 1.731, pinky 2.875, thumb 1.950mm. Thumb is hooked and all four distal flexions reached zero. New unrendered trial adds thumb CMC axial roll, three analytic roll seeds, smaller MCP/IP flexion limits, rounded DIP posture priors and rear-neck containment. The donor is already LEFT despite .R bone names: V522 maps it to main .L; V528 explicitly reflects it for the right hand. Do NOT add another reflection. Rear-neck normal equals -fretboard normal here; changing that is also not a fix.
+**Hand run 42568146113 succeeded but is visually rejected.** Results: `github_results/run-42568146113/blender-hand-build-9/`. Palms94mm; main/native drivers1957/48; wrist error0.000149mm; pick unchanged. Contact errors index2.030, middle-hover0.101, ring1.731, pinky2.875, thumb1.950mm. Thumb hooked and finger distal flexions zero. The donor is already LEFT despite .R bone names: V522 maps it to main .L; V528 explicitly reflects it for the right hand. Do NOT reflect again. Rear-neck normal equals -fretboard normal; changing that is not a fix.
 
 **Groom run 42568298993 succeeded but is visually rejected.** Download complete at `github_results/run-42568298993/blender-groom-build-10/`. Viewed all three images against the photoreal triptych: curls still form rows of extended springs, hairline remains serrated. New unrendered trial reduces axial advance from 18-22mm to 4-7mm while keeping the 11-14mm loop diameter and coherent directions. This targets compact ringlets; it does not fix the hairline by itself.
 
 **Blink run 42569037176 succeeded.** Results: `github_results/run-42569037176/blender-blink-build-11/`. Viewed frontal open/half/closed closeups: lids close continuously with no apparent corneal pop-through. Full-surface, oblique and animation deformation remain unreviewed. Scene has 170 objects, 1957 main drivers, no missing images. Local full-detail scene: `production_v547_blink_alignment/arc_trial/Character_An_blink_alignment_TRIAL_v547.blend`. Arc diagnostic at 0/0.25/0.5/0.75/1 had zero penetrating boundary samples and minimum clearance 0.1999mm, compared with the earlier half-blink -0.4273/-0.4165mm. Do not repeat the completed frontal check.
 
-**Hand run 42571049144 completed and is rejected.** Artifacts at `github_results/run-42571049144/blender-hand-build-12/`. All four previews inspected: thumb remains U-shaped; index/ring/pinky contact errors 3.840/4.039/4.126mm. Thumb contact 0.809mm alone is insufficient. Main/native drivers 1957/48, palms94mm, wrist anchor0.000137mm, pick unchanged. Three axial-roll seeds converged to the same bad basin; do not repeat them. A focused read-only solver review is investigating the pad/normal objective and anatomical pose constraints.
+**Hand run 42571049144 completed and is rejected.** Artifacts at `github_results/run-42571049144/blender-hand-build-12/`. All four previews inspected: thumb remains U-shaped; index/ring/pinky contact errors 3.840/4.039/4.126mm. Thumb contact 0.809mm alone is insufficient. Main/native drivers1957/48, palms94mm, wrist anchor0.000137mm, pick unchanged. Three axial-roll seeds converged to the same bad basin; do not repeat them. Focused solver review found underconstrained surface orientation and saturated joints.
 
-**Groom run 42571052107 succeeded at `53408a2`.** Artifact download is active, destination `github_results/run-42571052107/`. This tests compact curls only, without the new feathered hairline. **Blink run 42571894509 is running at `bc7863f`**, testing the smaller pupils plus a full frontal face image. The new hairline correction has not rendered yet. Keep one running and one pending job; a new submission can replace the pending job even with cancel-in-progress false.
+**Groom run 42571052107 succeeded at `53408a2`.** Downloaded to `github_results/run-42571052107/`. Front inspected: compact curls improve length but still show repeated upright wire loops; not accepted. Read-only groom follow-up is identifying the next concrete shape correction.
+
+**Blink run 42571894509 succeeded at `bc7863f`.** Downloaded to `github_results/run-42571894509/`. Full face inspected: smaller pupils are applied; angular/squinted lids and chalky skin still differ markedly from the reference. Read-only face follow-up is identifying the next correction. Earlier frontal blink continuity acceptance remains narrow.
+
+**Groom/hairline run 42572380374 succeeded at `c8dbabb` and is rejected.** Previews downloaded to `github_results/run-42572380374/previews-groom-build-15/`. Front and oblique images show large bald patches inside the curl mass: feathering included internal hair/skin material holes. Read-only MCP topology confirmed 136 boundary components; the largest (456 points, 195mm X span) is the outer hairline. The next trial feathers only that component, skips clean-skin samples farther than 25mm and varies curl axes by 17–57 degrees. Delta has not been downloaded.
+
+**Hand run 42572857511 is processing at `bb84612`.** Uses independent pad/nail frames, pad35deg and nail60deg orientation limits with explicit final acceptance checks, thumb MCP/IP caps20/15deg, priors10/5deg, and one analytic solve. Await actual contact/deformation images before accepting. One running and one pending job maximum: a new submission can replace the pending job even with cancel-in-progress false.
+
+**Next blink/face trial:** V549 aperture upper8mm/power0.52, lower3.8mm/power0.58, then recompute the V547 blink arc. Preserve the original photo skin material; copy it and multiply its photo blend weight by 0.65. Source syntax and diff passed; runtime and images pending. Read-only guitar follow-up is locating the figured-maple/burst mismatch; no guitar edits yet.
 
 ## Cleanup and notifications completed
 
 2026-11-08: archived V530–V541 (12 superseded trials) as Zstandard deltas against retained `github_release/current-v528.blend`. Each decoded stream matched the original SHA256 before the full scene was removed. Recovered **4,250,005,688 bytes**. Aggregate record: `local_archive_cleanup_2026-11-08.json`; each scene folder has `<original>.blend.archived.json` with exact restore command, base/delta checksums and original checksum. These are local archive records, not a remote backup of all history. Do not delete the base. Root filesystem now approximately 77GiB available; memory approximately 20GiB available and swap 466MiB.
 
-Five BCA_task notifications delivered HTTP200 during this pass: build progress, cleanup milestone, completed render review and new trial submissions (latest about 22:13PST Nov8). Continue at meaningful milestones and during long waits.
+Eight BCA_task notifications delivered HTTP200 during this pass (latest about22:35PST Nov8); a transient DNS failure succeeded on retry. Continue at meaningful milestones and during long waits, approximately every5–10minutes. Automatic context compaction is supported by this concise handoff; no manual compaction control is available.
 
 ## Next work
 
-1. Retrieve the submitted hand and compact-ringlet trials from Actions. Inspect actual images and contact/clearance; do not accept on numerical distance alone.
-2. Address the observed groom hairline and remaining hand deformation after the trials. Preserve the approved M3 chord targets.
+1. Retrieve hand42572857511 previews from Actions. Inspect actual images and contact/clearance; do not accept on numerical distance alone.
+2. Dispatch the prepared blink trial, then the groom trial when the pending slot is free. Review actual images. Preserve the approved M3 chord targets.
 3. Integrate acceptable branches reversibly and inspect the full character. Continue reference face/skin/hair, guitar shape/figured-maple finish, wardrobe, rig/deformation and animation work. None is finished.
 
 ## Commands and important details

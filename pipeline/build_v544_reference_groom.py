@@ -88,6 +88,16 @@ def build(root, out, *, coherent=False):
             theta = .16 * flow
         tangent = (tangent*math.cos(theta)+across*math.sin(theta)).normalized()
         across = normal.cross(tangent).normalized()
+        curl_axis, curl_normal, curl_across = tangent, normal, across
+        if coherent:
+            # Vary the plane over clump-sized patches. Tangential axes made all
+            # ringlets stand like parallel hoops; tilt them into rounded groups.
+            clump = (.60 * math.sin(root.x * math.tau / .021 + root.y * math.tau / .027)
+                     + .40 * math.sin(root.x * math.tau / .014 - root.y * math.tau / .019 + 1.7))
+            tilt = .65 + .35 * clump
+            curl_axis = (tangent*math.cos(tilt) + normal*math.sin(tilt)).normalized()
+            curl_normal = (normal-curl_axis*normal.dot(curl_axis)).normalized()
+            curl_across = curl_normal.cross(curl_axis).normalized()
         topness = min(1.,max(0.,(root.z-1.69)/.08))
         curl_radius = rng.uniform(.0045,.0065)*(.60+.40*topness)
         axial_length = rng.uniform(.012,.020)*(.50+.50*topness)
@@ -112,18 +122,18 @@ def build(root, out, *, coherent=False):
         height = radius*(1.-np.cos(angle))+.0006+.0005*np.sin(math.pi*t)
         side = radius*np.sin(angle)
         center = (np.asarray(root)[None,:]
-                  +np.asarray(normal)[None,:]*height[:,None]
-                  +np.asarray(across)[None,:]*side[:,None]
-                  +np.asarray(tangent)[None,:]*(axial_length*t)[:,None])
+                  +np.asarray(curl_normal)[None,:]*height[:,None]
+                  +np.asarray(curl_across)[None,:]*side[:,None]
+                  +np.asarray(curl_axis)[None,:]*(axial_length*t)[:,None])
         # Each bundle shares one curl. Fibers only vary within its cross section.
         # Their stable offsets retain clump thickness through the free tip.
-        radial = (np.asarray(normal)[None,:]*np.cos(angle)[:,None]
-                  +np.asarray(across)[None,:]*np.sin(angle)[:,None])
+        radial = (np.asarray(curl_normal)[None,:]*np.cos(angle)[:,None]
+                  +np.asarray(curl_across)[None,:]*np.sin(angle)[:,None])
         spread_angle = nprng.uniform(0.,math.tau,children)
         spread_radius = np.sqrt(nprng.uniform(0.,1.,children))*rng.uniform(.0008,.00125)
         offset_radial = (np.cos(spread_angle)*spread_radius)[:,None,None]*radial[None,:,:]
         offset_axial = ((np.sin(spread_angle)*spread_radius)[:,None,None]
-                        *np.asarray(tangent)[None,None,:])
+                        *np.asarray(curl_axis)[None,None,:])
         spread = (.82+.18*np.exp(-4.*t))[None,:,None]
         block = center[None,:,:]+(offset_radial+offset_axial)*spread
         wave_phase = nprng.uniform(0.,math.tau,children)

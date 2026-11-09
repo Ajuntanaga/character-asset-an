@@ -70,14 +70,21 @@ def rebuild_lashes(out):
     report['rig_drivers']=len(rig.animation_data.drivers)
     (out/'eyelash-report.json').write_text(json.dumps(report,indent=2))
 
-def build(root, out):
+def build(root, out, reopen=False):
     assert not bpy.app.is_job_running('RENDER')
     scene = bpy.context.scene
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     head = rig.pose.bones['Head']
     body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
     assert len(rig.animation_data.drivers) == 1957
-    assert not body.get('V544_eye_opening_applied')
+    if reopen:
+        assert body.get('V544_eye_opening_applied')
+        assert not body.get('V549_rounded_eyelids')
+        assert not body.get('V547_blink_alignment')
+    else:
+        assert not body.get('V544_eye_opening_applied')
+    upper_height, upper_power = (.0080, .52) if reopen else (.0070, .82)
+    lower_height, lower_power = (.0038, .58) if reopen else (.0028, .95)
     mesh = body.data
     keys = mesh.shape_keys.key_blocks
     basis = keys['Basis']
@@ -87,7 +94,9 @@ def build(root, out):
         for edge in polygon.edge_keys:
             edge_counts[tuple(sorted(edge))] += 1
 
-    report = {'eyes':{}}
+    report = {'eyes':{}, 'aperture_profile': {
+        'upper_height_m': upper_height, 'upper_power': upper_power,
+        'lower_height_m': lower_height, 'lower_power': lower_power}}
     backup = {}
     for side in ('L','R'):
         sign = 1 if side == 'L' else -1
@@ -133,8 +142,8 @@ def build(root, out):
             u = (old.x-xmin)/(xmax-xmin)
             baseline = zl*(1-u)+zr*u
             upper = old.z >= baseline
-            new_z = baseline + (.0070*math.sin(math.pi*u)**.82 if upper
-                                else -.0028*math.sin(math.pi*u)**.95)
+            new_z = baseline + (upper_height*math.sin(math.pi*u)**upper_power if upper
+                                else -lower_height*math.sin(math.pi*u)**lower_power)
             change = new_z-old.z
             v = start
             for row in range(11):
@@ -191,11 +200,15 @@ def build(root, out):
 
 
     body['V544_eye_opening_applied']=True
+    if reopen:
+        body['V549_rounded_eyelids']=True
     mesh.update()
     head['Blink.L']=head['Blink.R']=0.
     rig.update_tag();bpy.context.view_layer.update()
     report['rig_drivers']=len(rig.animation_data.drivers)
-    (out/'before_lid_coordinates.json').write_text(json.dumps(backup))
-    (out/'eyelid-report.json').write_text(json.dumps(report,indent=2))
-    rebuild_lashes(out)
+    prefix = 'rounded-' if reopen else ''
+    (out/(prefix+'before_lid_coordinates.json')).write_text(json.dumps(backup))
+    (out/(prefix+'eyelid-report.json')).write_text(json.dumps(report,indent=2))
+    if not reopen:
+        rebuild_lashes(out)
     return report

@@ -77,7 +77,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         guitar = bpy.data.objects['V206_GUITAR_ROOT'].matrix_world
         offset = guitar.to_3x3()
         context_shots = shots
-        if fit['status'] == 'REJECTED_CONTACT_FIT':
+        if fit['status'].startswith('REJECTED'):
             context_shots = [s for s in shots if s[0] == 'character']
         shots = [
             ('fretting-front', center + offset @ Vector((0, 0, .6)), center, .27),

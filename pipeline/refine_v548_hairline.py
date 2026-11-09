@@ -1,7 +1,9 @@
 """Feather the polygon hair mask into nearby clean scalp colour, reversibly."""
 import json
+from collections import defaultdict
 from pathlib import Path
 import bpy
+from mathutils import Vector
 from mathutils.kdtree import KDTree
 
 
@@ -21,8 +23,7 @@ def build(output, width=.005):
     def key(i):
         return tuple(round(c, 5) for c in basis[i].co)
 
-    hair_keys = {key(i) for i in hair_vertices}
-    skin_loops, boundary = {}, {}
+    skin_loops = {}
     for polygon in mesh.polygons:
         if polygon.material_index not in skin_indices:
             continue
@@ -31,8 +32,37 @@ def build(output, width=.005):
             if basis[i].co.z < 1.52:
                 continue
             skin_loops.setdefault(i, loop)
-            if key(i) in hair_keys:
-                boundary[key(i)] = basis[i].co.copy()
+    # The scan has many tiny skin-labelled holes inside the hair cap. Their
+    # edges are not hairlines: feathering each one creates bald spots. Select
+    # the connected outer perimeter after welding coincident UV-seam vertices.
+    edge_kinds = defaultdict(set)
+    for polygon in mesh.polygons:
+        kind = ('hair' if polygon.material_index == original_index else
+                'skin' if polygon.material_index in skin_indices else None)
+        if kind is None:
+            continue
+        for a, b in polygon.edge_keys:
+            if min(basis[a].co.z, basis[b].co.z) < 1.52:
+                continue
+            edge = tuple(sorted((key(a), key(b))))
+            if edge[0] != edge[1]:
+                edge_kinds[edge].add(kind)
+    graph = defaultdict(set)
+    for (a, b), kinds in edge_kinds.items():
+        if len(kinds) == 2:
+            graph[a].add(b); graph[b].add(a)
+    remaining, components = set(graph), []
+    while remaining:
+        seed = remaining.pop()
+        component, stack = {seed}, [seed]
+        while stack:
+            for point in graph[stack.pop()]:
+                if point in remaining:
+                    remaining.remove(point); component.add(point); stack.append(point)
+        components.append(component)
+    outer = max(components, key=len)
+    assert max(p[0] for p in outer)-min(p[0] for p in outer) > .15
+    boundary = {point: Vector(point) for point in outer}
     assert len(boundary) > 50, len(boundary)
     edge_tree = KDTree(len(boundary))
     for index, point in enumerate(boundary.values()):
@@ -62,12 +92,12 @@ def build(output, width=.005):
     for i in hair_vertices:
         point = basis[i].co
         distance = edge_tree.find(point)[2]
-        t = min(1., distance / width)
-        coverage.data[i].value = t*t*(3.-2.*t)
         _, source, source_distance = clean_tree.find(point)
+        t = min(1., distance / width) if source_distance < .025 else 1.
+        coverage.data[i].value = t*t*(3.-2.*t)
         sources[i] = skin_loops[source]
         photo_weight.data[i].value = previous_weight.data[source].value
-        if distance < width:
+        if t < 1.:
             distances.append(source_distance)
             feathered += 1
     for polygon in hair_faces:
@@ -108,6 +138,7 @@ def build(output, width=.005):
     mesh.update()
     report = {'original_material': original.name, 'trial_material': material.name,
               'hair_faces': len(hair_faces), 'boundary_points': len(boundary),
+              'ignored_internal_boundary_components': len(components)-1,
               'feather_width_m': width, 'feathered_vertices': feathered,
               'clean_skin_candidates': len(clean),
               'maximum_skin_sample_distance_m': max(distances),

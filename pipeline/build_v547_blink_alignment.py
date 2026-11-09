@@ -16,10 +16,14 @@ def build(root, out):
     body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
     assert body.get('V544_eye_opening_applied')
     assert not body.get('V547_blink_alignment')
+    # Re-open the reference aperture before computing the closed alignment and
+    # corneal arc. Closed blink targets remain unchanged by this contour edit.
+    from build_v544_reference_eyelids import build as reshape_aperture
+    aperture = reshape_aperture(root, out, reopen=True)
     keys = body.data.shape_keys.key_blocks
     material = list(body.data.materials).index(bpy.data.materials['V365_LID_SKIN'])
     counts = Counter(tuple(sorted(e)) for p in body.data.polygons for e in p.edge_keys)
-    report, backup, lid_vertices = {}, {}, {}
+    report, backup, lid_vertices = {'aperture': aperture}, {}, {}
     for side, sign in (('L', 1), ('R', -1)):
         adjacent = defaultdict(set)
         for p in body.data.polygons:
@@ -117,6 +121,27 @@ def build(root, out):
         dilation = bpy.data.objects['V374_EYE.' + side].data.shape_keys.key_blocks['Dilation']
         report['pupils'][side] = {'previous_dilation': dilation.value, 'trial_dilation': .60}
         dilation.value = .60
+    # Retain the fitted photo UV and original material for rollback. Reduce
+    # its baked lighting contribution only on the face's existing material.
+    original_skin = bpy.data.materials['V377_REFERENCE_PHOTO_SKIN']
+    original_slot = list(body.data.materials).index(original_skin)
+    balanced_skin = original_skin.copy()
+    balanced_skin.name = 'V549_REFERENCE_PHOTO_SKIN_BALANCED'
+    nodes, links = balanced_skin.node_tree.nodes, balanced_skin.node_tree.links
+    composite = nodes['V377_PhotoSkinComposite']
+    weight = composite.inputs[0].links[0].from_socket
+    gain = nodes.new('ShaderNodeMath')
+    gain.name = 'V549_PhotoSkinBlendGain'
+    gain.operation = 'MULTIPLY'; gain.inputs[1].default_value = .65
+    links.new(weight, gain.inputs[0]); links.new(gain.outputs[0], composite.inputs[0])
+    body.data.materials.append(balanced_skin)
+    affected = 0
+    for polygon in body.data.polygons:
+        if polygon.material_index == original_slot:
+            polygon.material_index = len(body.data.materials)-1
+            affected += 1
+    report['photo_skin'] = {'material': balanced_skin.name, 'photo_blend_gain': .65,
+                            'affected_faces': affected, 'original_material': original_skin.name}
     report['status'] = 'TRIAL_REQUIRES_RENDER_AND_DEFORMATION_REVIEW'
     report['rig_drivers'] = len(rig.animation_data.drivers)
     (out / 'blink-alignment-backup.json').write_text(json.dumps(backup))
