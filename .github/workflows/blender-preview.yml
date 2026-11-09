@@ -15,6 +15,11 @@ on:
         description: Test the lower-resolution de-lit albedo with combined-build
         type: boolean
         default: false
+      review_scope:
+        description: Full review, or face and mouth views for a mouth-only correction
+        type: choice
+        options: [full, mouth]
+        default: full
 permissions:
   contents: read
 concurrency:
@@ -30,6 +35,7 @@ jobs:
       MODE: ${{ inputs.mode }}
       FACIAL_HAIR: ${{ inputs.facial_hair }}
       DELIT_FACE: ${{ inputs.delit_face }}
+      REVIEW_SCOPE: ${{ inputs.review_scope }}
     steps:
       - uses: actions/checkout@v4
       - name: Download pinned scene
@@ -95,6 +101,7 @@ jobs:
           extra=()
           if [ "$FACIAL_HAIR" = true ]; then extra+=(--facial-hair); fi
           if [ "$DELIT_FACE" = true ]; then extra+=(--delit-face); fi
+          extra+=(--review-scope "${REVIEW_SCOPE:-full}")
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec "scenes/$SCENE" --threads 2 --python-exit-code 1 --python pipeline/github_scene_job.py -- --mode "$MODE" --output results "${extra[@]}"
       - name: Package built scene as a checked delta
         if: inputs.mode == 'build-review'

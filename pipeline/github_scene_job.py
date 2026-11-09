@@ -13,11 +13,14 @@ parser.add_argument('--output', default='results')
 parser.add_argument('--facial-hair', action='store_true')
 parser.add_argument('--delit-face', action='store_true')
 parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
+parser.add_argument('--review-scope', choices=('full', 'mouth'), default='full')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 if args.facial_hair and args.mode != 'blink-build':
     parser.error('--facial-hair requires --mode blink-build')
 if args.delit_face and args.mode != 'combined-build':
     parser.error('--delit-face requires --mode combined-build')
+if args.review_scope == 'mouth' and args.mode != 'combined-build':
+    parser.error('--review-scope mouth requires --mode combined-build')
 render_device = {'requested': args.device, 'selected': 'CPU'}
 if args.device == 'CUDA':
     preferences = bpy.context.preferences.addons['cycles'].preferences
@@ -73,7 +76,8 @@ if missing or bpy.data.libraries:
     raise RuntimeError(f'Scene is not self-contained: missing={missing}, linked={len(bpy.data.libraries)}')
 report = {'blender': bpy.app.version_string, 'scene': Path(bpy.data.filepath).name,
           'objects': len(scene.objects), 'main_drivers': count, 'missing_images': missing,
-          'mode': args.mode, 'quality_status': 'WORK_IN_PROGRESS_NOT_ACCEPTED'}
+          'mode': args.mode, 'review_scope': args.review_scope,
+          'quality_status': 'WORK_IN_PROGRESS_NOT_ACCEPTED'}
 (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
 if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build', 'combined-build'):
     review = args.mode != 'preview'
@@ -152,6 +156,8 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
                      ('face-profile', (2, 0, 1.65), (0, 0, 1.65), .40),
                      ('face-oblique', (.70, -1.7, 1.68), (0, 0, 1.65), .40),
                      ('face-clay', (.30, -2, 1.70), (0, 0, 1.65), .40)]
+        if args.review_scope == 'mouth':
+            shots = [shot for shot in shots if shot[0] in ('face-front', 'face-oblique')]
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'
@@ -215,7 +221,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             obj.hide_render = False
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-    if args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
+    if args.review_scope == 'full' and args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
         original = {side: head['Blink.' + side] for side in ('L', 'R')}
@@ -263,7 +269,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             for label, pucker, jaw, position in (
                     ('mouth-neutral', 0., 0., (0, -2, 1.565)),
                     ('mouth-pucker', .45, 0., (0, -2, 1.565)),
-                    ('mouth-pucker-jaw-oblique', .45, .2, (.3, -1.6, 1.60))):
+                    ('mouth-pucker-jaw-oblique', .45, .45, (.3, -1.6, 1.60))):
                 head['MouthPucker'], head['JawOpen'] = pucker, jaw
                 rig.update_tag(); bpy.context.view_layer.update()
                 actual = {name: bpy.data.objects[name].data.shape_keys.key_blocks['MouthPucker'].value
