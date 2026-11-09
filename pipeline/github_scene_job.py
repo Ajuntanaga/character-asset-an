@@ -5,10 +5,10 @@ import math
 from pathlib import Path
 import sys
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build'), default='check')
+parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build'), default='check')
 parser.add_argument('--output', default='results')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
@@ -29,6 +29,10 @@ if args.mode == 'blink-build':
     from build_v547_blink_alignment import build
     build(Path(__file__).resolve().parents[1], out)
     bpy.ops.wm.save_as_mainfile(filepath=str(out.resolve() / 'Character_An_blink_alignment_TRIAL_v547.blend'), compress=True)
+if args.mode == 'guitar-build':
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from refine_v550_maple_density import build
+    build(out)
 scene = bpy.context.scene
 rig = bpy.data.objects.get('V357_CLOUDRIG_CONTROLS')
 if rig is None or rig.animation_data is None:
@@ -43,8 +47,8 @@ report = {'blender': bpy.app.version_string, 'scene': Path(bpy.data.filepath).na
           'objects': len(scene.objects), 'main_drivers': count, 'missing_images': missing,
           'mode': args.mode, 'quality_status': 'WORK_IN_PROGRESS_NOT_ACCEPTED'}
 (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build'):
-    review = args.mode in ('review', 'build-review', 'hand-build', 'groom-build', 'blink-build')
+if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build'):
+    review = args.mode != 'preview'
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
     scene.cycles.samples = 32 if review else 8
@@ -92,6 +96,10 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         ]
     if args.mode == 'blink-build':
         shots = [('face-front', (0, -2, 1.68), (0, 0, 1.65), .40)]
+    if args.mode == 'guitar-build':
+        guitar = bpy.data.objects['V206_GUITAR_ROOT']
+        shots = [('guitar-front', guitar.matrix_world @ Vector((.665, 0, 1.)),
+                  guitar.matrix_world @ Vector((.665, 0, 0)), .47), shots[0]]
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'
@@ -101,8 +109,15 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             for obj in scene.objects:
                 if obj.type in {'MESH', 'CURVE', 'CURVES'} and not obj.hide_render and not obj.name.startswith(('V206_', 'V545_')):
                     hidden.append(obj); obj.hide_render = True
+        if label == 'guitar-front':
+            guitar_parts = set(guitar.children_recursive)
+            for obj in scene.objects:
+                if obj.type in {'MESH', 'CURVE', 'CURVES'} and not obj.hide_render and obj not in guitar_parts:
+                    hidden.append(obj); obj.hide_render = True
         camera.location = position
         camera.rotation_euler = (Vector(target) - camera.location).to_track_quat('-Z', 'Y').to_euler()
+        if label == 'guitar-front':
+            camera.rotation_euler = (guitar.matrix_world.to_3x3() @ Matrix(((0, -1, 0), (1, 0, 0), (0, 0, 1)))).to_euler()
         camera.data.ortho_scale = scale
         scene.render.filepath = str(out / f'{label}-preview.png')
         bpy.ops.render.render(write_still=True)
