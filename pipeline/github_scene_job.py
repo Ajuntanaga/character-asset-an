@@ -120,25 +120,33 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         shots = [('guitar-front', guitar.matrix_world @ Vector((.625, 0, 1.)),
                   guitar.matrix_world @ Vector((.625, 0, 0)), .55), shots[0]]
     if args.mode == 'combined-build':
-        # V556 changes the head and jacket. Reuse the previous guitar review;
-        # spend this bounded job on the affected surfaces and blink states.
+        # Keep camera and illumination identical for the reversible shape fit.
         shots = [
-            ('character', (.35, -3.5, 1.3), (0, 0, .94), 2.12),
             ('face-front', (0, -2, 1.68), (0, 0, 1.65), .40),
-            ('groom-side', (1.8, 0, 1.74), (0, 0, 1.70), .38),
-            ('wardrobe-front', (0, -3, 1.24), (0, 0, 1.24), .94),
+            ('face-profile', (2, 0, 1.65), (0, 0, 1.65), .40),
+            ('face-clay-front-before', (0, -2, 1.68), (0, 0, 1.65), .40),
+            ('face-clay-front-after', (0, -2, 1.68), (0, 0, 1.65), .40),
+            ('face-clay-profile-before', (2, 0, 1.65), (0, 0, 1.65), .40),
+            ('face-clay-profile-after', (2, 0, 1.65), (0, 0, 1.65), .40),
         ]
         if args.delit_face:
             shots = [shots[0], shots[1],
                      ('face-oblique', (.70, -1.7, 1.68), (0, 0, 1.65), .40),
-                     ('face-profile', (1.8, -.15, 1.68), (0, 0, 1.65), .40)]
+                     ('face-clay', (.30, -2, 1.70), (0, 0, 1.65), .40)]
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'
     for label, position, target, scale in shots:
         hidden = []
         override = bpy.context.view_layer.material_override
-        if label == 'face-clay':
+        shape_key = None
+        if label.startswith('face-clay-'):
+            shape_key = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks['V560_ReferenceCentralFace']
+            saved_shape_value = shape_key.value
+            if label.endswith('-before'):
+                shape_key.value = 0.
+            bpy.context.view_layer.update()
+        if label.startswith('face-clay'):
             clay = bpy.data.materials.new('DIAGNOSTIC_NEUTRAL_CLAY')
             clay.use_nodes = True
             bsdf = clay.node_tree.nodes.get('Principled BSDF')
@@ -167,6 +175,9 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         camera.data.ortho_scale = scale
         scene.render.filepath = str(out / f'{label}-preview.png')
         bpy.ops.render.render(write_still=True)
+        if shape_key is not None:
+            shape_key.value = saved_shape_value
+            bpy.context.view_layer.update()
         bpy.context.view_layer.material_override = override
         scene.cycles.samples = report['preview']['samples']
         scene.render.resolution_x = scene.render.resolution_y = size
