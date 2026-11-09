@@ -1,4 +1,4 @@
-"""Generate overlapping partial locks and a wavy undercoat on the current scalp."""
+"""Generate compact irregular locks and a wavy undercoat on the current scalp."""
 from collections import defaultdict
 import math
 import random
@@ -98,16 +98,18 @@ def generate(roots, bvh):
         children = round((80 + 48 * top) * (1. - nape) + 28 * nape)
         length = rng.uniform(.023, .035) * (.65 + .35 * top) * (1. - .40 * side)
         length = length * (1. - nape) + rng.uniform(.0025, .004) * nape
-        amplitude = rng.uniform(.007, .011) * (.55 + .45 * top) * (1. - .40 * side) * (1. - .90 * nape)
+        amplitude = rng.uniform(.003, .005) * (.55 + .45 * top) * (1. - .40 * side) * (1. - .90 * nape)
         phase = rng.uniform(-math.pi, math.pi)
-        turn = rng.uniform(.35, .72) * (-1 if rng.random() < .45 else 1)
+        turn = rng.uniform(.75, 1.05) * (-1 if rng.random() < .45 else 1)
         angle = phase + math.tau * turn * t
         envelope = np.sin(math.pi * t)**1.15
         height = .0004 + amplitude * envelope * (.9 + .7 * np.sin(angle)) + .0012 * t
         lateral = amplitude * envelope * np.cos(angle)
         center = (np.asarray(root)[None, :] + tangent[None, :] * (length * t)[:, None]
                   + normal[None, :] * height[:, None] + across[None, :] * lateral[:, None])
-        width = rng.uniform(.0018, .0028) * (1. - .35 * side) * (1. - .72 * nape)
+        # V557's 3.6–5.6mm bundles merged into thick ropes at render distance.
+        # Keep the real fiber radius; reduce the visible lock cross-section.
+        width = rng.uniform(.0006, .0011) * (1. - .35 * side) * (1. - .72 * nape)
         spread = (.65 + .45 * np.sin(math.pi * t)) * (1. - .90 * t**3)
         _clear_center(center, bvh, width * spread)
         u, v = _transport_frames(center, normal)
@@ -116,9 +118,11 @@ def generate(roots, bvh):
         offsets = (np.cos(disk_angle)[:, None, None] * u[None, :, :]
                    + np.sin(disk_angle)[:, None, None] * v[None, :, :])
         block = center[None, :, :] + offsets * disk_radius[:, None, None] * spread[None, :, None]
-        wave = nprng.uniform(.000008, .000065, children)[:, None] * np.sin(
+        # Small, tapered child departures avoid the perfectly parallel bands
+        # without returning to the previously rejected independent wire coils.
+        wave = nprng.uniform(.00010, .00030, children)[:, None] * np.sin(
             nprng.uniform(0., math.tau, children)[:, None] + math.tau * 1.4 * t[None, :])
-        block += v[None, :, :] * wave[:, :, None]
+        block += v[None, :, :] * (wave * np.sin(math.pi * t)[None, :])[:, :, None]
         _anchor(block, bvh)
         radius = nprng.uniform(.000034, .000048, children)[:, None] * (1. - .85 * t**2)[None, :]
         radius[:, -1] = .000003
@@ -162,14 +166,17 @@ def generate(roots, bvh):
     points, radii, uvs = np.concatenate(points), np.concatenate(radii), np.concatenate(uvs).astype(np.float32)
     assert np.isfinite(points).all() and np.isfinite(radii).all()
     assert 100 < len(macro_roots) < len(dense_roots)
-    report = {'geometry_model': 'V557_shared_partial_locks_with_wavy_undercoat',
+    report = {'geometry_model': 'V559_compact_locks_with_wavy_undercoat',
               'guides': len(macro_roots), 'undercoat_guides': len(dense_roots),
               'primary_strands': macro_strands, 'undercoat_strands': len(dense_roots) * base_children,
               'top_root_spacing_m': .014, 'side_root_spacing_m': .009,
               'posterior_root_spacing_m': .0045, 'posterior_guides': sum(
                   root.z < 1.655 and root.y > -.022 for root, _, _ in macro_roots),
-              'top_lock_length_m': [.023, .035], 'partial_turns': [.35, .72],
-              'top_bundle_radius_m': [.0018, .0028], 'independent_fiber_coils': False,
+              'top_lock_length_m': [.023, .035], 'partial_turns': [.75, 1.05],
+              'top_lock_amplitude_m': [.003, .005],
+              'top_bundle_radius_m': [.0006, .0011],
+              'child_departure_amplitude_m': [.00010, .00030],
+              'independent_fiber_coils': False,
               'fiber_frames': 'parallel_transport', 'part_maximum_root_thinning': .72}
     return points, radii, uvs, report
 

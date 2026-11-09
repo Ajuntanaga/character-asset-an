@@ -2229,3 +2229,10 @@ V557 groups fibers along shared partial locks with transported cross-sections, v
 ## 2026-11-09 V557 running and V558 eye-surface correction
 
 V557 run42591243696 at ac84650 started09:09UTC, still rendering09:17UTC. Live eye inspection found Dilation is reversed from the V547 comment: larger values contract the pupil. Eye shader also retained seven 5m Bump distances,30cm AO in its base color and specular0. V558 copies both material and group, bypasses shader AO, sets20µm bump distance, specular.5/roughness.24 and Dilation.90. Original iris colors/corneal cap and all lid geometry retained. Syntax/diff checks pass; actual visual result pending. Current live scene remains V554,dirty=false/main1957. A read-only child is measuring current picking/fretting palm proportions; no blind hand scaling or pending fret-assignment changes. BCA_task notification32 deliveredHTTP20009:16UTC. Cleanup remains11,499,641,049bytes.
+
+
+## 2026-11-09 V558 reviewed; V559 compact curls and matte fabric
+
+V557 run42591243696 and V558 run42592308744 succeeded; all seven previews from each reviewed. V558 improves iris visibility but narrow flat lids, chalky sclera, waxy face, rope curls and unequal hands remain. Main1957drivers retained; no missing images. Native curve probe confirms true3–48µm radii and scale1.0, ruling out default-radius error. V554 live scene stays clean on workspace7.
+
+V559 reduces macro curl lobes7–11→3–5mm and bundle radius1.8–2.8→.6–1.1mm, with.75–1.05turns and tapered100–300µm child deviations. Copied jacket roughness.84–.96/specular.10 suppresses broad smooth reflections; reference macro-check remains a separate gap. Syntax/diff checks pass; visual outcome pending dispatch. Thirty-five successful BCA_task notifications through09:30UTC. Cleanup remains11,499,641,049bytes.
