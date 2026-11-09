@@ -37,7 +37,7 @@ def build(root, out, *, coherent=False):
     rng = random.Random(382)
     nprng = np.random.default_rng(382)
     spacing = .0065
-    part_root_half_width = .008 if coherent else .0035
+    part_root_half_width = .0035
     roots,grid = [],defaultdict(list)
     for _ in range(130000):
         face = faces[bisect.bisect_left(areas,rng.random()*area)]
@@ -84,8 +84,8 @@ def build(root, out, *, coherent=False):
         if coherent:
             # Keep the broad flow, but vary neighboring curl planes. Purely
             # coherent directions made the compact curls read as rows of wire.
-            flow = math.sin(root.x * math.tau / .045 + root.y * math.tau / .060)
-            size_field = .5 + .5 * math.sin(root.x * math.tau / .055 - root.y * math.tau / .070)
+            flow = rng.uniform(-1., 1.)
+            size_field = rng.random()
             theta = .16 * flow + .70 * theta
         tangent = (tangent*math.cos(theta)+across*math.sin(theta)).normalized()
         across = normal.cross(tangent).normalized()
@@ -93,8 +93,7 @@ def build(root, out, *, coherent=False):
         if coherent:
             # Partly project each lock along the head, with enough outward
             # rise for neighboring fiber bundles to overlap naturally.
-            clump = (.60 * math.sin(root.x * math.tau / .021 + root.y * math.tau / .027)
-                     + .40 * math.sin(root.x * math.tau / .014 - root.y * math.tau / .019 + 1.7))
+            clump = rng.uniform(-1., 1.)
             tilt = .78 + .14 * clump
             curl_axis = (tangent*math.cos(tilt) + normal*math.sin(tilt)).normalized()
             curl_normal = (normal-curl_axis*normal.dot(curl_axis)).normalized()
@@ -124,18 +123,34 @@ def build(root, out, *, coherent=False):
                   +np.asarray(curl_normal)[None,:]*height[:,None]
                   +np.asarray(curl_across)[None,:]*side[:,None]
                   +np.asarray(curl_axis)[None,:]*(axial_length*t)[:,None])
-        # Each bundle shares one curl. Fibers only vary within its cross section.
-        # Their stable offsets retain clump thickness through the free tip.
+        # Reference locks share a flow, but their fibers do not trace identical
+        # hollow rings. V546 varies each fiber's anchored trajectory as well as
+        # its root spread; V544 remains available as the older bundle model.
         radial = (np.asarray(curl_normal)[None,:]*np.cos(angle)[:,None]
                   +np.asarray(curl_across)[None,:]*np.sin(angle)[:,None])
         spread_angle = nprng.uniform(0.,math.tau,children)
-        bundle_width = rng.uniform(.0015,.0022) if coherent else rng.uniform(.0008,.00125)
+        bundle_width = rng.uniform(.0007,.0011) if coherent else rng.uniform(.0008,.00125)
         spread_radius = np.sqrt(nprng.uniform(0.,1.,children))*bundle_width
         offset_radial = (np.cos(spread_angle)*spread_radius)[:,None,None]*radial[None,:,:]
         offset_axial = ((np.sin(spread_angle)*spread_radius)[:,None,None]
                         *np.asarray(curl_axis)[None,None,:])
         spread = (.82+.18*np.exp(-4.*t))[None,:,None]
         block = center[None,:,:]+(offset_radial+offset_axial)*spread
+        if coherent:
+            fiber_turns = turns*nprng.uniform(.8, 1.2, children)
+            fiber_phase = nprng.uniform(-.12, .12, children)
+            fiber_angle = (fiber_turns[:,None]*math.tau*phase_warp[None,:]
+                           +fiber_phase[:,None]*math.tau*t[None,:]**2)
+            fiber_radius = radius[None,:]*nprng.uniform(.8, 1.2, children)[:,None]
+            fiber_height = fiber_radius*(1.-np.cos(fiber_angle))+.0006+.0005*np.sin(math.pi*t)[None,:]
+            fiber_side = fiber_radius*np.sin(fiber_angle)
+            fiber_along = axial_length*nprng.uniform(.75, 1.25, children)[:,None]*t[None,:]
+            block = (np.asarray(root)[None,None,:]
+                     +np.asarray(curl_normal)[None,None,:]*fiber_height[:,:,None]
+                     +np.asarray(curl_across)[None,None,:]*fiber_side[:,:,None]
+                     +np.asarray(curl_axis)[None,None,:]*fiber_along[:,:,None]
+                     +(offset_radial+offset_axial)*spread)
+            center = block.mean(axis=0)
         wave_phase = nprng.uniform(0.,math.tau,children)
         wave_amplitude = nprng.uniform(.000008,.000065,children)
         wave = wave_amplitude[:,None]*np.sin(wave_phase[:,None]+t[None,:]*math.tau*2.)
@@ -267,7 +282,10 @@ def build(root, out, *, coherent=False):
     if coherent:
         report['curl_axis_tilt_radians'] = [.64, .92]
         report['top_curl_pitch_m'] = [.007, .011]
-        report['bundle_radius_m'] = [.0015, .0022]
+        report['bundle_radius_m'] = [.0007, .0011]
+        report['fiber_trajectory_variation'] = {'turns': [.8, 1.2], 'radius': [.8, 1.2],
+                                               'axial_length': [.75, 1.25], 'tip_phase_turns': [-.12, .12]}
+        report['guide_variation'] = 'seeded_aperiodic'
         report['part_root_half_width_m'] = part_root_half_width
         report['visible_part_half_width_m'] = .0015
     report['version'] = version
