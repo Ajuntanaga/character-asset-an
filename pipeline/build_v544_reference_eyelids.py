@@ -27,14 +27,14 @@ def rebuild_lashes(out):
      closed_surface=BVHTree.FromPolygons([v.co for v in closed.data],[list(p.vertices) for p in body.data.polygons if any(1.625<basis.data[i].co.z<1.675 for i in p.vertices)],all_triangles=False)
      neutral=edges['Basis'];xmin=min(p.x for p in neutral);xmax=max(p.x for p in neutral)
      states={key:[] for key in edges};faces=[];count=0
-     for upper,n in ((True,54),(False,27)):
+     for upper,n in ((True,54),(False,8)):
       for j in range(n):
        f=(j+.35+rng.random()*.3)/n
        pos=(1+30*f) if upper else (33+30*f)
        i=int(pos);a=pos-i
        root=neutral[i].lerp(neutral[(i+1)%64],a)
        u=(root.x-xmin)/(xmax-xmin)
-       length=(.0022 if upper else .00115)*rng.uniform(.7,1.2)*(.45+.55*math.sin(math.pi*u))
+       length=(.0022*rng.uniform(.7,1.2) if upper else rng.uniform(.00055,.00075))*(.45+.55*math.sin(math.pi*u))
        sideways=(u-.5)*.55
        direction=Vector((sideways,-.75,.75 if upper else -.65)).normalized()
        # A curved shaft projects toward the viewer before turning away from the aperture.
@@ -65,7 +65,7 @@ def rebuild_lashes(out):
      obj.shape_key_add(name='Basis');key=obj.shape_key_add(name='Blink')
      for v,p in zip(key.data,states['Blink']):v.co=p
      d=key.driver_add('value').driver;d.type='SCRIPTED';v=d.variables.new();v.name='blink';v.type='SINGLE_PROP';v.targets[0].id=rig;v.targets[0].data_path=f'pose.bones["Head"]["Blink.{side}"]';d.expression='blink'
-     report[side]={'lashes':count,'vertices':len(mesh.vertices)}
+     report[side]={'lashes':count,'upper_lashes':54,'lower_lashes':8,'vertices':len(mesh.vertices)}
     rig.update_tag();bpy.context.view_layer.update()
     report['rig_drivers']=len(rig.animation_data.drivers)
     (out/'eyelash-report.json').write_text(json.dumps(report,indent=2))
