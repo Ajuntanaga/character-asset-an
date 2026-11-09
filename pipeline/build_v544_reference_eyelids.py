@@ -181,7 +181,7 @@ def build(root, out, reopen=False):
         edge = [basis.data[v].co.copy() for v in order]
         for i,p in enumerate(edge):
             top = i <= 32
-            radius = .00012 if top else .00020
+            radius = .00007 if top else .00010
             tangent = (edge[(i+1)%64]-edge[i-1]).normalized()
             front = Vector((0,-1,0))
             across = tangent.cross(front).normalized()
@@ -189,6 +189,14 @@ def build(root, out, reopen=False):
                 angle = k*math.tau/6
                 mk['Basis'].data[i*6+k].co = p+front*.00007+radius*(
                     math.cos(angle)*front+math.sin(angle)*across)
+            # Keep the closed target centerline, but match the open tube's
+            # thinner cross section so the border does not swell on blinking.
+            closed_center = sum((mk['Blink'].data[i*6+k].co for k in range(6)), Vector())/6
+            for k in range(6):
+                vertex = mk['Blink'].data[i*6+k]
+                radial = vertex.co-closed_center
+                assert radial.length > 1e-7
+                vertex.co = closed_center+radial.normalized()*radius
         margin.data.update()
         closed_difference = max((keys['Blink.'+side].data[v].co
                                  -Vector(backup[side]['Blink.'+side][str(v)])).length
@@ -196,6 +204,7 @@ def build(root, out, reopen=False):
         assert closed_difference == 0.
         report['eyes'][side] = {'max_opening_change_mm':max_shift*1000,
                                 'closed_target_change_mm':closed_difference*1000,
+                                'margin_radius_mm': {'upper': .07, 'lower': .10},
                                 'eye_clearance_projections':pushed}
 
 

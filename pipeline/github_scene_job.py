@@ -101,7 +101,11 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             ('groom-side', (1.8, 0, 1.74), (0, 0, 1.70), .38),
         ]
     if args.mode == 'blink-build':
-        shots = [('face-front', (0, -2, 1.68), (0, 0, 1.65), .40)]
+        shots = [
+            ('face-front', (0, -2, 1.68), (0, 0, 1.65), .40),
+            ('face-clay', (.30, -2, 1.70), (0, 0, 1.65), .40),
+            ('wardrobe-front', (0, -3, 1.24), (0, 0, 1.24), .94),
+        ]
         if args.facial_hair:
             shots.append(('beard-detail', (.12, -.8, 1.58), (0, -.045, 1.557), .15))
     if args.mode == 'guitar-build':
@@ -113,6 +117,20 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
     camera.data.type = 'ORTHO'
     for label, position, target, scale in shots:
         hidden = []
+        override = bpy.context.view_layer.material_override
+        if label == 'face-clay':
+            clay = bpy.data.materials.new('DIAGNOSTIC_NEUTRAL_CLAY')
+            clay.use_nodes = True
+            bsdf = clay.node_tree.nodes.get('Principled BSDF')
+            bsdf.inputs['Base Color'].default_value = (.32, .32, .32, 1)
+            bsdf.inputs['Roughness'].default_value = .75
+            bpy.context.view_layer.material_override = clay
+            scene.cycles.samples = 16
+            scene.render.resolution_x = scene.render.resolution_y = 512
+        if label == 'wardrobe-front':
+            for obj in bpy.data.objects['V206_GUITAR_ROOT'].children_recursive:
+                if not obj.hide_render:
+                    hidden.append(obj); obj.hide_render = True
         if label == 'fretting-rear':
             for obj in scene.objects:
                 if obj.type in {'MESH', 'CURVE', 'CURVES'} and not obj.hide_render and not obj.name.startswith(('V206_', 'V545_')):
@@ -129,6 +147,9 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         camera.data.ortho_scale = scale
         scene.render.filepath = str(out / f'{label}-preview.png')
         bpy.ops.render.render(write_still=True)
+        bpy.context.view_layer.material_override = override
+        scene.cycles.samples = report['preview']['samples']
+        scene.render.resolution_x = scene.render.resolution_y = size
         for obj in hidden:
             obj.hide_render = False
         report['preview']['completed_shots'].append(label)
