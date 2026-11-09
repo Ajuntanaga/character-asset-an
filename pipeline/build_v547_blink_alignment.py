@@ -110,6 +110,13 @@ def build(root, out):
         report[side]['arc_maximum_displacement_m'] = corrections
     rig.update_tag()
     bpy.context.view_layer.update()
+    # Keep the established globe/lid geometry. The previous 0.90 dilation
+    # obscured most of the brown iris visible in the frontal reference.
+    report['pupils'] = {}
+    for side in ('L', 'R'):
+        dilation = bpy.data.objects['V374_EYE.' + side].data.shape_keys.key_blocks['Dilation']
+        report['pupils'][side] = {'previous_dilation': dilation.value, 'trial_dilation': .60}
+        dilation.value = .60
     report['status'] = 'TRIAL_REQUIRES_RENDER_AND_DEFORMATION_REVIEW'
     report['rig_drivers'] = len(rig.animation_data.drivers)
     (out / 'blink-alignment-backup.json').write_text(json.dumps(backup))

@@ -1,0 +1,116 @@
+"""Feather the polygon hair mask into nearby clean scalp colour, reversibly."""
+import json
+from pathlib import Path
+import bpy
+from mathutils.kdtree import KDTree
+
+
+def build(output, width=.005):
+    body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
+    mesh = body.data
+    assert not mesh.attributes.get('V548_HairCoverage')
+    original = bpy.data.materials['V371_DARK_HAIR_UNDERLAY']
+    original_index = list(mesh.materials).index(original)
+    skin = bpy.data.materials['V377_REFERENCE_PHOTO_SKIN']
+    skin_indices = {0, list(mesh.materials).index(skin)}
+    basis = mesh.shape_keys.key_blocks['Basis'].data
+    hair_faces = [p for p in mesh.polygons if p.material_index == original_index]
+    hair_vertices = {v for p in hair_faces for v in p.vertices}
+    # UV seams duplicate vertices. Classify coincident points together so those
+    # seams do not accidentally become bald stripes within the hair cap.
+    def key(i):
+        return tuple(round(c, 5) for c in basis[i].co)
+
+    hair_keys = {key(i) for i in hair_vertices}
+    skin_loops, boundary = {}, {}
+    for polygon in mesh.polygons:
+        if polygon.material_index not in skin_indices:
+            continue
+        for loop in polygon.loop_indices:
+            i = mesh.loops[loop].vertex_index
+            if basis[i].co.z < 1.52:
+                continue
+            skin_loops.setdefault(i, loop)
+            if key(i) in hair_keys:
+                boundary[key(i)] = basis[i].co.copy()
+    assert len(boundary) > 50, len(boundary)
+    edge_tree = KDTree(len(boundary))
+    for index, point in enumerate(boundary.values()):
+        edge_tree.insert(point, index)
+    edge_tree.balance()
+    hair_tree = KDTree(len(hair_vertices))
+    for index, i in enumerate(hair_vertices):
+        hair_tree.insert(basis[i].co, index)
+    hair_tree.balance()
+    # Sample beyond the baked dark transition. Carry both albedo UVs and the
+    # existing photo blend weight, rather than substituting a uniform skin tint.
+    clean = [i for i in skin_loops
+             if i not in hair_vertices and hair_tree.find(basis[i].co)[2] >= .007]
+    assert len(clean) > 100, len(clean)
+    clean_tree = KDTree(len(clean))
+    for i in clean:
+        clean_tree.insert(basis[i].co, i)
+    clean_tree.balance()
+    coverage = mesh.attributes.new('V548_HairCoverage', 'FLOAT', 'POINT')
+    photo_weight = mesh.attributes.new('V548_ScalpPhotoBlend', 'FLOAT', 'POINT')
+    previous_weight = mesh.attributes['V377_PhotoSkinBlend']
+    clean_uv = mesh.uv_layers.new(name='V548_CleanScalp')
+    clean_photo_uv = mesh.uv_layers.new(name='V548_CleanPhotoScalp')
+    original_uv = mesh.uv_layers['UVMap']
+    photo_uv = mesh.uv_layers['V377_FacePhotoProjection']
+    sources, distances, feathered = {}, [], 0
+    for i in hair_vertices:
+        point = basis[i].co
+        distance = edge_tree.find(point)[2]
+        t = min(1., distance / width)
+        coverage.data[i].value = t*t*(3.-2.*t)
+        _, source, source_distance = clean_tree.find(point)
+        sources[i] = skin_loops[source]
+        photo_weight.data[i].value = previous_weight.data[source].value
+        if distance < width:
+            distances.append(source_distance)
+            feathered += 1
+    for polygon in hair_faces:
+        for loop in polygon.loop_indices:
+            source = sources.get(mesh.loops[loop].vertex_index)
+            if source is not None:
+                clean_uv.data[loop].uv = original_uv.data[source].uv
+                clean_photo_uv.data[loop].uv = photo_uv.data[source].uv
+    material = skin.copy()
+    material.name = 'V548_FEATHERED_HAIRLINE'
+    nodes, links = material.node_tree.nodes, material.node_tree.links
+    source_uv = nodes.new('ShaderNodeUVMap')
+    source_uv.uv_map = clean_uv.name
+    links.new(source_uv.outputs['UV'], nodes['Image Texture'].inputs['Vector'])
+    fitted_photo = nodes['V377_FittedPhotoAlbedo']
+    fitted_uv = nodes.new('ShaderNodeUVMap')
+    fitted_uv.uv_map = clean_photo_uv.name
+    links.new(fitted_uv.outputs['UV'], fitted_photo.inputs['Vector'])
+    for node in nodes:
+        if node.type == 'ATTRIBUTE' and node.attribute_name == 'V377_PhotoSkinBlend':
+            node.attribute_name = photo_weight.name
+    output_node = next(n for n in nodes if n.type == 'OUTPUT_MATERIAL' and n.is_active_output)
+    skin_surface = output_node.inputs['Surface'].links[0].from_socket
+    hair_shader = nodes.new('ShaderNodeBsdfPrincipled')
+    original_shader = next(n for n in original.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
+    for name in ('Base Color', 'Roughness', 'Specular IOR Level'):
+        hair_shader.inputs[name].default_value = original_shader.inputs[name].default_value
+    hair_attribute = nodes.new('ShaderNodeAttribute')
+    hair_attribute.attribute_name = coverage.name
+    mix = nodes.new('ShaderNodeMixShader')
+    links.new(hair_attribute.outputs['Fac'], mix.inputs[0])
+    links.new(skin_surface, mix.inputs[1])
+    links.new(hair_shader.outputs['BSDF'], mix.inputs[2])
+    links.new(mix.outputs[0], output_node.inputs['Surface'])
+    mesh.materials.append(material)
+    for polygon in hair_faces:
+        polygon.material_index = len(mesh.materials)-1
+    mesh.update()
+    report = {'original_material': original.name, 'trial_material': material.name,
+              'hair_faces': len(hair_faces), 'boundary_points': len(boundary),
+              'feather_width_m': width, 'feathered_vertices': feathered,
+              'clean_skin_candidates': len(clean),
+              'maximum_skin_sample_distance_m': max(distances),
+              'geometry_changed': False, 'status': 'TRIAL_REQUIRES_VISUAL_REVIEW'}
+    (Path(output) / 'hairline-report.json').write_text(json.dumps(report, indent=2))
+    return report

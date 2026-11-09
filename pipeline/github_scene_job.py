@@ -91,7 +91,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             ('groom-side', (1.8, 0, 1.74), (0, 0, 1.70), .38),
         ]
     if args.mode == 'blink-build':
-        shots = []
+        shots = [('face-front', (0, -2, 1.68), (0, 0, 1.65), .40)]
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'

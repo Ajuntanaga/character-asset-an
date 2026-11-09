@@ -14,7 +14,7 @@ Updated 2026-11-08. The character is unfinished. Continue the active reference-l
 ## Current files and branches
 
 Project: `/home/ajuntanaga/Projects/Blender/Character Asset_An`.
-Remote: https://github.com/Ajuntanaga/character-asset-an . HEAD `c25566b` was pushed before the current hand/groom iteration.
+Remote: https://github.com/Ajuntanaga/character-asset-an . HEAD `53408a2` is pushed with thumb axial-roll trials and compact-ringlet geometry.
 
 - Preserved main character: V514. Native hand foundation: V522. V528 remains a retained delta base.
 - Working reference branch V544: `production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend`; SHA256 `6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02`. Its release and remote restore are verified. Do not redo that verification.
@@ -29,17 +29,17 @@ Remote: https://github.com/Ajuntanaga/character-asset-an . HEAD `c25566b` was pu
 
 **Blink run 42569037176 succeeded.** Results: `github_results/run-42569037176/blender-blink-build-11/`. Viewed frontal open/half/closed closeups: lids close continuously with no apparent corneal pop-through. Full-surface, oblique and animation deformation remain unreviewed. Scene has 170 objects, 1957 main drivers, no missing images. Local full-detail scene: `production_v547_blink_alignment/arc_trial/Character_An_blink_alignment_TRIAL_v547.blend`. Arc diagnostic at 0/0.25/0.5/0.75/1 had zero penetrating boundary samples and minimum clearance 0.1999mm, compared with the earlier half-blink -0.4273/-0.4165mm. Do not repeat the completed frontal check.
 
-No cloud jobs are active as of 2026-11-09 06:03UTC. Dispatch the pending hand/groom changes after syntax and diff checks; record run IDs here.
+Active submissions at 2026-11-09 06:06UTC: hand run **42571049144**, groom run **42571052107**, both at `53408a2`. Hand succeeded; artifact download is underway. Groom is now running. Resume these jobs, do not duplicate. Syntax and diff checks passed before dispatch. The face reviewer recommended pupil dilation 0.90 to 0.60, verified live on both eyes. Next trial implements that without moving the eyes/lids; the groom wrapper adds a reversible 5mm material hairline feather using nearby clean skin UVs and photo weights. Neither new correction has rendered yet.
 
 ## Cleanup and notifications completed
 
 2026-11-08: archived V530–V541 (12 superseded trials) as Zstandard deltas against retained `github_release/current-v528.blend`. Each decoded stream matched the original SHA256 before the full scene was removed. Recovered **4,250,005,688 bytes**. Aggregate record: `local_archive_cleanup_2026-11-08.json`; each scene folder has `<original>.blend.archived.json` with exact restore command, base/delta checksums and original checksum. These are local archive records, not a remote backup of all history. Do not delete the base. Root filesystem now approximately 77GiB available; memory approximately 20GiB available and swap 466MiB.
 
-Three BCA_task notifications delivered HTTP200 during this pass: build progress, cleanup milestone and completed render review (latest about 21:57PST Nov8). Continue at meaningful milestones and during long waits.
+Five BCA_task notifications delivered HTTP200 during this pass: build progress, cleanup milestone, completed render review and new trial submissions (latest about 22:13PST Nov8). Continue at meaningful milestones and during long waits.
 
 ## Next work
 
-1. Render the pending hand and compact-ringlet trials on Actions. Inspect actual images and contact/clearance; do not accept on numerical distance alone.
+1. Retrieve the submitted hand and compact-ringlet trials from Actions. Inspect actual images and contact/clearance; do not accept on numerical distance alone.
 2. Address the observed groom hairline and remaining hand deformation after the trials. Preserve the approved M3 chord targets.
 3. Integrate acceptable branches reversibly and inspect the full character. Continue reference face/skin/hair, guitar shape/figured-maple finish, wardrobe, rig/deformation and animation work. None is finished.
 
