@@ -26,7 +26,10 @@ def build(output):
     assert 'V563_FrontPhotoUV' not in mesh.uv_layers
     original = bpy.data.materials['V549_REFERENCE_PHOTO_SKIN_BALANCED']
     original_slot = list(mesh.materials).index(original)
-    eligible = {v for polygon in mesh.polygons if polygon.material_index == original_slot
+    lid_slot = list(mesh.materials).index(bpy.data.materials['V365_LID_SKIN'])
+    # The lid's outer annulus shares the face shader in V569. Project its
+    # attributes through the same eye exclusion, so the outer seam is continuous.
+    eligible = {v for polygon in mesh.polygons if polygon.material_index in (original_slot, lid_slot)
                 for v in polygon.vertices}
     # Reuse V377/V381 registration. The photo donor and fitted cameras share
     # coordinates; transfer their projection through the same donor triangles.
@@ -39,6 +42,7 @@ def build(output):
     triangles = [tuple(t.vertices) for t in donor.data.loop_triangles]
     tree = BVHTree.FromPolygons(mapped, triangles, all_triangles=True)
     uv_vertex = np.zeros((len(mesh.vertices), 2), np.float32)
+    uv_valid = np.zeros(len(mesh.vertices), bool)
     weights = np.zeros(len(mesh.vertices), np.float32)
     counts = {'eligible': 0, 'projected': 0, 'rejected': 0}
 
@@ -80,8 +84,30 @@ def build(output):
                 counts['rejected'] += 1
                 continue
             uv_vertex[i] = uv.xy
+            uv_valid[i] = True
             weights[i] = .94 * weight * smooth((-normal.y - .20) / .35)
             counts['projected'] += 1
+        # Zero blend weight does not stop UV interpolation across a polygon.
+        # Give excluded vertices a nearby portrait coordinate too: leaving
+        # them at (0, 0) pulls image corners into the feathered eye boundary.
+        counts['zero_weight_uv_samples'] = 0
+        for i in eligible:
+            if uv_valid[i]:
+                continue
+            p = body.matrix_world @ mesh.shape_keys.key_blocks['Basis'].data[i].co
+            hit, _, index, _ = tree.ray_cast(Vector((p.x, -.4, p.z)), Vector((0, 1, 0)))
+            if hit is None:
+                hit, _, index, _ = tree.find_nearest(p)
+            if hit is None:
+                continue
+            triangle = triangles[index]
+            point = barycentric_transform(hit, *[mapped[j] for j in triangle],
+                                          *[raw[j] for j in triangle])
+            uv = world_to_camera_view(projection_scene, camera, point)
+            if uv.z > 0 and 0 < uv.x < 1 and 0 < uv.y < 1:
+                uv_vertex[i] = uv.xy
+                uv_valid[i] = True
+                counts['zero_weight_uv_samples'] += 1
     finally:
         bpy.data.objects.remove(camera, do_unlink=True)
         bpy.data.cameras.remove(camera_data)
@@ -137,7 +163,7 @@ def build(output):
               'material': material.name, 'affected_faces': affected_faces,
               'maximum_mix': float(weights.max()), 'geometry_changed': False,
               'rig_drivers': 1957, 'uv_layer': layer.name,
-              'scope': 'central_forehead_nose_cheeks; eyelids_lips_beard_transition_excluded',
+              'scope': 'central_forehead_nose_cheeks_outer_socket; inner_eyelids_lips_beard_transition_excluded',
               'status': 'TRIAL_REQUIRES_MATCHED_RENDER_REVIEW'}
     (Path(output) / 'front-photo-report.json').write_text(json.dumps(report, indent=2))
     return report

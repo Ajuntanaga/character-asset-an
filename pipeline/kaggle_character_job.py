@@ -21,7 +21,7 @@ work.mkdir(parents=True, exist_ok=True)
 output = Path('/kaggle/working/results')
 output.mkdir(parents=True, exist_ok=True)
 status = {'status': 'STARTING', 'budget_seconds': budget_seconds,
-          'revision': 'V567', 'maximum_selected_gpus': 1}
+          'revision': REVISION, 'maximum_selected_gpus': 1}
 
 
 def remaining():

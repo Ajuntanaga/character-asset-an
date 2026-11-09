@@ -13,14 +13,13 @@ def build(output, delit_face=False):
     from refine_v550_maple_density import build as build_guitar
 
     from build_v557_reference_locks import reduce_skin_microrelief
-    report = {'revision': 'V567', 'skin_microrelief': reduce_skin_microrelief()}
+    report = {'revision': 'V571', 'skin_microrelief': reduce_skin_microrelief()}
     report['groom'] = build_groom(out, save=False, clean_scalp=True)
     report['eyes'] = build_eyes(root, out)
     from refine_v558_eye_surface import build as build_eye_surface
     report['eye_surface'] = build_eye_surface(out)
-    # The separate wet margin tubes form a pale oval even with the eyes shut.
-    # Retain their shape keys and alignment targets, but render the continuous
-    # lid skin and individual lashes without the independent tubes.
+    # Preserve the independent wet margins as blink-alignment targets while
+    # rendering the continuous lid skin and individual lashes.
     report['hidden_lid_margins'] = []
     for side in ('L', 'R'):
         margin = bpy.data.objects['V369_LID_MARGIN.' + side]
@@ -38,6 +37,8 @@ def build(output, delit_face=False):
     else:
         from refine_v563_front_photo import build as build_front_photo
         report['front_photo'] = build_front_photo(out)
+        from refine_v569_lid_skin_transition import build as build_lid_skin
+        report['lid_skin_transition'] = build_lid_skin(out)
 
     original = bpy.data.materials['V379_DARK_COTTON_JACKET']
     jacket = original.copy()
@@ -95,6 +96,8 @@ def build(output, delit_face=False):
     report['collar_shape'] = build_collar(out)
     from refine_v567_rear_collar import build as build_rear_collar
     report['rear_collar_material'] = build_rear_collar(out)
+    from refine_v568_pen_cloth import build as build_pen_cloth
+    report['pen_cloth_material'] = build_pen_cloth(out)
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     assert len(rig.animation_data.drivers) == 1957
     report['main_drivers'] = 1957

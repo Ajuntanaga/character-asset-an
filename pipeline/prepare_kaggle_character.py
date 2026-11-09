@@ -1,4 +1,5 @@
-"""Package allowlisted inputs for the authorized, private V567 GPU trial."""
+"""Package allowlisted inputs for one authorized, private GPU trial."""
+import argparse
 import ast
 import base64
 import gzip
@@ -13,7 +14,12 @@ import zipfile
 
 
 root = Path(__file__).resolve().parents[1]
-staging = root / 'kaggle_payload/v567'
+parser = argparse.ArgumentParser()
+parser.add_argument('--revision', default='V571')
+args = parser.parse_args()
+revision = args.revision.upper()
+assert revision.startswith('V') and revision[1:].isdigit(), revision
+staging = root / 'kaggle_payload' / revision.lower()
 dataset = staging / 'input'
 kernel = staging / 'kernel'
 dataset.mkdir(parents=True, exist_ok=True)
@@ -26,6 +32,7 @@ assets = [
     'references/derived/photoreal_facebuilder_v1/character_an_front_v1.png',
     'references/derived/photoreal_facebuilder_v1/fitted_cameras_v326.json',
     'github_assets/v567-rear-collar-mask.json',
+    'github_assets/v568-pen-cloth-mask.json',
 ]
 archive = dataset / 'reference-inputs.zip'
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1) as bundle:
@@ -80,7 +87,7 @@ for version, name in [('528', 'current-v528.blend'),
         assert url.startswith('https://release-assets.githubusercontent.com/')
     downloads.append(dict(manifest[name], name=name, url=url))
 del token
-program = (f'INPUTS_SHA256 = {archive_hash!r}\nSOURCES_B64 = {encoded!r}\n'
+program = (f'REVISION = {revision!r}\nINPUTS_SHA256 = {archive_hash!r}\nSOURCES_B64 = {encoded!r}\n'
            f'SCENE_DOWNLOADS = {downloads!r}\nSCENE_MANIFEST = {manifest!r}\n' +
            (root / 'pipeline/kaggle_character_job.py').read_text())
 ast.parse(program)
@@ -93,8 +100,8 @@ ast.parse(program)
     'description': 'Private working inputs for one bounded character render. Copyright remains with the original authors. No redistribution license is granted; not a public asset release.',
 }, indent=2))
 (kernel / 'kernel-metadata.json').write_text(json.dumps({
-    'id': 'anthovargas/character-an-v567-gpu-preview',
-    'title': 'Character An V567 GPU Preview',
+    'id': f'anthovargas/character-an-{revision.lower()}-gpu-preview',
+    'title': f'Character An {revision} GPU Preview',
     'code_file': 'character_job.py', 'language': 'python', 'kernel_type': 'script',
     'is_private': True, 'enable_gpu': True, 'enable_internet': True,
     'machine_shape': 'NvidiaTeslaT4',
