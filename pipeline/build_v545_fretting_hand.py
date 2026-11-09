@@ -193,13 +193,14 @@ def build(out):
     rest = {b.name: b.matrix_local.copy() for b in source}
     relative = {b.name: rest[b.parent.name].inverted() @ rest[b.name] if b.parent else rest[b.name] for b in source}
     # Variables: guitar-local wrist, world rotation, four flex/flex/flex/splay sets,
-    # then thumb flex/opposition/flex/flex. Native joint lengths never change.
+    # then thumb flex/opposition/flex/flex/axial roll. The donor is already a
+    # left hand despite its .R bone names. Native joint lengths never change.
     prior = np.r_[[center_x, .125, -.060], [0., 0., 0.],
-                  np.radians([45, 75, 40, 0] * 4 + [20, 20, 30, 15])]
+                  np.radians([45, 75, 40, 0] * 4 + [20, 20, 20, 15, 0])]
     low = np.r_[[center_x - .09, .045, -.125], [-1.5] * 3,
-                np.radians([0, 10, 0, -25] * 4 + [-45, -60, -10, -10])]
+                np.radians([0, 10, 12, -25] * 4 + [-45, -75, -10, -10, -90])]
     high = np.r_[[center_x + .09, .185, .025], [1.5] * 3,
-                 np.radians([95, 105, 80, 25] * 4 + [60, 60, 60, 55])]
+                 np.radians([95, 105, 80, 25] * 4 + [60, 75, 45, 40, 90])]
 
     def matrices(values):
         linear = Euler(tuple(values[3:6]), 'XYZ').to_matrix() @ initial_linear
@@ -216,6 +217,10 @@ def build(out):
                 q = Quaternion(axes[(digit, j)], float(flex[j - 1]))
                 if j == 1:
                     q = Quaternion(spreads[(digit, j)], float(splay)) @ q
+                    if digit == 'Thumb':
+                        # CMC opposition includes axial rotation. Without it,
+                        # the solver folds MCP/IP to turn the pad toward the neck.
+                        q = q @ Quaternion((0., 1., 0.), float(values[26]))
                 rotations[name] = q
                 pose[name] = pose[source[name].parent.name] @ relative[name] @ q.to_matrix().to_4x4()
         return world, pose, rotations
@@ -253,7 +258,7 @@ def build(out):
         for digit, (point, n) in points.items():
             r.extend(point - targets[digit])
             desired = normal if digit == 'Thumb' else -normal
-            r.extend((n - desired) * .003)
+            r.extend((n - desired) * (.006 if digit == 'Thumb' else .003))
         # Keep non-thumb knuckles and shafts on the front/edge of the fretboard.
         for digit in DIGITS[:4]:
             for j in (1, 2, 3):
@@ -272,8 +277,20 @@ def build(out):
             name = f'DEF-Finger_Thumb{j}.R'
             point = world @ pose[name] @ Vector((0, source[name].length * .5, 0))
             r.append(min(0., neck_clearance(point) - .004))
+            # The approved thumb supports the rear of the neck; it must not
+            # curl over the fretboard toward the fretting camera.
+            r.append(max(0., (guitar_inv @ point).z + .006))
         r.extend((values[:3] - prior[:3]) * .025)
-        r.extend((values[3:] - prior[3:]) * .00035)
+        r.extend((values[3:6] - prior[3:6]) * .00035)
+        for index in range(4):
+            offset = 6 + index * 4
+            r.extend((values[offset:offset + 3] - prior[offset:offset + 3]) * .0015)
+            r.append((values[offset + 3] - prior[offset + 3]) * .0005)
+            # Retain a rounded fingertip rather than extending every DIP to
+            # zero just to minimize the five contact distances.
+            r.append((values[offset + 2] - .55 * values[offset + 1]) * .0025)
+        r.extend((values[[22, 23, 26]] - prior[[22, 23, 26]]) * .0004)
+        r.extend((values[24:26] - prior[24:26]) * .003)
         return np.array(r)
 
     contacts(prior, True)
@@ -282,7 +299,14 @@ def build(out):
                        rig.matrix_world @ b.head).length for b in rig.pose.bones)
     assert joint_error < 1e-5, f'Analytic/evaluated joint mismatch: {joint_error}'
     print('Fitting native left hand: analytic joints', flush=True)
-    values, coarse_history = minimize(residual, prior, low, high, 100)
+    # Compare a small bounded set of CMC orientations analytically before the
+    # expensive skin refinement; opposition can have different local minima.
+    candidates = []
+    for roll_degrees in (-45., 0., 45.):
+        seed = prior.copy(); seed[26] = math.radians(roll_degrees)
+        candidate, history = minimize(residual, seed, low, high, 70)
+        candidates.append((history[-1], candidate, history, roll_degrees))
+    _, values, coarse_history, selected_roll_seed = min(candidates, key=lambda item: item[0])
     print(f'Coarse fit loss: {coarse_history[-1]}; refining evaluated skin', flush=True)
     values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 24)
     print(f'Surface fit loss: {surface_history[-1]}; attaching to main arm', flush=True)
@@ -361,6 +385,9 @@ def build(out):
               'contacts': final, 'left_palm_m': actual_palm, 'right_palm_m': right_palm,
               'wrist_anchor_error_m': wrist_error, 'pick_matrix_error': pick_error,
               'values': values.tolist(), 'coarse_loss': coarse_history, 'surface_loss': surface_history,
+              'thumb_axial_roll_degrees': math.degrees(values[26]),
+              'selected_roll_seed_degrees': selected_roll_seed,
+              'coarse_seed_losses': [{'roll_degrees': item[3], 'loss': item[0]} for item in candidates],
               'nail_polygons': sum(p.material_index == 1 for p in hand.data.polygons)}
     (out / 'hand-fit-report.json').write_text(json.dumps(report, indent=2))
     # Appending retains a weak origin-library record even with all IDs local.

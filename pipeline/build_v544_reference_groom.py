@@ -96,7 +96,9 @@ def build(root, out, *, coherent=False):
         turns = rng.uniform(.85,1.65)*(1.-.30*side_weight)
         if coherent:
             curl_radius = (.0055 + .0015 * size_field) * (.60 + .40 * topness) * (1. - .68 * side_weight)
-            axial_length = (.018 + .004 * size_field) * (.50 + .50 * topness) * (1. - .55 * side_weight)
+            # Compact ringlets: the former 18-22mm advance stretched the
+            # 11-14mm loops into visible parallel springs.
+            axial_length = (.004 + .003 * size_field) * (.50 + .50 * topness) * (1. - .55 * side_weight)
             turns = (1.05 + .15 * size_field) * (1. - .30 * side_weight)
         if in_part and abs(root.x-part)<.012:
             curl_radius *= .77
