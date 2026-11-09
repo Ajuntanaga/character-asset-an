@@ -122,13 +122,11 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
     if args.mode == 'combined-build':
         guitar = bpy.data.objects['V206_GUITAR_ROOT']
         shots = [
-            ('character', (.35, -3.5, 1.3), (0, 0, .94), 2.12),
+            ('face-source-before', (0, -2, 1.68), (0, 0, 1.65), .40),
             ('face-front', (0, -2, 1.68), (0, 0, 1.65), .40),
             ('face-profile', (2, 0, 1.65), (0, 0, 1.65), .40),
             ('face-oblique', (.70, -1.7, 1.78), (0, 0, 1.67), .40),
-            ('guitar-front', guitar.matrix_world @ Vector((.625, 0, 1.)),
-             guitar.matrix_world @ Vector((.625, 0, 0)), .55),
-            ('pick-grip', center + Vector((.13, -.2, .04)), center, .16),
+            ('character', (.35, -3.5, 1.3), (0, 0, .94), 2.12),
         ]
         if args.delit_face:
             shots = [shots[1],
@@ -143,10 +141,10 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         override = bpy.context.view_layer.material_override
         shape_key = None
         photo_gain = None
-        if label.startswith('face-photo90-'):
-            photo_gain = bpy.data.materials['V549_REFERENCE_PHOTO_SKIN_BALANCED'].node_tree.nodes['V549_PhotoSkinBlendGain'].inputs[1]
+        if label == 'face-source-before':
+            photo_gain = bpy.data.materials['V563_DIRECT_FRONT_PHOTO_SKIN'].node_tree.nodes['V563_FrontPhotoGain'].inputs[1]
             saved_photo_gain = photo_gain.default_value
-            photo_gain.default_value = .90
+            photo_gain.default_value = 0.
             bpy.context.view_layer.update()
         if label.startswith('face-clay-'):
             shape_key = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks['V560_ReferenceCentralFace']
@@ -197,7 +195,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
     # V561 already rendered frontal/oblique blink closure. Repeat that suite
-    # when eyelids change, not for the V562 hair-only combined trial.
+    # when eyelids change; current combined trials preserve that geometry.
     if args.mode in ('review', 'build-review', 'blink-build'):
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks

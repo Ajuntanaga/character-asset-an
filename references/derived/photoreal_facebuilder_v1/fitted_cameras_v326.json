@@ -1,0 +1,137 @@
+{
+  "profile": {
+    "source_object": "fbCamera.002",
+    "source_blend": "production_v326_photoreal_facebuilder/Character_An_photoreal_head_v326.blend",
+    "matrix": [
+      [
+        0.4508335292339325,
+        0.0782686248421669,
+        0.8891698718070984,
+        4.471000671386719
+      ],
+      [
+        0.8918148875236511,
+        0.0024865944869816303,
+        -0.452393501996994,
+        -2.2824504375457764
+      ],
+      [
+        -0.037619225680828094,
+        0.9969291687011719,
+        -0.06868008524179459,
+        -0.22514751553535461
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "camera": {
+      "type": "PERSP",
+      "lens": 49.999996185302734,
+      "sensor_width": 36.0,
+      "sensor_height": 24.0,
+      "sensor_fit": "AUTO",
+      "shift_x": 0.0,
+      "shift_y": 0.0,
+      "ortho_scale": 6.0
+    },
+    "image": "character_an_profile_v1.png",
+    "size": [
+      644,
+      813
+    ]
+  },
+  "three_quarter": {
+    "source_object": "fbCamera.001",
+    "source_blend": "production_v326_photoreal_facebuilder/Character_An_photoreal_head_v326.blend",
+    "matrix": [
+      [
+        0.9154054522514343,
+        -0.03191575035452843,
+        0.40126585960388184,
+        2.144549608230591
+      ],
+      [
+        0.4025329649448395,
+        0.0717666745185852,
+        -0.9125879406929016,
+        -4.6555256843566895
+      ],
+      [
+        0.0003284151607658714,
+        0.9969106912612915,
+        0.07854274660348892,
+        0.4018821120262146
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "camera": {
+      "type": "PERSP",
+      "lens": 49.999996185302734,
+      "sensor_width": 36.0,
+      "sensor_height": 24.0,
+      "sensor_fit": "AUTO",
+      "shift_x": 0.0,
+      "shift_y": 0.0,
+      "ortho_scale": 6.0
+    },
+    "image": "character_an_three_quarter_v1.png",
+    "size": [
+      645,
+      813
+    ]
+  },
+  "front": {
+    "source_object": "fbCamera",
+    "source_blend": "production_v326_photoreal_facebuilder/Character_An_photoreal_head_v326.blend",
+    "matrix": [
+      [
+        0.9997422695159912,
+        0.018479101359844208,
+        -0.013182132504880428,
+        -0.06121053174138069
+      ],
+      [
+        -0.015002435073256493,
+        0.10210585594177246,
+        -0.9946603775024414,
+        -8.17039680480957
+      ],
+      [
+        -0.017034457996487617,
+        0.994601845741272,
+        0.10235678404569626,
+        0.8175637125968933
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "camera": {
+      "type": "PERSP",
+      "lens": 85.0,
+      "sensor_width": 36.0,
+      "sensor_height": 24.0,
+      "sensor_fit": "AUTO",
+      "shift_x": 0.0,
+      "shift_y": 0.0,
+      "ortho_scale": 6.0
+    },
+    "image": "character_an_front_v1.png",
+    "size": [
+      644,
+      813
+    ]
+  }
+}

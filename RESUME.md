@@ -17,7 +17,9 @@ Project /home/ajuntanaga/Projects/Blender/Character Asset_An; remote https://git
 
 V561: .90 photo-mask gain does not remove white cheek/temple etching; retain.65. Reduced35% chin field removes V560's worst profile ledge; keep provisionally. Upper lid6.9mm closes continuously at front0/.5/1 and oblique.5/1; open shape still artificial/chalky. Narrow darker part improves contrast but is still straight; flat waves lack reference curl volume. Jacket check is too faint, collar reads rubbery, pocket detail visibly stretched; whole character still has unequal hands. Actual renders are diagnostic, not final acceptance.
 
-V562 prepared: shared rising ringlet guides,35–55deg axis tilt,11–18mm axial length,1.25–1.75turns,3.2–4.8mm lobes,9.5mm top spacing; retain fine fibers/undercoat and scalp clearance. Next shots whole character,front/profile/oblique hair,guitar-front,pick-grip. Blink suite not repeated for hair-only changes. Root sole writer. Read-only guitar_next_correction child still comparing the guitar. Picking child completed; proposed centroid shift rejected by actual live measurement below.
+V562 Actions42599808028 at a48e79faa031b1d683a84c223b874810f8424822 succeeded10:24UTC: shared rising ringlet guides,35–55deg axis tilt,11–18mm axial length,1.25–1.75turns,3.2–4.8mm lobes,9.5mm top spacing. Six previews downloading: character,front/profile/oblique hair,guitar-front,pick-grip; artifact13666076016(5.06MB). Full artifact13664869232(95.87MB) remains remote. Root sole writer. Guitar child suggests deepening/lengthening the control-side lower scoop and slimming its horn; confirm against the new straight-front view before editing. Picking centroid shift rejected by actual live measurement below.
+
+V563 prepared: direct original644x813 front-reference projection onto central forehead/nose/cheeks, excluding eyes/lips/beard transition. V326 fitted camera matrix_basis recovered (unlinked matrix_world was identity); read-only MCP landmark projection aligns eyes/nose/mouth with source. Tracked fitted_cameras_v326.json plus refine_v563_front_photo.py reuse V377 registration and barycentric donor transfer. New UV/weight attribute/material preserve geometry, original maps and rig. Five remote views include matched front gain0/1; runtime and visual acceptance pending. Keep delit_face=false.
 
 V56042595153834 full chin field rejected; nine renders retained in previews-combined-build-37. V55942594193337 seven renders retained in previews-combined-build-36. Neither full scene downloaded.
 
@@ -55,12 +57,12 @@ Cumulative14,963,460,563bytes (14.96GB/13.94GiB) reclaimed.42 obsolete full scen
 
 Also19 byte-verified redundant installer fragments and4 rejected superseded deltas removed, retaining complete installer, previews/reports and current scenes. Records local_installer_fragment_cleanup_2026-11-09.json and local_rejected_delta_cleanup_2026-11-09.json. Installer underscore/hyphen aliases are hardlinks, not duplicated storage. Do not delete unique .blend1 backups or unrelated projects.
 
-43successful BCA_task notifications, latest~10:12UTC HTTP200. Latest resources:83GiB disk free,19GiB memory available,swap2/8GiB. Viewers chafa/image available. No notification daemon or local heavy process.
+45successful BCA_task notifications, latest~10:26UTC HTTP200. Latest resources:85GiB disk free,19GiB memory available,swap2/8GiB. Viewers chafa/image available. No notification daemon or local heavy process.
 
 ## Immediate next steps
 
-1. Dispatch V562 after syntax/diff check and inspect six actual previews. Integrate one concrete guitar geometry correction if the read-only finding supports it.
-2. Retain.65 face blend. Cheek etching persists and needs a targeted texture correction; do not retry the same gain comparison. Live V554 shader probe confirms only procedural Bump connects to Normal, not an imported normal map; V557 reduces its amplitude in newer builds.
+1. Inspect six V562 previews when their download completes. Check the guitar control-side lower scoop against references before changing body outline.
+2. Dispatch V563 matched source-photo trial; retain underlying.65 atlas blend. No further gain-only comparison: pale etching persists in the blended atlas itself. Only procedural Bump feeds Normal; its newer amplitude is already reduced.
 3. Restore a newer full scene only when improvement warrants it. Keep pending hand-finger question open; do not repeat failed solver branches.
 
 ## Commands

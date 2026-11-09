@@ -13,7 +13,7 @@ def build(output, delit_face=False):
     from refine_v550_maple_density import build as build_guitar
 
     from build_v557_reference_locks import reduce_skin_microrelief
-    report = {'revision': 'V562', 'skin_microrelief': reduce_skin_microrelief()}
+    report = {'revision': 'V563', 'skin_microrelief': reduce_skin_microrelief()}
     report['groom'] = build_groom(out, save=False, clean_scalp=True)
     report['eyes'] = build_eyes(root, out)
     from refine_v558_eye_surface import build as build_eye_surface
@@ -25,6 +25,9 @@ def build(output, delit_face=False):
     if delit_face:
         from refine_v555_face_albedo import build as build_face
         report['face_albedo'] = build_face(out)
+    else:
+        from refine_v563_front_photo import build as build_front_photo
+        report['front_photo'] = build_front_photo(out)
 
     original = bpy.data.materials['V379_DARK_COTTON_JACKET']
     jacket = original.copy()
