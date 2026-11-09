@@ -2204,3 +2204,11 @@ Guitar run42583595731 at b4441fa succeeded; guitar-front visibly reduces vertica
 ## 2026-11-09: V554 rendering and V555 de-lit face preview
 
 V554 dispatched08:19UTC as run42585046848 at39896d7. Face texture diagnosis identifies V377 fitted photo atlas as the coherent source, with baked lighting; lowering its blend exposes worse raw Tripo texture. V555 keeps the original4K map and creates a generated1254px de-lit preview derivative, provenance and exact checksum in assets/generated/face_delit_v555/SOURCE.json. Optional combined-build input delit_face=true copies the material, changes only the fitted image, restores original photo-mask gain1.0, and renders front/oblique/profile plus whole character. Lower resolution is explicit; no production or UV-correspondence acceptance before rendered review. Cleanup unchanged4,423,050,972bytes; ntfy23 delivered08:24UTC. Independent guitar silhouette diagnosis ongoing.
+
+## 2026-11-09 V556 combined correction prepared
+
+V554 run42585046848 succeeded; all six renders reviewed and remain unaccepted. V555 de-lit run42586200698 succeeded; all four renders reviewed, rejected for waxy softness and temple/sideburn smearing. Original4K texture retained. V554 full delta downloaded08:52UTC, restore pending.
+
+V556 connects the posterior nape mask only (y>=.035,z>=1.575), with one max-y hair-touch seed and ear exclusion. Snapshot replay selected5264 faces without former lateral islands; actual Blender runtime and visual results still pending. Short nape fibers, narrower6.2/2.3mm eyelid aperture, and weave-driven charcoal jacket albedo are combined. Main1957-driver rig unchanged. Seven remote previews include open/half/closed blink.
+
+Additional10 old scenes V500/501/506/507/508/523–527 were converted to exact-restorable Zstandard deltas, reclaiming3,547,257,288bytes. Cumulative cleanup7,970,308,260bytes. V528 base and designated checkpoints retained. Named-finger chord assignment remains unchanged pending the already-sent user question.

@@ -13,9 +13,9 @@ Updated 2026-11-09 UTC. The character is unfinished. Continue the active referen
 
 ## Current state (2026-11-09 UTC)
 
-Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://github.com/Ajuntanaga/character-asset-an . Source through `39896d7` pushed. V554 combined run42585046848 is rendering (started08:19UTC). Main rig remains V357_CLOUDRIG_CONTROLS with 1,957 drivers. Root is sole writer; wardrobe_next_correction owns a read-only guitar silhouette diagnosis. Face diagnosis is complete.
+Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://github.com/Ajuntanaga/character-asset-an . Source through `81f8443` pushed; V556 combined correction prepared for the next commit. V554 run42585046848 and V555 run42586200698 succeeded; all ten preview images reviewed. Main rig remains V357_CLOUDRIG_CONTROLS with 1,957 drivers. Root is sole writer. Read-only children completed posterior-mask geometry and archive-candidate checks; root remains sole writer.
 - Preserved main V514, native hand V522, delta base V528. Reference branch V544: `production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend`; SHA256 `6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02`. Release and remote restore verified; do not repeat.
-- Live GUI on workspace7: `production_v545_fretting_hand/run-42568146113/Character_An_fretting_hand_TRIAL_v545.blend`. Main1957 drivers. Temporary read-only diagnostics used copies and removed them; check dirty state before replacing the scene.
+- Live GUI on workspace7: `production_v545_fretting_hand/run-42568146113/Character_An_fretting_hand_TRIAL_v545.blend`. Main1957 drivers, dirty=false at08:40UTC. Check again before replacing the scene. V554 delta download completed08:52UTC in `github_results/run-42585046848/blender-combined-build-31/`; restore and GUI load pending.
 - V545 hands, V546 groom, V547 face/blinks, V550 guitar, V551 beard are INDEPENDENT V544 trials. None is merged or production accepted.
 
 ## Latest visual results and V554 trial
@@ -26,15 +26,17 @@ Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://g
 - Beard42575549129 (`77cebb5`): short fibers still dominated by blurry photo beard and flat moustache; not accepted or merged.
 - Wardrobe front reviewed: leather-like broad highlights, weak weave/check variation. V379 already uses Poly Haven roughness/height. V388 HSV is correct; no mode change. Floral collar intentional.
 
-V554 combined trial is running in42585046848 at39896d7; do not duplicate it. `pipeline/build_v554_combined_trial.py`, mode `combined-build`, combines V546 groom, V547 eye alignment and V553 maple/V552 hardware without intermediate saves. Hands remain V544 and unresolved. Six views: whole character, face, side groom, wardrobe, guitar, instrument. No visual acceptance yet.
+V554 combined trial42585046848 at39896d7 succeeded08:28UTC. `pipeline/build_v554_combined_trial.py`, mode `combined-build`, combines V546 groom, V547 eye alignment and V553 maple/V552 hardware without intermediate saves. Hands remain V544 and unresolved. All six views inspected: face remains doll-like, curl rows uniform, lower nape is a dark smooth scan; jacket has broad gray bands. 209objects,1957drivers,zero missing images. Trial not accepted.
 
 - New `refine_v554_scalp_surface.py`: weld coincident UV seam coordinates, select456-group outer hairline, flood its interior, smooth120 passes with fixed boundary and7mm movement cap. Apply identical displacement to every shape key. Fill internal skin-labelled holes. Root sampling and collision use this same current smoothed scalp, triangulated with original UVMap; never use the archived lumpy V371 surface for this trial. Offline actual-mesh topology confirmed15536 interior groups and no face flood.
 - Remove global strand x-clamp. Replace170mm straight part with70mm irregular tapered part and pigmented scalp shader. Vary curl axes/radius/handedness; no claim of natural hair until rendered.
 - Replace only continuous upper-margin slot0 black material with copied warm waterline tissue; individual V394 lashes retain dark material.
-- Raise V388 jacket light albedo(.026,.029,.028)→(.045,.050,.048) to restore cloth variation; original material retained. Does not create missing macro-check pattern.
+- V554 raised jacket light albedo to(.045,.050,.048), worsening broad baked-light bands. V556 pending correction replaces only the ramp factor with existing rest-position V384_Weave_height, narrow charcoal range(.008,.009,.009)–(.018,.021,.020). Retains colored-detail saturation mask, roughness and bump. No render of this correction yet.
 - Python syntax, YAML and git diff whitespace passed including triangulation correction. V554 must preserve1957 drivers and save full detail before simplified previews.
 
-V555 optional de-lit face preview is prepared for `combined-build delit_face=true`. Source is the existing V377 fitted FaceBuilder4096px atlas; underlying V372/Tripo atlas is worse, so do not lower photo influence further. Built-in imagegen produced a1254px derivative, SHA256 `fa8bbf0db871b3b77461fae8f728025a045498a374c6a4a3fb7912e79aa0af1a`, with provenance under `assets/generated/face_delit_v555/`. Viewed atlas: baked nose/ear shine and etched shading reduced, but lower resolution and correspondence require actual render review. Original4K atlas preserved. `refine_v555_face_albedo.py` copies V549 material, substitutes only fitted image, restores photo-mask gain1.0, packs image, leaves UV/geometry untouched. Four views: character, face-front, oblique, profile. Trial only; no final texture acceptance.
+V555 de-lit face run42586200698 at81f8443 succeeded08:33UTC. All four views inspected: baked shading reduced but face remains soft/waxy, and profile has temple/sideburn smearing. Rejected as a final texture. Original4K atlas preserved. Generated1254px derivative SHA256 `fa8bbf0db871b3b77461fae8f728025a045498a374c6a4a3fb7912e79aa0af1a`, provenance `assets/generated/face_delit_v555/`. Keep optional `delit_face=false` for ordinary combined trials. No V555 full-scene download needed.
+
+V556 prepared08:53UTC, not rendered yet. Dark lower nape is raw Tripo hair baked into V377 skin faces, outside the old V371 mask (whose minimum z1.655 is ear-top height). Extend only the connected posterior skin region with center z1.575–1.668 and y>=.035, excluding the ear ellipse, seeded once at maximum-y hair-touch face. Independent snapshot replay selects5264 faces, no front/lateral islands. Runtime perimeter and interior-size gates still apply. Shorten nape fibers toward2–4mm with3.8mm root spacing; preserve ordinary6.5mm spacing elsewhere. Narrow reopened lid height from8/3.8mm to6.2/2.3mm and power from.52/.58 to.82/.95. Jacket uses weave height as narrow charcoal albedo factor. Combined job renders face, profile, character, wardrobe and blink0/.5/1; full scene saved before preview simplification. Keep delit_face=false.
 
 ## Hand diagnosis and next change
 
@@ -46,17 +48,21 @@ Exact exported kinematics and bounded scipy diagnostics are in `local_diagnostic
 
 IMPORTANT: PROJECT_HISTORY.md:375 already records the authorized index/ring fret-order crossing issue and failed endpoint fits. Do not present it as new, silently change targets, or repeat old diagnosis. The 27DOF solver uses pad35°/nail60° cones and thumb MCP/IP caps20°/15°. Need feasible coupled pose with clearance, not relaxed anatomy or point-only success.
 
+Pending user input: permission to reassign which fingers play the SAME strings/frets for a natural grip, versus retaining the named-finger assignments. Question already sent asynchronously; do not repeat it or change assignments before the answer.
+
 ## Cleanup, notifications and local resources
 
 Archived V530–V541 (12 obsolete full trials) as Zstandard deltas against retained `github_release/current-v528.blend`; each decoded SHA256 matched before original removal. Reclaimed4,250,005,688bytes from scenes, plus114,783,529bytes from19 obsolete KeenTools range/tail/race fragments, each byte-compared to retained complete installer at exact offsets. **Previous subtotal4,364,789,217bytes**. Also removed4 superseded, rejected generated deltas from runs42568298993/42571052107/42564726025/42566087166, retaining all previews/reports and current V545. Reclaimed58,261,755bytes; manifest `local_rejected_delta_cleanup_2026-11-09.json`. **Total4,423,050,972bytes (4.42GB/4.12GiB)**. Fragment manifest `local_installer_fragment_cleanup_2026-11-09.json`. Keep complete147MB core installer; underscore/hyphen names are hardlinks, not duplicated storage. `local_archive_cleanup_2026-11-08.json` plus per-folder `.blend.archived.json` record exact restore commands/checksums. Keep base, references, V514/V522/V528/V544+.
 
-Twenty-three BCA_task notifications delivered HTTP200, latest08:24UTC. Continue every5–10minutes or milestones; no daemon. Approximately76GiB disk free,21GiB memory available, swap1.8GiB; keep heavy rendering remote. Local viewers `chafa`, `image` available. Manual compaction unavailable; keep this handoff current.
+Additionally archived V500/501/506/507/508/523–527 with streamed restoration SHA256 verification, reclaiming3,547,257,288bytes. Aggregate `local_archive_cleanup_2026-11-09_older.json`; every folder has exact restore metadata. **Cumulative7,970,308,260bytes (7.97GB/7.42GiB) reclaimed.** V542 hardlink preserved. Never delete retained V528 base or designated checkpoints.
+
+Twenty-seven BCA_task notifications delivered HTTP200; continue milestone and5–10minute updates. Continue every5–10minutes or milestones; no daemon. Approximately79GiB disk free,19GiB memory available, swap1.9GiB; keep heavy rendering remote. Local viewers `chafa`, `image` available. Manual compaction unavailable; keep this handoff current.
 
 ## Next work
 
-1. Monitor V554 run42585046848; inspect all6 images and structural report. Commit/push V555 and dispatch one pending `combined-build delit_face=true` after confirming the slot is free.
-2. Restore its SHA-verified delta locally, check GUI dirty state, then load on workspace7 for whole-character review. Preserve prior scenes and keep trial status.
-3. Correct photographic face texture from actual source diagnosis. Native hand pose remains unresolved; do not rerun stopped solver sweeps. Continue reference-led corrections.
+1. Validate/commit/push V556 and dispatch one combined-build without de-lit face. Review seven actual renders; keep hand and reference targets unchanged.
+2. Restore downloaded V554 against V544 and verify SHA, check GUI dirty state, then load on workspace7. Preserve prior scenes and keep trial status.
+3. Correct face proportions/texture from reference comparison. Native hand pose remains unresolved; do not rerun stopped solver sweeps. Continue reference-led corrections.
 
 ## Commands and important details
 

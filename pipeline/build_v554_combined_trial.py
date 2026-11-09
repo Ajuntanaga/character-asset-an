@@ -12,7 +12,7 @@ def build(output, delit_face=False):
     from build_v547_blink_alignment import build as build_eyes
     from refine_v550_maple_density import build as build_guitar
 
-    report = {'groom': build_groom(out, save=False, clean_scalp=True)}
+    report = {'revision': 'V556', 'groom': build_groom(out, save=False, clean_scalp=True)}
     report['eyes'] = build_eyes(root, out)
     report['guitar'] = build_guitar(out, save=False)
     if delit_face:
@@ -21,10 +21,19 @@ def build(output, delit_face=False):
 
     original = bpy.data.materials['V379_DARK_COTTON_JACKET']
     jacket = original.copy()
-    jacket.name = 'V554_CHARCOAL_JACKET_VARIATION'
-    high = jacket.node_tree.nodes['V388_CharcoalAlbedo'].color_ramp.elements[1]
-    previous = list(high.color)
-    high.color = (.045, .050, .048, 1)
+    jacket.name = 'V556_CHARCOAL_WOVEN_JACKET'
+    ramp = jacket.node_tree.nodes['V388_CharcoalAlbedo']
+    previous = [list(e.color) for e in ramp.color_ramp.elements]
+    # The scan's grayscale includes broad baked light bands. Use the existing
+    # rest-position cloth height for subtle albedo variation instead, retaining
+    # the saturation mask that preserves the jacket's colored details.
+    for link in tuple(ramp.inputs['Fac'].links):
+        jacket.node_tree.links.remove(link)
+    jacket.node_tree.links.new(
+        jacket.node_tree.nodes['V384_Weave_height'].outputs['Color'],
+        ramp.inputs['Fac'])
+    ramp.color_ramp.elements[0].color = (.008, .009, .009, 1)
+    ramp.color_ramp.elements[1].color = (.018, .021, .020, 1)
     affected = []
     for obj in bpy.context.scene.objects:
         for slot in obj.material_slots:
@@ -33,8 +42,9 @@ def build(output, delit_face=False):
                 affected.append(obj.name)
     assert affected
     report['jacket'] = {'material': jacket.name, 'original': original.name,
-                        'previous_light_albedo': previous,
-                        'trial_light_albedo': list(high.color),
+                        'previous_albedo_range': previous,
+                        'trial_albedo_range': [list(e.color) for e in ramp.color_ramp.elements],
+                        'albedo_source': 'V384_Weave_height',
                         'objects': sorted(set(affected))}
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     assert len(rig.animation_data.drivers) == 1957

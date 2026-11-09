@@ -54,14 +54,15 @@ def build(root, out, *, coherent=False, scalp=None):
                 root.z>1.720 and -.105<root.y<.065 and abs(root.x-part)<part_root_half_width)
         if skip:
             continue
+        root_spacing = .0038 if scalp is not None and root.z < 1.655 and root.y > -.022 else spacing
         cell = tuple(math.floor(v/spacing) for v in root)
-        neighbors = (p for x in range(cell[0]-1,cell[0]+2)
+        neighbors = ((p, distance) for x in range(cell[0]-1,cell[0]+2)
                      for y in range(cell[1]-1,cell[1]+2)
                      for z in range(cell[2]-1,cell[2]+2)
-                     for p in grid.get((x,y,z),()))
-        if any((p-root).length_squared<spacing*spacing for p in neighbors):
+                     for p, distance in grid.get((x,y,z),()))
+        if any((p-root).length_squared < max(root_spacing, distance)**2 for p, distance in neighbors):
             continue
-        grid[cell].append(root)
+        grid[cell].append((root, root_spacing))
         roots.append((root,face,weights))
 
     children,steps = 48,25
@@ -70,6 +71,7 @@ def build(root, out, *, coherent=False, scalp=None):
     radii = np.empty((len(roots),children,steps),np.float32)
     uvs = np.empty((len(roots),children,2),np.float32)
     for gi,(root,face,weights) in enumerate(roots):
+        nape = min(1., max(0., (1.675-root.z)/.055)) if scalp is not None and root.y > -.022 else 0.
         normal = Vector(face['normal']).normalized()
         ellipsoid = Vector((root.x/.095**2,(root.y-.012)/.115**2,(root.z-1.682)/.118**2)).normalized()
         if normal.dot(ellipsoid)<0:
@@ -84,6 +86,7 @@ def build(root, out, *, coherent=False, scalp=None):
             direction = Vector((0.,.65,-.50))
         side_weight = max(0., min(1., (abs(root.x)-.045)/.035))*max(0., min(1., (1.78-root.z)/.07))
         direction = direction.lerp(Vector((0., .85, -.4)), side_weight)
+        direction = direction.lerp(Vector((0., .15, -1.)), nape)
         tangent = (direction-normal*direction.dot(normal)).normalized()
         across = normal.cross(tangent).normalized()
         theta = rng.uniform(-.40,.40)
@@ -105,6 +108,7 @@ def build(root, out, *, coherent=False, scalp=None):
             tilt = .78 + .14 * clump
             if scalp is not None:
                 tilt = .55 + .35 * clump
+                tilt = tilt * (1. - nape) + .12 * nape
             curl_axis = (tangent*math.cos(tilt) + normal*math.sin(tilt)).normalized()
             curl_normal = (normal-curl_axis*normal.dot(curl_axis)).normalized()
             curl_across = curl_normal.cross(curl_axis).normalized()
@@ -123,6 +127,9 @@ def build(root, out, *, coherent=False, scalp=None):
                 axial_length = rng.uniform(.007, .012) * (.50 + .50 * topness) * (1. - .45 * side_weight)
                 turns = rng.uniform(.80, 1.40) * (1. - .20 * side_weight)
                 turns *= -1 if rng.random() < .40 else 1
+        curl_radius *= 1. - .85 * nape
+        axial_length = axial_length * (1. - nape) + rng.uniform(.002, .004) * nape
+        turns *= 1. - .80 * nape
         if in_part and abs(root.x-part)<.012:
             curl_radius *= .77
         phase_warp = t+rng.uniform(-.14,.14)*np.sin(math.pi*t)
@@ -199,6 +206,7 @@ def build(root, out, *, coherent=False, scalp=None):
     base_radii = np.empty((len(roots),base_children,steps),np.float32)
     base_uvs = np.empty((len(roots),base_children,2),np.float32)
     for gi,(root,face,weights) in enumerate(roots):
+        nape = min(1., max(0., (1.675-root.z)/.055)) if scalp is not None and root.y > -.022 else 0.
         normal = Vector(face['normal']).normalized()
         outward = Vector((root.x/.095**2,(root.y-.012)/.115**2,(root.z-1.682)/.118**2)).normalized()
         if normal.dot(outward)<0:
@@ -208,13 +216,15 @@ def build(root, out, *, coherent=False, scalp=None):
         direction = Vector((-.85,.30,.05)) if root.x<part else Vector((.25,.65,-.30))
         if root.y>.035:
             direction = Vector((0.,.65,-.50))
+        direction = direction.lerp(Vector((0., .15, -1.)), nape)
         tangent = (direction-normal*direction.dot(normal)).normalized()
         across = normal.cross(tangent).normalized()
         angle = nprng.uniform(.8,1.4,base_children)[:,None]*math.tau*t[None,:]
-        radius = nprng.uniform(.0007,.0015,base_children)[:,None]
+        angle *= 1. - .80 * nape
+        radius = nprng.uniform(.0007,.0015,base_children)[:,None] * (1. - .70 * nape)
         height = .00025+radius*(1.-np.cos(angle))
         side = radius*np.sin(angle)
-        along = nprng.uniform(.007,.013,base_children)[:,None]*t[None,:]
+        along = nprng.uniform(.007,.013,base_children)[:,None]*t[None,:] * (1. - .70 * nape)
         block = (np.asarray(root)[None,None,:]+np.asarray(normal)[None,None,:]*height[:,:,None]
                  +np.asarray(across)[None,None,:]*side[:,:,None]
                  +np.asarray(tangent)[None,None,:]*along[:,:,None])
@@ -288,6 +298,8 @@ def build(root, out, *, coherent=False, scalp=None):
     bpy.context.view_layer.update()
     report = {'guides':len(roots),'strands':len(roots)*children,'points':len(curves.points),
               'root_spacing_m':spacing,'build_seconds':time.monotonic()-started,
+              'posterior_root_spacing_m': .0038 if scalp is not None else spacing,
+              'posterior_guides': sum(root.z < 1.655 and root.y > -.022 for root, _, _ in roots),
               'rig_drivers':len(rig.animation_data.drivers)}
     (out/'groom_report_b.json').write_text(json.dumps(report,indent=2))
 
