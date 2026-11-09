@@ -1,3 +1,9 @@
+## 2026-11-08 GitHub backup and bounded processing
+
+Private repository: https://github.com/Ajuntanaga/character-asset-an . Commit1330329 uploaded build scripts, references, attribution and handoff. Release checkpoint-v528 has all four assets confirmed uploaded: current-v528.blend (358071211 bytes), preserved-v514.blend (357867321 bytes), native-hand-v522.blend (732537 bytes), SHA256SUMS. Full scene assets are release downloads, not Git/LFS objects. Local github_release assets are hardlinks: do not modify them in place.
+
+Manual preview submitted: https://github.com/Ajuntanaga/character-asset-an/actions/runs/42549091532 . Two CPU threads, 512px,8samples, reduced subdivision/hair,20minute timeout, one concurrent job,7day artifact retention. At submission not yet verified; inspect run and returned image before claiming remote rendering works. No schedules or paid GPU runner. Private account remaining included minutes could not be queried with current token; account limits govern billing. Modal remains unavailable. Kaggle permitted only for modest occasional compute; no Kaggle job or data upload started.
+
 ## 2026-11-08 V530 bounded thumb review and remote processing
 
 Restored V528 via live MCP. V530 three native hinge-axis thumb trial saved and viewed: root spike avoided, but endpoint error22.25mm and no convincing pinch; not promoted. V528 live pose restored, main1957drivers preserved. GitHub private backup and bounded Actions CPU processing being prepared; Modal unavailable. User allows occasional modest Kaggle GPU compute, no broad batches.

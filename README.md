@@ -4,7 +4,7 @@ Private working project: reference-led, rigged guitarist character for animation
 
 ## Scene files
 
-Download the `checkpoint-v528` release assets. `current-v528.blend` is the active anatomical-hand integration trial; `preserved-v514.blend` is the previous intact character; `native-hand-v522.blend` is the native donor rig foundation. Verify files with `github_assets/SHA256SUMS`.
+Download the [checkpoint-v528 release assets](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v528). `current-v528.blend` is the active anatomical-hand integration trial; `preserved-v514.blend` is the previous intact character; `native-hand-v522.blend` is the native donor rig foundation. Verify files with `github_assets/SHA256SUMS`.
 
 Blender 5.2.2 LTS. Current scene textures are packed and there are no linked libraries. CloudRig controls and drivers are retained. The original workstation uses a loopback Blender MCP bridge for interactive editing; remote jobs do not expose that bridge.
 
