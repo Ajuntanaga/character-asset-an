@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Bounded scene check, CPU preview, V544 build, V545 hand fit, or V546 groom
+        description: Bounded scene check, CPU preview, hand fit, groom, or blink alignment
         type: choice
-        options: [check, preview, review, build-review, hand-build, groom-build]
+        options: [check, preview, review, build-review, hand-build, groom-build, blink-build]
         default: check
 permissions:
   contents: read
@@ -116,6 +116,19 @@ jobs:
           python3 - <<'PY'
           import hashlib,json,pathlib
           files = [pathlib.Path('scenes/current-v544.blend'), pathlib.Path('results/current-v546.delta.zst'), pathlib.Path('results/Character_An_coherent_groom_TRIAL_v546.blend')]
+          manifest = {}
+          for p in files:
+              with p.open('rb') as f: digest=hashlib.file_digest(f,'sha256').hexdigest()
+              manifest[p.name] = {'sha256': digest, 'bytes': p.stat().st_size}
+          pathlib.Path('results/build-manifest.json').write_text(json.dumps(manifest,indent=2))
+          PY
+      - name: Package blink scene as a checked delta
+        if: inputs.mode == 'blink-build'
+        run: |
+          zstd -T2 --patch-from=scenes/current-v544.blend results/Character_An_blink_alignment_TRIAL_v547.blend -o results/current-v547.delta.zst
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          files = [pathlib.Path('scenes/current-v544.blend'), pathlib.Path('results/current-v547.delta.zst'), pathlib.Path('results/Character_An_blink_alignment_TRIAL_v547.blend')]
           manifest = {}
           for p in files:
               with p.open('rb') as f: digest=hashlib.file_digest(f,'sha256').hexdigest()

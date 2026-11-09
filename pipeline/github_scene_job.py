@@ -8,7 +8,7 @@ import bpy
 from mathutils import Vector
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build'), default='check')
+parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build'), default='check')
 parser.add_argument('--output', default='results')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
@@ -24,6 +24,11 @@ if args.mode == 'groom-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v546_coherent_groom import build
     build(out)
+if args.mode == 'blink-build':
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from build_v547_blink_alignment import build
+    build(Path(__file__).resolve().parents[1], out)
+    bpy.ops.wm.save_as_mainfile(filepath=str(out.resolve() / 'Character_An_blink_alignment_TRIAL_v547.blend'), compress=True)
 scene = bpy.context.scene
 rig = bpy.data.objects.get('V357_CLOUDRIG_CONTROLS')
 if rig is None or rig.animation_data is None:
@@ -38,8 +43,8 @@ report = {'blender': bpy.app.version_string, 'scene': Path(bpy.data.filepath).na
           'objects': len(scene.objects), 'main_drivers': count, 'missing_images': missing,
           'mode': args.mode, 'quality_status': 'WORK_IN_PROGRESS_NOT_ACCEPTED'}
 (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build'):
-    review = args.mode in ('review', 'build-review', 'hand-build', 'groom-build')
+if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build'):
+    review = args.mode in ('review', 'build-review', 'hand-build', 'groom-build', 'blink-build')
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
     scene.cycles.samples = 32 if review else 8
@@ -85,6 +90,8 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             ('groom-oblique', (.8, -1.6, 1.86), (0, 0, 1.70), .38),
             ('groom-side', (1.8, 0, 1.74), (0, 0, 1.70), .38),
         ]
+    if args.mode == 'blink-build':
+        shots = []
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'
@@ -103,7 +110,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             obj.hide_render = False
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-    if args.mode in ('review', 'build-review'):
+    if args.mode in ('review', 'build-review', 'blink-build'):
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
         original = {side: head['Blink.' + side] for side in ('L', 'R')}
