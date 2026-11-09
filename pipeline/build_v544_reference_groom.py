@@ -13,13 +13,14 @@ from mathutils.bvhtree import BVHTree
 
 import gzip
 
-def build(root, out):
+def build(root, out, *, coherent=False):
+    version = "V546" if coherent else "V544"
     assert not bpy.app.is_job_running('RENDER')
     started = time.monotonic()
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
     assert len(rig.animation_data.drivers) == 1957
-    assert bpy.data.objects.get('V544_CURL_GROOM') is None
+    assert bpy.data.objects.get(version + '_CURL_GROOM') is None
     source = json.loads(gzip.decompress((root/'github_assets/groom/scalp_surface.json.gz').read_bytes()))
     mask = set(json.loads(gzip.decompress((root/'github_assets/groom/hair_mask.json.gz').read_bytes()))['faces'])
     positions = {int(i):Vector(p) for i,p in source['vertices'].items()}
@@ -79,6 +80,12 @@ def build(root, out):
         tangent = (direction-normal*direction.dot(normal)).normalized()
         across = normal.cross(tangent).normalized()
         theta = rng.uniform(-.40,.40)
+        if coherent:
+            # Smooth spatial field: adjacent roots share direction and curl size.
+            # Coordinates are metres; wavelengths span several root spacings.
+            flow = math.sin(root.x * math.tau / .045 + root.y * math.tau / .060)
+            size_field = .5 + .5 * math.sin(root.x * math.tau / .055 - root.y * math.tau / .070)
+            theta = .16 * flow
         tangent = (tangent*math.cos(theta)+across*math.sin(theta)).normalized()
         across = normal.cross(tangent).normalized()
         topness = min(1.,max(0.,(root.z-1.69)/.08))
@@ -87,11 +94,19 @@ def build(root, out):
         curl_radius *= 1.-.68*side_weight
         axial_length *= 1.-.55*side_weight
         turns = rng.uniform(.85,1.65)*(1.-.30*side_weight)
+        if coherent:
+            curl_radius = (.0055 + .0015 * size_field) * (.60 + .40 * topness) * (1. - .68 * side_weight)
+            axial_length = (.018 + .004 * size_field) * (.50 + .50 * topness) * (1. - .55 * side_weight)
+            turns = (1.05 + .15 * size_field) * (1. - .30 * side_weight)
         if in_part and abs(root.x-part)<.012:
             curl_radius *= .77
         phase_warp = t+rng.uniform(-.14,.14)*np.sin(math.pi*t)
+        if coherent:
+            phase_warp = t + .035 * flow * np.sin(math.pi*t)
         angle = turns*math.tau*phase_warp
         radius = curl_radius*(1.-rng.uniform(.05,.35)*t)
+        if coherent:
+            radius = curl_radius * (1. - .12 * t)
         height = radius*(1.-np.cos(angle))+.0006+.0005*np.sin(math.pi*t)
         side = radius*np.sin(angle)
         center = (np.asarray(root)[None,:]
@@ -196,14 +211,14 @@ def build(root, out):
             shader.inputs['Specular IOR Level'].default_value = .10
 
     visibility = {}
-    for name in ('V370_CURL_GROOM','V371_CURL_GROOM','V373_CURL_GROOM','V375_CURL_GROOM','V376_CURL_GROOM','V382_CURL_GROOM','V386_CURL_GROOM','V389_CURL_GROOM','V448_CURL_GROOM','V449_CURL_GROOM'):
+    for name in ('V370_CURL_GROOM','V371_CURL_GROOM','V373_CURL_GROOM','V375_CURL_GROOM','V376_CURL_GROOM','V382_CURL_GROOM','V386_CURL_GROOM','V389_CURL_GROOM','V448_CURL_GROOM','V449_CURL_GROOM') + (('V544_CURL_GROOM',) if coherent else ()):
         old = bpy.data.objects.get(name)
         if old:
             visibility[name] = {'render':old.hide_render,'viewport':old.hide_get()}
             old.hide_render = True
             old.hide_set(True)
     (out/'previous_visibility_b.json').write_text(json.dumps(visibility,indent=2))
-    curves = bpy.data.hair_curves.new('V544_LOOSE_CURL_STRANDS')
+    curves = bpy.data.hair_curves.new(version + '_LOOSE_CURL_STRANDS')
     curves.add_curves([steps]*(len(roots)*children))
     curves.set_types(type='CATMULL_ROM')
     curves.position_data.foreach_set('vector',points.ravel())
@@ -213,12 +228,12 @@ def build(root, out):
     curves.surface_uv_map = body.data.uv_layers.active.name
     curves.surface_collision_distance = .0002
     mat = bpy.data.objects['V389_CURL_GROOM'].data.materials[0].copy()
-    mat.name = 'V544_BLACK_CURL_FIBER'
+    mat.name = version + '_BLACK_CURL_FIBER'
     shader = next(n for n in mat.node_tree.nodes if n.type=='BSDF_HAIR_PRINCIPLED')
     shader.inputs['Roughness'].default_value = .44
     shader.inputs['Random Roughness'].default_value = .12
     curves.materials.append(mat)
-    obj = bpy.data.objects.new('V544_CURL_GROOM',curves)
+    obj = bpy.data.objects.new(version + '_CURL_GROOM',curves)
     bpy.context.scene.collection.objects.link(obj)
     bone = rig.pose.bones['DEF-Head']
     frame = rig.matrix_world@bone.matrix@Matrix.Translation((0,bone.bone.length,0))
@@ -235,5 +250,7 @@ def build(root, out):
     (out/'groom_report_b.json').write_text(json.dumps(report,indent=2))
 
     report['points_per_strand'] = steps
+    report['coherent_flow'] = coherent
+    report['version'] = version
     (out/'groom-report.json').write_text(json.dumps(report,indent=2))
     return report

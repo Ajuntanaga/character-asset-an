@@ -8,7 +8,7 @@ import bpy
 from mathutils import Vector
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build'), default='check')
+parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build'), default='check')
 parser.add_argument('--output', default='results')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
@@ -19,6 +19,10 @@ if args.mode == 'build-review':
 if args.mode == 'hand-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v545_fretting_hand import build
+    build(out)
+if args.mode == 'groom-build':
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from build_v546_coherent_groom import build
     build(out)
 scene = bpy.context.scene
 rig = bpy.data.objects.get('V357_CLOUDRIG_CONTROLS')
@@ -34,8 +38,8 @@ report = {'blender': bpy.app.version_string, 'scene': Path(bpy.data.filepath).na
           'objects': len(scene.objects), 'main_drivers': count, 'missing_images': missing,
           'mode': args.mode, 'quality_status': 'WORK_IN_PROGRESS_NOT_ACCEPTED'}
 (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-if args.mode in ('preview', 'review', 'build-review', 'hand-build'):
-    review = args.mode in ('review', 'build-review', 'hand-build')
+if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build'):
+    review = args.mode in ('review', 'build-review', 'hand-build', 'groom-build')
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
     scene.cycles.samples = 32 if review else 8
@@ -75,6 +79,12 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build'):
             ('fretting-oblique', center + offset @ Vector((.12, .20, .4)), center, .27),
             ('fretting-rear', center + offset @ Vector((-.02, .14, -.4)), center, .27),
         ] + context_shots
+    if args.mode == 'groom-build':
+        shots = [
+            ('groom-front', (0, -2, 1.72), (0, 0, 1.70), .38),
+            ('groom-oblique', (.8, -1.6, 1.86), (0, 0, 1.70), .38),
+            ('groom-side', (1.8, 0, 1.74), (0, 0, 1.70), .38),
+        ]
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'

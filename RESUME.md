@@ -1,3 +1,9 @@
+## 2026-11-08 V545 palm/wrist clearance trial running
+
+GitHub Actions https://github.com/Ajuntanaga/character-asset-an/actions/runs/42568146113 is in progress at commit ca46b8f50c0f4fcc802e0e9171d49d7318510dc7. Poll this exact run; do not dispatch a duplicate. Added actual neck BVH clearance for palm samples, wrist interior and thumb shafts; tightened thumb articulation bounds. Compilation and diff checks passed. Remote contact, collision and visual results remain pending. Preserve prior V545 reconstruction separately when downloading this trial. V544 remains live and full character remains unfinished.
+
+User authorizes public repository fallback if Actions denial requires it. Current repository verified PRIVATE and run started successfully; no visibility change needed or performed.
+
 ## 2026-11-08 V545 contact improved; clearance still rejected
 
 Run https://github.com/Ajuntanaga/character-asset-an/actions/runs/42566087166 succeeded. Downloaded github_results/run-42566087166/blender-hand-build-8/. Pad errors: Index 0.362mm, Middle hover 0.913mm, Ring 1.402mm, Pinky 1.561mm, Thumb 0.810mm. Both palms 94mm; main 1957 drivers, 48 donor drivers, wrist anchor 0.000149mm, unchanged pick transform. Reconstructed production_v545_fretting_hand/Character_An_fretting_hand_TRIAL_v545.blend with zstd --memory=512MB; SHA256 verified 0dc4ba2b56d78296082b5478fac342c6daf713caa52d49a624683d3686cbe898. V544 remains live. V545 is NOT accepted.
