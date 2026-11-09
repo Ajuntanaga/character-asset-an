@@ -30,12 +30,25 @@ def build(output):
     contrast = nodes.new('ShaderNodeRGBCurve')
     contrast.name = 'V550_FigureContrast'
     # Input is decoded linear RGB: luminance p05/p95 are .222/.321.
-    contrast.mapping.curves[3].points.new(.22, .075)
-    contrast.mapping.curves[3].points.new(.32, .72)
+    # Keep the flame visible without amplifying fine longitudinal grain into
+    # white scratches. The reference has a restrained silver/olive center.
+    contrast.mapping.curves[3].points.new(.22, .18)
+    contrast.mapping.curves[3].points.new(.32, .48)
     contrast.mapping.update()
     links.new(luminance.outputs['Val'], contrast.inputs['Color'])
     links.new(contrast.outputs['Color'], nodes['V387_GrayStain'].inputs[1])
-    nodes['V387_GrayStain'].inputs[2].default_value = (.47, .55, .59, 1)
+    nodes['V387_GrayStain'].inputs[2].default_value = (.47, .52, .45, 1)
+    nodes['V380_BurstFalloff'].inputs[1].default_value = 3.5
+    edge_object = bpy.data.objects['V206_BODY_CORE']
+    edge_original = bpy.data.materials['V356_NATURAL_MAPLE_EDGE']
+    edge_material = edge_original.copy()
+    edge_material.name = 'V550_CHARCOAL_BODY_EDGE'
+    edge_shader = edge_material.node_tree.nodes['Principled BSDF']
+    edge_shader.inputs['Base Color'].default_value = (.009, .012, .010, 1)
+    edge_shader.inputs['Roughness'].default_value = .42
+    for slot in edge_object.material_slots:
+        if slot.material == edge_original:
+            slot.material = edge_material
     for slot in top.material_slots:
         if slot.material == original:
             slot.material = material
@@ -48,10 +61,11 @@ def build(output):
     bpy.ops.wm.save_as_mainfile(filepath=str(path), compress=True)
     report = {'status': 'TRIAL_REQUIRES_VISUAL_REVIEW', 'original_material': original.name,
               'trial_material': material.name, 'longitudinal_density': 2.5,
-              'figure_contrast_points': [[.22, .075], [.32, .72]],
-              'stain_tint': [.47, .55, .59, 1],
+              'figure_contrast_points': [[.22, .18], [.32, .48]],
+              'stain_tint': [.47, .52, .45, 1],
+              'edge_material': edge_material.name,
               'body_geometry_changed': False, 'hardware': hardware,
-              'burst_changed': False, 'main_drivers': 1957,
+              'burst_changed': True, 'burst_exponent': 3.5, 'main_drivers': 1957,
               'output': path.name}
     (out / 'maple-density-report.json').write_text(json.dumps(report, indent=2))
     return report

@@ -1,6 +1,6 @@
 # Character Asset_An: current handoff
 
-Updated 2026-11-08. The character is unfinished. Continue the active reference-led Blender build; do not restart it or treat successful scripts as visual acceptance. Detailed prior decisions, rejected trials and checkpoint provenance are preserved in [PROJECT_HISTORY.md](PROJECT_HISTORY.md).
+Updated 2026-11-09 UTC. The character is unfinished. Continue the active reference-led Blender build; do not restart it or treat successful scripts as visual acceptance. Detailed prior decisions, rejected trials and checkpoint provenance are preserved in [PROJECT_HISTORY.md](PROJECT_HISTORY.md).
 
 ## User direction and working constraints
 
@@ -11,22 +11,22 @@ Updated 2026-11-08. The character is unfinished. Continue the active reference-l
 - Send meaningful updates and long-wait pings to `BCA_task` with `/home/ajuntanaga/.local/bin/researchos-ntfy-publish TOPIC TITLE MESSAGE`. Reuse the encrypted credential; never print or copy it. Do not create another notification daemon.
 - Keep this handoff concise for automatic context compaction. Remove reproducible caches and obsolete full-size scene copies only after preserving necessary rollback data and verifying exact restoration. Keep references, current scenes, designated checkpoints and delta bases.
 
-## Current state (2026-11-08 UTC)
+## Current state (2026-11-09 UTC)
 
-Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://github.com/Ajuntanaga/character-asset-an . Source through `3dc8378` pushed. Own-digit hand surface sampling is implemented and live verified; the next groom trial rotates the loop planes toward the scalp and reduces outward pitch. Main rig remains V357_CLOUDRIG_CONTROLS with 1,957 drivers.
-
+Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://github.com/Ajuntanaga/character-asset-an . Source through `cad82e4` pushed. Main rig remains V357_CLOUDRIG_CONTROLS with 1,957 drivers. New groom run42580685710 is active; no other render queued. Root is sole writer.
 - Preserved main V514, native hand V522, delta base V528. Reference branch V544: `production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend`; SHA256 `6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02`. Release and remote restore verified; do not repeat.
 - Live GUI on workspace7: `production_v545_fretting_hand/run-42568146113/Character_An_fretting_hand_TRIAL_v545.blend`. Main1957 drivers. Temporary read-only diagnostics used copies and removed them; check dirty state before replacing the scene.
 - V545 hands, V546 groom, V547 face/blinks, V550 guitar, V551 beard are INDEPENDENT V544 trials. None is merged or production accepted.
-- All Actions jobs through42577808048 completed successfully; all preview artifacts downloaded and viewed. No job running/queued at this handoff. New groom run pending dispatch. No new deltas downloaded.
+- Guitar run42579739576 (`959931a`) and eye run42580180604 (`cdaaf5d`) succeeded; previews downloaded and root visually reviewed. New deltas not downloaded.
 
 ## Latest visual results
 
-- Hand42572857511 (`bb84612`), `github_results/run-42572857511/`: REJECTED. Index12.17, middle4.04, ring14.46, pinky8.19, thumb10.41mm errors. Contact/orientation checks fail; thumb shape remains wrong. Main/native drivers1957/48. Earlier42568146113 had smaller distances but hooked thumb/straight distal joints and was also rejected.
-- Face/blink42574020857 (`a08fee1`), `github_results/run-42574020857/previews-blink-build-17/`: rounder aperture and warmer skin applied. Frontal closed lids continuous, no visible corneal pop-through. Face still stares; sharp black lid rim, chalky sclera, insufficient tearline. No full-surface/oblique animation acceptance. Arc minimum boundary clearance0.20mm; preserve completed evidence.
-- Groom42576959425 (`2c1fa07`), `github_results/run-42576959425/previews-groom-build-21/`: all3 views inspected. Independent direction variation did not fix the upright wire/spring loops or hard temple masses. REJECTED. Next trial changes curl-axis tilt from .30–1.00rad to 1.03–1.47rad and top pitch from4–7mm to1.5–3mm, placing loops along the scalp.
-- Guitar42577808048 (`3dc8378`), `github_results/run-42577808048/previews-guitar-build-22/`: front/oblique reviewed. Contrast curve still gives faint muddy grain; investigate linear texture values before another remap. Camera wider but top horn touches frame. Brown sides, bright tan edge, bridge blocks and toggle switch do not match product photo. Not accepted.
-- Beard42575549129 (`77cebb5`), `github_results/run-42575549129/previews-blink-build-20/`: beard detail/full face viewed. 1.4–2.4mm fibers visible but still dominated by blurry baked-photo beard/moustache. Short chin silhouette and flat moustache need work. Runtime successful; not accepted.
+- Hand42572857511 (`bb84612`): REJECTED. Index12.17, middle4.04, ring14.46, pinky8.19, thumb10.41mm errors. Earlier smaller-distance42568146113 also rejected for hooked thumb/straight distal joints. Main/native drivers1957/48.
+- Face/blink42580180604 (`cdaaf5d`), `github_results/run-42580180604/previews-blink-build-25/`: all4 frames reviewed. Upper54/lower8 lashes, lower length0.55–0.75mm before fade. Sparse lower lashes help; open eyes still have a continuous heavy black rim, chalky sclera and doll stare. Frontal closed lids continuous, no visible corneal pop-through. Arc minimum boundary clearance0.20mm; no full-surface/oblique animation acceptance. Child face_next_correction investigating source of rim read-only.
+- Groom42578933062 (`5b2a16a`), `github_results/run-42578933062/previews-groom-build-23/`: all3 views inspected, REJECTED hollow hoops over dark cap, hard temple blocks, no scalp part. Active42580685710 (`cad82e4`): coherent axis tilt .78+.14clump, axial pitch7–11mm, turns .78–1.10, bundle width1.5–2.2mm,28% radius fade, roots excluded within±8mm part; scalp shader clean central3mm plus2.5mm falloff each side. Preview required.
+- Guitar42579739576 (`959931a`), `github_results/run-42579739576/previews-guitar-build-24/`: both images reviewed. New rounded bridge housings/knurled tuners, pickup seams/lettering and thin selector improve hardware, all saddle transforms unchanged. Maple too bright/coarse and fabric-like; brown side/tan rim wrong. Curve .22→.075,.32→.72 over-amplifies linear input .222–.321. Needs softer contrast, broader burst and dark edges. Not accepted as a whole.
+- Beard42575549129 (`77cebb5`): 1.4–2.4mm fibers still dominated by blurry photo beard/moustache; short chin and flat moustache. Not accepted.
+- Wardrobe actual active body slot6 V379_DARK_COTTON_JACKET, refined V384/V388; V345 suggestion was stale. Floral buttonup collar is intentional in approved design. Child wardrobe_next_correction reading active shaders, no writes.
 
 ## Hand diagnosis and next change
 
@@ -34,21 +34,21 @@ Authoritative targets remain `references/m3/m3_chord_mapping_v2.json`. Donor alr
 
 Implemented per-digit distal skin BVHs (all polygon vertices >0.95 distal weight, skin material0), nearest to persistent pad anchor, max4mm, including final full-subdivision measurement. Live temporary-copy verification: Middle now samples Middle; anchor distances0.09–0.20mm. Own-pad errors I12.15/M4.00/R14.47/P8.16/T10.41mm. Sampling correctness does not solve the pose. `pad-identity-fixed-report.json` under local diagnostics. Temporary copies removed.
 
-Exact exported kinematics and bounded scipy diagnostics are in `local_diagnostics/hand_fit_2026-11-08/`. Removing thumb, widening thumb CMC or splay, Kabsch seed, and moving pulp patch solve all still fail. Moving pulp errors I9.75/M3.93/R9.49/P4.45/T1.06mm, with pad/nail orientation failures. Axis sign test confirms positive flex bends toward palmar skin; do NOT invert axes. Child hand_solver_correction now tries one bounded wrist-orientation multistart (max12 seeds/120sec, no scene writes).
+Exact exported kinematics and bounded scipy diagnostics are in `local_diagnostics/hand_fit_2026-11-08/`. Removing thumb, widening thumb CMC or splay, Kabsch seed, and moving pulp patch solve all still fail. Moving pulp errors I9.75/M3.93/R9.49/P4.45/T1.06mm, with pad/nail orientation failures. Axis sign test confirms positive flex bends toward palmar skin; do NOT invert axes. Bounded12-seed wrist multistart also failed: best I11.657/M.321/R14.233/P8.596/T11.345mm with orientation/limit failures. This solver path is STOPPED; do not repeat no-thumb, widened-CMC, Kabsch, moving-pulp or wrist-multistart trials.
 
 IMPORTANT: PROJECT_HISTORY.md:375 already records the authorized index/ring fret-order crossing issue and failed endpoint fits. Do not present it as new, silently change targets, or repeat old diagnosis. The 27DOF solver uses pad35°/nail60° cones and thumb MCP/IP caps20°/15°. Need feasible coupled pose with clearance, not relaxed anatomy or point-only success.
 
 ## Cleanup, notifications and local resources
 
-Archived V530–V541 (12 obsolete full trials) as Zstandard deltas against retained `github_release/current-v528.blend`; each decoded SHA256 matched before original removal. Reclaimed **4,250,005,688 bytes**. `local_archive_cleanup_2026-11-08.json` plus per-folder `.blend.archived.json` record exact restore commands/checksums. Keep base, references, V514/V522/V528/V544+.
+Archived V530–V541 (12 obsolete full trials) as Zstandard deltas against retained `github_release/current-v528.blend`; each decoded SHA256 matched before original removal. Reclaimed4,250,005,688bytes from scenes, plus114,783,529bytes from19 obsolete KeenTools range/tail/race fragments, each byte-compared to retained complete installer at exact offsets. **Total4,364,789,217bytes (4.36GB/4.07GiB)**. Fragment manifest `local_installer_fragment_cleanup_2026-11-09.json`. Keep complete147MB core installer; underscore/hyphen names are hardlinks, not duplicated storage. `local_archive_cleanup_2026-11-08.json` plus per-folder `.blend.archived.json` record exact restore commands/checksums. Keep base, references, V514/V522/V528/V544+.
 
-Fourteen BCA_task notifications delivered HTTP200 during this pass, latest about07:25UTC. Continue meaningful updates every5–10minutes or milestones; no duplicate daemon. Disk approximately76GiB free, memory20GiB available, swap~0.7GiB. Keep heavy rendering remote. Local image viewers available (`chafa`, `image`). Manual compaction control unavailable; keep this handoff current for automatic compaction.
+Seventeen BCA_task notifications delivered HTTP200, latest07:44UTC. Continue every5–10minutes or milestones; no daemon. Approximately76GiB disk free,21GiB memory available, swap1.4GiB; keep heavy rendering remote. Local viewers `chafa`, `image` available. Manual compaction unavailable; keep this handoff current.
 
 ## Next work
 
-1. Commit hand measurement fix and next groom correction; dispatch ONE groom-build. Record run and inspect all3 previews.
-2. Use bounded hand multistart result only if it supplies a materially better pose; no more repeated sign/target diagnosis.
-3. Correct maple linear color range and hardware; improve face/eyes/beard, wardrobe and integrate acceptable branches reversibly. Character remains substantially below supplied references and unfinished.
+1. Download and inspect all3 previews from groom42580685710 when complete. Do not queue more than one pending Actions job (third replaces pending).
+2. Correct maple finish and dark body edge. Source `pipeline/refine_v550_maple_density.py`; hardware `pipeline/refine_v552_guitar_hardware.py` has38 new/58 hidden objects, live temporary-copy geometry/1957-driver/saddle verification already passed. No repeat needed.
+3. Apply grounded eye/wardrobe corrections, then integrate improvements reversibly and review the whole character in Blender workspace7. Native hand pose remains unresolved. Character substantially below reference and unfinished.
 
 ## Commands and important details
 
