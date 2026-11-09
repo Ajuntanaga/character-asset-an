@@ -4,7 +4,13 @@ Private working project: reference-led, rigged guitarist character for animation
 
 ## Scene files
 
-Download the [checkpoint-v542 release asset](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v542). `current-v542.blend` is the current hand-pose trial, with the pick attached to the evaluated donor hand and redistributed index curl. The grip remains unaccepted. The [checkpoint-v528 release](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v528) retains the earlier integration trial, intact V514 character and V522 native donor rig foundation. Verify files with `github_assets/SHA256SUMS`.
+The [checkpoint-v542 release](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v542) stores a small Zstandard delta against `current-v528.blend` from the [checkpoint-v528 release](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v528). Actions reconstructs and checksum-verifies the exact `current-v542.blend` before rendering. To restore locally, download both files into one directory and run:
+
+```sh
+zstd -d -M1024MB --patch-from=current-v528.blend current-v542.delta.zst -o current-v542.blend
+```
+
+Verify the base, delta and reconstructed scene with `github_assets/SHA256SUMS`. V542 is the current hand-pose trial, with the pick attached to the evaluated donor hand and redistributed index curl. The grip remains unaccepted. The earlier release also retains the intact V514 character and V522 native donor rig foundation. The delta avoids uploading another full 358 MB scene over the workstation's slow upstream link; it requires the exact V528 base.
 
 Blender 5.2.2 LTS. Current scene textures are packed and there are no linked libraries. CloudRig controls and drivers are retained. The original workstation uses a loopback Blender MCP bridge for interactive editing; remote jobs do not expose that bridge.
 

@@ -18,5 +18,11 @@
     "sha256": "27d324c129efe7a021b706b0978f6cae270e3e5267a15364b7ad056b22690413",
     "bytes": 357930799,
     "source": "production_v542_index_curl/Character_An_index_curl_TRIAL_v542.blend"
+  },
+  "current-v542.delta.zst": {
+    "sha256": "d644e9ef5b99fba69e0b9c55667aaaf08e6afa9098c143fa0c7d9e53dc737f19",
+    "bytes": 3793925,
+    "base": "current-v528.blend",
+    "output": "current-v542.blend"
   }
 }

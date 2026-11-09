@@ -27,7 +27,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p scenes results
-          gh release download checkpoint-v542 --pattern current-v542.blend --dir scenes
+          gh release download checkpoint-v528 --pattern current-v528.blend --dir scenes
+          gh release download checkpoint-v542 --pattern current-v542.delta.zst --dir scenes
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          manifest=json.loads(pathlib.Path('github_assets/scene-manifest.json').read_text())
+          for name in ('current-v528.blend', 'current-v542.delta.zst'):
+              with pathlib.Path('scenes',name).open('rb') as f: actual=hashlib.file_digest(f,'sha256').hexdigest()
+              assert actual == manifest[name]['sha256'], (name, actual)
+          PY
+          zstd -d -M1024MB --patch-from=scenes/current-v528.blend scenes/current-v542.delta.zst -o scenes/current-v542.blend
           python3 - <<'PY'
           import hashlib,json,pathlib
           p=pathlib.Path('scenes/current-v542.blend')
