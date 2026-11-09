@@ -69,7 +69,9 @@ try:
         if 'base' in asset:
             dictionary = zstandard.ZstdCompressionDict((work / asset['base']).read_bytes(),
                                                        dict_type=zstandard.DICT_TYPE_RAWCONTENT)
-            decoder = zstandard.ZstdDecompressor(dict_data=dictionary, max_window_size=1024 * 1024)
+            # The pinned C backend passes this value to libzstd in bytes.
+            # Scene patch frames need a roughly 370 MiB window; cap at 1 GiB.
+            decoder = zstandard.ZstdDecompressor(dict_data=dictionary, max_window_size=1024 ** 3)
             restored = work / asset['output']
             with downloaded.open('rb') as source, restored.open('wb') as target:
                 with decoder.stream_reader(source) as reader:

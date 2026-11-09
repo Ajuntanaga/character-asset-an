@@ -2387,3 +2387,9 @@ Earlier cornea visibility study confirmed the shiny cap came from cornea penetra
 ## 2026-11-09 14:00 UTC bounded V583 Kaggle submission
 
 Fixed the dataset loader to accept Kaggle expanded archive mounts as well as ZIP files. Pinned per-file hashes/sizes restore only the seven selected reference inputs, including the V578 collar mask. Local ZIP/expanded/corrupt-input checks passed. The private dataset update reached READY, then private kernel anthovargas/character-an-v583-gpu-preview version 1 was submitted successfully with one selected T4 and a 30-minute cap. The generated source bundle includes the V583 full-Basis initialization corrections. GitHub Actions V582 run42627527644 remains active for the earlier hair comparison. No local render or duplicate V583 job.
+
+## 2026-11-09 14:13 UTC — V582 review and V583 Kaggle decoder correction
+
+All 12 V582 preview images were viewed. Hair trajectory variation is improved, but molded curl clumps/dark cap/bright tan part remain. Eye rollback removes the pale full-blink flap, but narrow triangular open eyes and half-blink corneal cap remain; the separate V583 Basis initialization fix is pending full cloud verification. Front collar and rear roll remain thick. Review: github_results/run-42627527644/previews-combined-build-46/visual-review.json.
+
+Kaggle V583 v1 failed after 49.24 seconds, before rendering: ZstdError Frame requires too much memory for decoding. Expanded reference inputs restored correctly, and V528 download hash passed. Pinned zstandard 0.25.0 C backend forwards max_window_size to libzstd in bytes (despite the documentation saying KiB). Replaced 1 MiB with bounded 1 GiB. Actual V543 patch reproduced the old error and decoded correctly under the new cap: 357953331 bytes, SHA256 e9f1f82067791e1381db845d84dda8ae76e9d8095a2f8ce88f1708a3217437ff, 0.9 seconds. Report local_diagnostics/kaggle-zstd-window-validation.json. Preparing one corrected private single-GPU/30-minute retry.
