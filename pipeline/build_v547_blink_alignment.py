@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import bpy
 from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 
 
 def build(root, out):
@@ -18,7 +19,7 @@ def build(root, out):
     keys = body.data.shape_keys.key_blocks
     material = list(body.data.materials).index(bpy.data.materials['V365_LID_SKIN'])
     counts = Counter(tuple(sorted(e)) for p in body.data.polygons for e in p.edge_keys)
-    report, backup = {}, {}
+    report, backup, lid_vertices = {}, {}, {}
     for side, sign in (('L', 1), ('R', -1)):
         adjacent = defaultdict(set)
         for p in body.data.polygons:
@@ -38,6 +39,7 @@ def build(root, out):
                     distance[n] = distance[v] + 1
                     queue.append(n)
         assert max(distance.values()) == 11
+        lid_vertices[side] = list(distance)
         margin = bpy.data.objects['V369_LID_MARGIN.' + side].data.shape_keys.key_blocks
         centers = {k: [sum((margin[k].data[i*6+j].co for j in range(6)), Vector()) / 6
                        for i in range(64)] for k in ('Basis', 'Blink')}
@@ -64,6 +66,50 @@ def build(root, out):
     body['V547_blink_alignment'] = True
     from build_v544_reference_eyelids import rebuild_lashes
     rebuild_lashes(out)
+    # Linear shape interpolation cuts through the convex cornea. Add a smooth
+    # outward arc whose influence is zero at both accepted endpoint shapes.
+    dg = bpy.context.evaluated_depsgraph_get()
+    for side in ('L', 'R'):
+        cornea = bpy.data.objects['V374_CORNEA.' + side].evaluated_get(dg)
+        mesh = cornea.to_mesh()
+        world_vertices = [cornea.matrix_world @ v.co for v in mesh.vertices]
+        faces = [list(p.vertices) for p in mesh.polygons]
+        cornea.to_mesh_clear()
+        corrections = {}
+        for obj, closed_name, indices in (
+            (body, 'Blink.' + side, lid_vertices[side]),
+            (bpy.data.objects['V369_LID_MARGIN.' + side], 'Blink', None),
+            (bpy.data.objects['V394_EYELASHES.' + side], 'Blink', None),
+        ):
+            # Objects share the head coordinate convention; transform the cornea
+            # into each object's local space rather than assuming identical parents.
+            inverse = obj.matrix_world.inverted()
+            surface = BVHTree.FromPolygons([inverse @ v for v in world_vertices], faces, all_triangles=False)
+            shape_keys = obj.data.shape_keys.key_blocks
+            basis, closed = shape_keys['Basis'], shape_keys[closed_name]
+            corrective = obj.shape_key_add(name='BlinkArc.' + side)
+            maximum = 0.
+            for i in indices if indices is not None else range(len(basis.data)):
+                shift = 0.
+                for step in range(1, 16):
+                    t = step / 16
+                    point = basis.data[i].co.lerp(closed.data[i].co, t)
+                    hit, _, _, _ = surface.ray_cast(Vector((point.x, -.3, point.z)), Vector((0, 1, 0)), .5)
+                    if hit is not None:
+                        shift = max(shift, (point.y - hit.y + .0002) / (4*t*(1-t)))
+                corrective.data[i].co.y -= shift
+                maximum = max(maximum, shift)
+            driver = corrective.driver_add('value').driver
+            driver.type = 'SCRIPTED'
+            variable = driver.variables.new()
+            variable.name = 'blink'; variable.type = 'SINGLE_PROP'
+            variable.targets[0].id = rig
+            variable.targets[0].data_path = f'pose.bones["Head"]["Blink.{side}"]'
+            driver.expression = '4*blink*(1-blink)'
+            corrections[obj.name] = maximum
+        report[side]['arc_maximum_displacement_m'] = corrections
+    rig.update_tag()
+    bpy.context.view_layer.update()
     report['status'] = 'TRIAL_REQUIRES_RENDER_AND_DEFORMATION_REVIEW'
     report['rig_drivers'] = len(rig.animation_data.drivers)
     (out / 'blink-alignment-backup.json').write_text(json.dumps(backup))

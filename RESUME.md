@@ -1,3 +1,23 @@
+## 2026-11-08 V547 intermediate blink arc clearance corrected
+
+Live MCP trial saved separately at production_v547_blink_alignment/arc_trial/Character_An_blink_alignment_TRIAL_v547.blend. Added driven outward corrective arcs to lid skin, margins and lashes, zero at open/closed endpoints. Previous half-blink cornea penetration was 0.427mm. Evaluated boundary diagnostic at 0/0.25/0.5/0.75/1 now reports zero penetrating samples both sides, minimum sampled clearance 0.1999mm. Report lives under arc_trial/blink-clearance-diagnostic.json. Main rig retains 1957 drivers. This does not establish full-surface collision or visual quality; remote blink renders next. Original endpoint trial and V544 retained. Hand 42568146113 completed successfully; download in progress. Groom 42568298993 in_progress. Repository remains private; no access denial.
+
+## 2026-11-08 V547 blink alignment trial built locally through MCP
+
+Previous turn yielded new evidence and verified live remote jobs. Clean live V405 was safely replaced by V544 via MCP, then V547 saved separately at production_v547_blink_alignment/Character_An_blink_alignment_TRIAL_v547.blend. Live scene is now V547. Main rig 1957 drivers retained. V544 remains untouched. Measured V544 closed skin versus margin mismatch up to 2.792mm left / 2.632mm right; margin closure alone was only 0.05mm. New builder aligns body closed edge to the margin with 0.07mm depth offset and tapers correction through 11 lid rings, then rebuilds lashes. Runtime alignment error 1.8e-9m both eyes. This is raw shape alignment, NOT proof of rendered closure, cornea clearance or intermediate blink quality. Existing closed preview re-viewed confirms slit/double contour. New render review still required.
+
+Added blink-build remote mode: reconstruct V544, build V547, save full scene, render open/half/closed, package delta. Python compilation and diff check passed. Do not dispatch while hand is running and groom pending: preserve existing pending job. Hand 42568146113 still in_progress at 21:40 PST; groom 42568298993 pending. Dispatch blink-build once groom starts. This is a separate V544 branch, not merged with V545/V546. Whole character incomplete.
+
+## 2026-11-08 live MCP correction and Actions status
+
+Fresh MCP read at 21:38 PST reports live file production_v405_wrist_contour/Character_An_wrist_contour_v405.blend, 1957 main rig drivers, no render. This supersedes earlier assumptions that V544 remains live. No scene was loaded or overwritten; inspect unsaved state before changing the live file. V544 remains the cloud trial base. GitHub repository verified PRIVATE; hand run 42568146113 is in_progress and groom run 42568298993 pending. No Actions access denial and no visibility change. User authorizes public fallback if needed. Continue polling existing runs without duplicates.
+
+## 2026-11-08 V546 coherent groom queued behind hand trial
+
+Committed fcfb254. V546 groom trial https://github.com/Ajuntanaga/character-asset-an/actions/runs/42568298993 verified pending behind active hand trial 42568146113. Do not duplicate either. New groom-build mode restores V544, preserves old groom hidden, uses spatially smooth curl direction/size/phase, saves full scene and renders front/oblique/side closeups. Output is a checked delta against V544. This is an independent branch from V544, not a merge of V545 hand work. Python compilation and diff check passed; Blender execution and visual results pending. Reference portrait and V544 portrait re-viewed: reference has organized larger ringlets; current hair is bristly and face remains unfinished.
+
+Live window inventory shows Blender PID7551 on workspace7. No local render started. Next poll hand run, download/view results and check clearance versus pad errors; then review groom run. Preserve run-specific files for repeated V545 trials. Full goal remains active and unfinished.
+
 ## 2026-11-08 V545 palm/wrist clearance trial running
 
 GitHub Actions https://github.com/Ajuntanaga/character-asset-an/actions/runs/42568146113 is in progress at commit ca46b8f50c0f4fcc802e0e9171d49d7318510dc7. Poll this exact run; do not dispatch a duplicate. Added actual neck BVH clearance for palm samples, wrist interior and thumb shafts; tightened thumb articulation bounds. Compilation and diff checks passed. Remote contact, collision and visual results remain pending. Preserve prior V545 reconstruction separately when downloading this trial. V544 remains live and full character remains unfinished.
