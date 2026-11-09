@@ -4,7 +4,7 @@ Private working project: reference-led, rigged guitarist character for animation
 
 ## Scene files
 
-Download the [checkpoint-v528 release assets](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v528). `current-v528.blend` is the active anatomical-hand integration trial; `preserved-v514.blend` is the previous intact character; `native-hand-v522.blend` is the native donor rig foundation. Verify files with `github_assets/SHA256SUMS`.
+Download the [checkpoint-v542 release asset](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v542). `current-v542.blend` is the current hand-pose trial, with the pick attached to the evaluated donor hand and redistributed index curl. The grip remains unaccepted. The [checkpoint-v528 release](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v528) retains the earlier integration trial, intact V514 character and V522 native donor rig foundation. Verify files with `github_assets/SHA256SUMS`.
 
 Blender 5.2.2 LTS. Current scene textures are packed and there are no linked libraries. CloudRig controls and drivers are retained. The original workstation uses a loopback Blender MCP bridge for interactive editing; remote jobs do not expose that bridge.
 
@@ -12,7 +12,7 @@ Blender 5.2.2 LTS. Current scene textures are packed and there are no linked lib
 
 ## Processing
 
-Run **Blender scene check and preview** manually in Actions. It downloads the pinned release scene and Blender version, validates the scene, and optionally makes a 512-pixel, 8-sample CPU preview. Two threads, one job at a time, 20-minute job timeout, seven-day result retention. The preview reduces subdivision and hair children to fit standard hosted runner memory; it is not a final quality render or animation certification.
+Run **Blender scene check and preview** manually in Actions. It downloads the pinned release scene and Blender version and validates the scene. `preview` makes a 512-pixel, 8-sample instrument render; `review` makes four 768-pixel, 32-sample renders of the instrument, grip, full character and portrait. Both use CPU rendering. Two threads, one job at a time, 20-minute job timeout, seven-day result retention. These previews reduce subdivision and hair children to fit standard hosted runner memory; they are not final quality renders or animation certification.
 
 [First successful remote preview](https://github.com/Ajuntanaga/character-asset-an/actions/runs/42549182718): scene checksum passed, 169 objects, 1,957 main-rig drivers, no missing images; returned PNG visually inspected.
 

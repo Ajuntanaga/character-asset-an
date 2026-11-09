@@ -13,5 +13,10 @@
     "sha256": "b333dc2bb52943f17850598e054c8d7d64ba541941e3031431c266e14c6db4fa",
     "bytes": 732537,
     "source": "production_v522_native_donor/Antonia_native_hand_rig_v522.blend"
+  },
+  "current-v542.blend": {
+    "sha256": "27d324c129efe7a021b706b0978f6cae270e3e5267a15364b7ad056b22690413",
+    "bytes": 357930799,
+    "source": "production_v542_index_curl/Character_An_index_curl_TRIAL_v542.blend"
   }
 }

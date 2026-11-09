@@ -8,7 +8,7 @@ import bpy
 from mathutils import Vector
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', choices=('check', 'preview'), default='check')
+parser.add_argument('--mode', choices=('check', 'preview', 'review'), default='check')
 parser.add_argument('--output', default='results')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
@@ -26,26 +26,42 @@ report = {'blender': bpy.app.version_string, 'scene': Path(bpy.data.filepath).na
           'objects': len(scene.objects), 'main_drivers': count, 'missing_images': missing,
           'mode': args.mode, 'quality_status': 'WORK_IN_PROGRESS_NOT_ACCEPTED'}
 (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-if args.mode == 'preview':
+if args.mode in ('preview', 'review'):
+    review = args.mode == 'review'
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
-    scene.cycles.samples = 8
+    scene.cycles.samples = 32 if review else 8
     scene.cycles.use_denoising = True
     scene.render.threads_mode = 'FIXED'; scene.render.threads = 2
     scene.render.use_simplify = True
     scene.render.simplify_subdivision_render = 1
     scene.render.simplify_child_particles_render = 0.1
-    scene.render.resolution_x = 512; scene.render.resolution_y = 512
+    size = 768 if review else 512
+    scene.render.resolution_x = size; scene.render.resolution_y = size
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = 'PNG'
     camera = scene.camera
     if camera is None:
         raise RuntimeError('Scene camera missing')
-    camera.location = (-.00624775, -.645, .74370837)
-    camera.rotation_euler = (Vector((-.10234958, -.27, 1.0314399)) - camera.location).to_track_quat('-Z', 'Y').to_euler()
-    camera.data.type = 'ORTHO'; camera.data.ortho_scale = .42
-    scene.render.filepath = str(out / 'instrument-preview.png')
-    bpy.ops.render.render(write_still=True)
-    report['preview'] = {'samples': 8, 'size': 512, 'threads': 2, 'reduced_detail': True}
-    (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
+    shots = [('instrument', (-.00624775, -.645, .74370837),
+              (-.10234958, -.27, 1.0314399), .42)]
+    if review:
+        pick = bpy.data.objects['V361_NYLON_PICK']
+        center = sum((pick.matrix_world @ v.co for v in pick.data.vertices), Vector()) / len(pick.data.vertices)
+        shots.extend([
+            ('pick-grip', center + Vector((.13, -.2, .04)), center, .16),
+            ('character', (.35, -3.5, 1.3), (0, 0, .94), 2.12),
+            ('portrait', (.30, -2, 1.7), (0, 0, 1.64), .58),
+        ])
+    report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
+                         'reduced_detail': True, 'completed_shots': []}
+    camera.data.type = 'ORTHO'
+    for label, position, target, scale in shots:
+        camera.location = position
+        camera.rotation_euler = (Vector(target) - camera.location).to_track_quat('-Z', 'Y').to_euler()
+        camera.data.ortho_scale = scale
+        scene.render.filepath = str(out / f'{label}-preview.png')
+        bpy.ops.render.render(write_still=True)
+        report['preview']['completed_shots'].append(label)
+        (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
 print(json.dumps(report))
