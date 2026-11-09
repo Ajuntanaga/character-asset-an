@@ -11,7 +11,6 @@ import sys
 import tarfile
 import time
 import urllib.request
-import zipfile
 
 
 started = time.monotonic()
@@ -50,20 +49,16 @@ try:
          '--format=csv,noheader'], text=True, timeout=min(30, remaining()))
     status['available_gpus'] = gpu.strip().splitlines()
     print(gpu, flush=True)
-    candidates = list(Path('/kaggle/input').rglob('reference-inputs.zip'))
-    assert len(candidates) == 1, candidates
-    archive = candidates[0]
-    assert digest(archive) == INPUTS_SHA256
-    with zipfile.ZipFile(archive) as bundle:
-        for entry in bundle.namelist():
-            assert not Path(entry).is_absolute() and '..' not in Path(entry).parts
-        bundle.extractall(work)
     scripts = json.loads(gzip.decompress(base64.b64decode(SOURCES_B64)))
     for name, source_text in scripts.items():
         target = work / name
         assert name.startswith('pipeline/') and len(Path(name).parts) == 2
         target.parent.mkdir(exist_ok=True)
         target.write_text(source_text)
+    sys.path.insert(0, str(work / 'pipeline'))
+    from kaggle_reference_inputs import restore_reference_inputs
+    status['reference_inputs'] = restore_reference_inputs(
+        '/kaggle/input', work, INPUTS_SHA256, INPUTS_MANIFEST_SHA256)
     status['source_bundle_sha256'] = hashlib.sha256(SOURCES_B64.encode()).hexdigest()
     subprocess.run([sys.executable, '-m', 'pip', '-q', 'install', 'zstandard==0.25.0'],
                    check=True, timeout=min(120, remaining()))

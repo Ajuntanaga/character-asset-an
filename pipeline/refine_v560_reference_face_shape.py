@@ -84,6 +84,10 @@ def build(output, chin_weight=1.):
     assert KEY not in keys, 'Apply the reversible face fit only once'
     basis = keys['Basis']
     key = body.shape_key_add(name=KEY, from_mix=False)
+    # Prior scripts edit Basis directly; mesh storage can still hold old lids.
+    # Initialize every vertex before applying this deliberately partial field.
+    for destination, source in zip(key.data, basis.data):
+        destination.co = source.co
     key.value = 0.
     key.slider_min, key.slider_max = 0., 1.
     direction = body.matrix_world.inverted().to_3x3() @ Vector((0, 1, 0))

@@ -15,7 +15,7 @@ import zipfile
 
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
-parser.add_argument('--revision', default='V571')
+parser.add_argument('--revision', default='V583')
 args = parser.parse_args()
 revision = args.revision.upper()
 assert revision.startswith('V') and revision[1:].isdigit(), revision
@@ -33,13 +33,21 @@ assets = [
     'references/derived/photoreal_facebuilder_v1/fitted_cameras_v326.json',
     'github_assets/v567-rear-collar-mask.json',
     'github_assets/v568-pen-cloth-mask.json',
+    'github_assets/v578-collar-rim-mask.json',
 ]
+inputs_manifest = json.dumps({'format': 1, 'files': {
+    name: {'bytes': (root / name).stat().st_size,
+           'sha256': hashlib.sha256((root / name).read_bytes()).hexdigest()}
+    for name in assets
+}}, sort_keys=True, separators=(',', ':')).encode()
+inputs_manifest_hash = hashlib.sha256(inputs_manifest).hexdigest()
 archive = dataset / 'reference-inputs.zip'
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1) as bundle:
     for name in assets:
         bundle.write(root / name, name)
+    bundle.writestr('reference-inputs-manifest.json', inputs_manifest)
 archive_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
-sources, pending = {}, ['github_scene_job']
+sources, pending = {}, ['github_scene_job', 'kaggle_reference_inputs']
 while pending:
     name = pending.pop()
     relative = 'pipeline/' + name + '.py'
@@ -87,7 +95,8 @@ for version, name in [('528', 'current-v528.blend'),
         assert url.startswith('https://release-assets.githubusercontent.com/')
     downloads.append(dict(manifest[name], name=name, url=url))
 del token
-program = (f'REVISION = {revision!r}\nINPUTS_SHA256 = {archive_hash!r}\nSOURCES_B64 = {encoded!r}\n'
+program = (f'REVISION = {revision!r}\nINPUTS_SHA256 = {archive_hash!r}\n'
+           f'INPUTS_MANIFEST_SHA256 = {inputs_manifest_hash!r}\nSOURCES_B64 = {encoded!r}\n'
            f'SCENE_DOWNLOADS = {downloads!r}\nSCENE_MANIFEST = {manifest!r}\n' +
            (root / 'pipeline/kaggle_character_job.py').read_text())
 ast.parse(program)

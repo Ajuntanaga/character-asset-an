@@ -48,6 +48,9 @@ def build(output):
     assert KEY not in keys, 'Apply the collar trial only once'
     basis = keys['Basis']
     key = body.shape_key_add(name=KEY, from_mix=False)
+    # A collar-only key must not inherit stale mesh coordinates on the face.
+    for destination, source in zip(key.data, basis.data):
+        destination.co = source.co
     key.value = 0.
     world_to_local = body.matrix_world.inverted().to_3x3()
     moved, peak = 0, 0.

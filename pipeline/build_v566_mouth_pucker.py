@@ -65,6 +65,8 @@ def build(output):
         assert key_name not in keys
         key = obj.shape_key_add(name=key_name, from_mix=False)
         basis = keys['Basis']
+        for destination, source in zip(key.data, basis.data):
+            destination.co = source.co
         inverse = obj.matrix_world.inverted().to_3x3()
         for i, delta in deltas.items():
             key.data[i].co = basis.data[i].co + inverse @ delta

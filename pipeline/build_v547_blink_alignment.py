@@ -107,7 +107,10 @@ def build(root, out):
             surface = BVHTree.FromPolygons([inverse @ v for v in world_vertices], faces, all_triangles=False)
             shape_keys = obj.data.shape_keys.key_blocks
             basis, closed = shape_keys['Basis'], shape_keys[closed_name]
-            corrective = obj.shape_key_add(name='BlinkArc.' + side)
+            corrective = obj.shape_key_add(name='BlinkArc.' + side, from_mix=False)
+            # Keep this eye's correction independent of earlier keys and edits.
+            for destination, source in zip(corrective.data, basis.data):
+                destination.co = source.co
             maximum = 0.
             for i in indices if indices is not None else range(len(basis.data)):
                 shift = 0.
