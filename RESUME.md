@@ -1,17 +1,19 @@
 # Character Asset_An: current handoff
 
-Updated 2026-11-09 14:13 UTC. The character remains unfinished. Continue the existing reference-led build. Successful scripts are not visual acceptance. Earlier details and rejected trials are preserved in PROJECT_HISTORY.md, including the complete handoff archived at 13:41 UTC.
+Updated 2026-11-09 14:33 UTC. The character remains unfinished. Continue the existing reference-led build. Successful scripts are not visual acceptance. Earlier details and rejected trials are preserved in PROJECT_HISTORY.md, including the complete handoff archived at 13:41 UTC.
 
 ## Constraints
 
 - Match the supplied character, face, wardrobe, hands and guitar sheets; produce a film/show-quality animation-ready character and show actual renders.
 - Preserve V357_CLOUDRIG_CONTROLS and its 1,957 drivers. Blender MCP belongs on workspace 7, loopback 127.0.0.1:9876, per-tool approval prompt, no add-on auto-start.
 - GitHub uploads, commits/push and Actions are authorized. Repo https://github.com/Ajuntanaga/character-asset-an remains PRIVATE; Actions works. Modal unavailable. Modest Kaggle allowed.
-- One writer, at most two read-only children. v584_part_geometry finished: part material footprint can narrow from 2.3 to 1.4 mm. v584_collar_remaining derives rear-roll geometry bounds from existing exports; no further arbitrary rim mask. Root remains sole writer. The finished expression-key audit found no additional active post-rebuild creation sites beyond the four fixed. Serialize bounded local heavy jobs; do not close other Codex sessions.
+- One writer, at most two read-only children. All current children finished. Curl-shape review viewed the reference/current renders and recommended analytic guide suspension before collision projection; implemented for V584. Collar exports are cropped and cannot prove isolated components. The expression-key audit found no additional active post-rebuild creation sites beyond the four fixed. Serialize bounded local heavy jobs; do not close other Codex sessions.
 - BCA_task notifications about every 5–10 minutes and at milestones, using the existing encrypted credential publisher. No notification daemon. No manual compaction tool; keep this handoff compact.
 - Remove only obsolete/reproducible files after exact restoration or redundancy checks. Keep references, unique backups, current scenes and designated bases/checkpoints.
 
 ## Current cloud work
+
+V583 Actions run 42634096386, commit c884bca, started 14:22:54 UTC and is rendering all 15 views. Kaggle v2 was cancelled externally without a diagnostic reason; don't retry it again now. V584 source adds reversible rear-collar flattening and analytic curl-guide suspension; cloud dispatch follows syntax/diff checks. Do not cancel V583: its eye/expression results matter independently.
 
 V582 commit 4b7102a is pushed. Actions run 42627527644 started around 13:40 UTC, appearance scope (12 actual views), delit_face=false and facial_hair=false. Main changes:
 - Restore upper eye opening 11.5 to 8.8 mm. V578 wider opening caused a pale overlapping flap at full closure, despite intermediate stored-target assertions.
@@ -22,7 +24,7 @@ V578 run 42622660668 succeeded 13:18:52 UTC. All 12 images reviewed in github_re
 
 V575 run 42619527185 is fully downloaded and restored. Valid scene: production_v575_combined_reference/run-42619527185/Character_An_combined_reference_TRIAL_v554.blend, 514141241 bytes, SHA256 369e8a79c7e19c95479b5a783d674f7f08379aa450691aa931ff4e7524f4769f. Restoration manifest beside it. Bad 135002024-byte ranged-transfer scratch removed after successful restore; local_diagnostics/v575-failed-transfer-cleanup.json records it. No active download.
 
-## V583 eye correction: implemented, Kaggle build submitted
+## V583 eye correction: implemented, Actions full build running
 
 Actual cause found through live MCP: newly added partial shape keys inherit stale mesh coordinates after direct Basis edits. V560_ReferenceCentralFace (.75) and V565_ReferenceJacketCollar (1) lower upper lids by 3.1499/3.1195 mm combined; MouthPucker has the same unintended lid offsets at zero value. BlinkArc.R also inherited a left-eye delta. Disabling the Armature makes no difference, so this is not a rig-transform problem. Details: local_diagnostics/eye-deformation-v575.json and neutral-eye-aperture-v575.json.
 
@@ -32,10 +34,10 @@ Earlier cornea visibility study confirmed the shiny cap came from cornea penetra
 
 ## Next actions
 
-1. V582 review is complete. Continue from its recorded findings; no active download.
-2. V583 Kaggle v1 failed after 49.24 seconds, before rendering, on the zstd window cap. Expanded reference input restoration and V528 download verification succeeded. Pinned zstandard 0.25.0 C backend uses bytes, so old 1 MiB cap rejected the 357953331-byte V543 frame. Changed bounded cap to 1 GiB; actual local old-cap failure reproduced and new-cap decode SHA matched the manifest in 0.9 seconds. Report local_diagnostics/kaggle-zstd-window-validation.json. Preparing one corrected v2 retry; do not also dispatch Actions V583.
-3. Update/load a verified cloud scene into workspace 7 after visual review and checksum restoration. Continue reference face/hair/wardrobe and hand/animation work. No overall completion claim.
-4. V583 source/Kaggle loader fix committed and pushed 3e5fe66. Continue with actual cloud results and maintain frequent notifications and recoverable cleanup.
+1. Download and inspect V583 full previews from run 42634096386 when ready; verify open/half/full blink and mouth expressions after the Basis initialization fix.
+2. V584 local collar study completed in 75.85 seconds, four actual images viewed: local_diagnostics/collar_v584_shape_2026-11-09. Accept intermediate improvement: slimmer/flatter rear roll, still simplified/thick with pale rim flecks and neck atlas defects. Reversible key affects 3456 vertices, peak29.6615mm, preserves1957drivers; study restored live state without saving.
+3. V584 groom adds analytic lift of radial normal excursion before BVH projection, preserving strand count/random streams/width/radius/shader. Prior collision projection flattened inward curl arcs. Full front/oblique/profile renders must decide whether suspension improves them without floating/fluffy silhouettes. Collar key is inserted after V578 rim mask in the combined build. Syntax and diff checks pass.
+4. Update/load a verified cloud scene into workspace 7 after visual review and checksum restoration. Continue reference face/hair/wardrobe and hand/animation work. No overall completion claim.
 
 ## Live Blender and preservation
 
@@ -66,17 +68,17 @@ Picking centroid residual 9.253 mm is along exposed-tip axis; existing 13 mm sea
 ## Cleanup, resources, notifications
 
 32,060,063,086 bytes (32.06 GB / 29.86 GiB) reclaimed across 108 obsolete full scenes. Each was encoded against retained V528, decoded and SHA256 verified before original removal. Latest V386 reclaimed 200896951 bytes, manifest local_archive_cleanup_2026-11-09_pre387.json. The next V385 archive exceeded the half-size cutoff, so its original was kept and only the newly created inefficient trial delta removed; V383/V381 skipped. Record local_diagnostics/archive-pre387-stop.json. No archive job active. Each .blend.archived.json has exact restore instructions. Also 19 byte-verified redundant installer fragments and four rejected deltas removed; unique .blend1 backups and references retained.
-At 13:55 UTC: 15 GiB memory available, swap 3.3/8 GiB, about 96 GiB disk free. No local heavy job active. Native image viewer chafa available.
-80 successful BCA_task notifications through 14:09 UTC, seven DNS failures. Scoped CURL_HOME=/tmp/character-ntfy-curl resolves ntfy.sh from TLS Google DoH; latest lookup 14:11 UTC TTL385 seconds, refresh after 14:17 UTC. Saved encrypted credential loading and normal TLS retained; no OS DNS changes.
+At 14:26 UTC: 16 GiB memory available, swap 3.3/8 GiB, about 96 GiB disk free. No local heavy job active. Native image viewer chafa available.
+83 successful BCA_task notifications through 14:31 UTC, seven DNS failures. Scoped CURL_HOME=/tmp/character-ntfy-curl resolves ntfy.sh from TLS Google DoH; latest lookup 14:26:29 UTC returned159.203.148.75 TTL873 seconds, refresh after14:41 UTC. Saved encrypted credential loading and normal TLS retained; no OS DNS changes. Next notification due about14:37.
 
 ## Kaggle
 
-anthovargas/character-an-v567-gpu-preview v1 FAILED before rendering, in 2.03 seconds: /kaggle/input/**/reference-inputs.zip absent. Kaggle documentation confirms archive inputs are expanded; the loader assumed a ZIP. Log/report in kaggle_results/v567. Two T4 GPUs available, but no rendering occurred. Dataset anthovargas/character-an-v544-render-inputs private. V583 version 1 submitted at 14:00 UTC and FAILED before rendering after 49.24 seconds: https://www.kaggle.com/code/anthovargas/character-an-v583-gpu-preview . Dataset update READY before submission. Expanded inputs restored correctly. The decoder cap fix passed the actual local patch test; one v2 retry is being prepared with fresh signed URLs. One selected T4 GPU, CPU2, 1800-second cap; do not duplicate. Temporary asset URLs generated about 13:57 UTC, expire about 14:57 UTC.
+anthovargas/character-an-v567-gpu-preview v1 failed before rendering because it assumed an unexpanded input ZIP. V583 v1 failed after49.24seconds at the zstd window cap. Fixed in c884bca: pinned zstandard0.25.0 C backend uses bytes; old1MiB cap failed, bounded1GiB cap restored the actual V543 SHA in0.9seconds. Report local_diagnostics/kaggle-zstd-window-validation.json. V583 v2 submitted14:14UTC, RUNNING14:16, CANCEL_ACKNOWLEDGED14:18:37 without root cancellation or reason. Log kaggle_results/v583-v2/character-an-v583-gpu-preview.log confirms V528 and both V543/V544 deltas verified by16.27seconds; next stage was Blender download. No rendering result or OOM/quota conclusion. Stop retries; Actions fallback running. Private kernel https://www.kaggle.com/code/anthovargas/character-an-v583-gpu-preview . One selected T4, CPU2,1800-secondcap. Signed URLs expire15:13UTC; mode600 ignored payloads must not be printed/committed.
 Source fix adds kaggle_reference_inputs.py, a pinned per-file manifest embedded in the input ZIP, supports either ZIP or expanded mounts, and validates file sizes/hashes before restoring. prepare_kaggle_character.py adds missing v578-collar-rim-mask.json and bundles the helper. Local fixture reproduces old missing-ZIP failure, restores identical bytes through ZIP/expanded paths, rejects corrupt expanded inputs; syntax checks pass. Generated bundle includes all four Basis initialization fixes, revision V583, 30 scripts and seven reference inputs; 3.32 MB uploaded. No claim of GPU success yet.
 Refresh temporary signed scene URLs immediately before any authorized upload/run. Generated kaggle_payload scripts contain signed URLs; ignored, mode600, do not print/commit. Modest single-GPU/30min cap remains.
 
 ## Commands
 
 MCP: /home/ajuntanaga/Documents/Codex/Blender-MCP/.venv/bin/python pipeline/blender_mcp_call.py execute_blender_code @script:/tmp/script.py . Inspect structured status, not exit0 alone. Window inventory /run/user/1000/researchos-workstation/window-inventory.json.
-GitHub: gh run view RUN --repo Ajuntanaga/character-asset-an --json status,conclusion,jobs . Download named previews before full artifacts. Current run42627527644. Do not duplicate active transfers.
+GitHub: gh run view RUN --repo Ajuntanaga/character-asset-an --json status,conclusion,jobs . Download named previews before full artifacts. Current V583run42634096386. Do not duplicate active transfers.
 Workflow Blender5.2.2/Ubuntu24.04, CPU2, concurrency1,35minlimit, artifacts7days. Restores V528→V543→V544 with SHA checks; saves full scene before previews. Review scopes full15/mouth5/appearance12. Combined filename stays V554 across revisions; identify by run/report, not filename.

@@ -59,6 +59,17 @@ def _clear_center(center, bvh, width):
                 center[j] += np.asarray(normal) * (width[j] + .0001 - clearance)
 
 
+def _suspend_center(center, normal, axis, radial_u, length, t, amplitude, envelope, width):
+    # A nearly tangential helix puts its inward lobe beneath the scalp. Pointwise
+    # collision projection clips that whole arc into a flat band. Lift the
+    # trajectory by its radial normal excursion before the BVH safety check,
+    # retaining the circular lobe rather than flattening each intersecting point.
+    axial_height = .0004 + np.dot(axis, normal) * length * t
+    lift = np.maximum(0., width + .0001 - axial_height)
+    lift += amplitude * abs(np.dot(radial_u, normal)) * envelope
+    center += normal[None, :] * lift[:, None]
+
+
 def _anchor(block, bvh):
     for strand in block:
         near, normal, _, _ = bvh.find_nearest(Vector(strand[0]))
@@ -128,6 +139,8 @@ def generate(roots, bvh):
         # Add fibers and bundle volume together; individual radii stay real.
         width = rng.uniform(.00115, .00175) * (1. - .35 * side) * (1. - .72 * nape)
         spread = (.65 + .45 * np.sin(math.pi * t)) * (1. - .90 * t**3)
+        _suspend_center(center, normal, axis, radial_u, length, t,
+                        amplitude, envelope, width * spread)
         _clear_center(center, bvh, width * spread)
         u, v = _transport_frames(center, normal)
         disk_angle = nprng.uniform(0., math.tau, children)
@@ -152,6 +165,8 @@ def generate(roots, bvh):
             group_center = (np.asarray(root)[None, :] + normal[None, :] * .0004
                             + axis[None, :] * (length * t)[:, None]
                             + group_radial * (group_amplitude * envelope)[:, None])
+            _suspend_center(group_center, normal, axis, radial_u, length, t,
+                            group_amplitude, envelope, width * spread)
             _clear_center(group_center, bvh, width * spread)
             group_u, group_v = _transport_frames(group_center, normal)
             group_offsets = (np.cos(disk_angle[selected])[:, None, None] * group_u[None, :, :]
@@ -208,7 +223,7 @@ def generate(roots, bvh):
     points, radii, uvs = np.concatenate(points), np.concatenate(radii), np.concatenate(uvs).astype(np.float32)
     assert np.isfinite(points).all() and np.isfinite(radii).all()
     assert 100 < len(macro_roots) < len(dense_roots)
-    report = {'geometry_model': 'V582_five_related_subclump_trajectories',
+    report = {'geometry_model': 'V584_suspended_partial_curl_trajectories',
               'guides': len(macro_roots), 'undercoat_guides': len(dense_roots),
               'primary_strands': macro_strands, 'undercoat_strands': len(dense_roots) * base_children,
               'top_root_spacing_m': .0095, 'side_root_spacing_m': .0075,
@@ -226,6 +241,7 @@ def generate(roots, bvh):
               'subclump_amplitude_factor': [.85, 1.15],
               'subclump_turn_factor': [.88, 1.12],
               'subclump_phase_warp_radians': [-.35, .35],
+              'guide_clearance': 'analytic radial suspension before BVH safety projection',
               'independent_fiber_coils': False,
               'fiber_frames': 'parallel_transport', 'part_maximum_root_thinning': .72}
     return points, radii, uvs, report
