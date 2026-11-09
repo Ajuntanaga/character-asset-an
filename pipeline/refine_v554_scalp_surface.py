@@ -13,11 +13,11 @@ def part_center(y):
 
 def part_strength(point):
     x, y, z = point
-    if z <= 1.720 or not -.105 < y < -.035:
+    if z <= 1.720 or not -.100 < y < -.045:
         return 0.
-    ends = min(1., (y + .105) / .010, (-.035 - y) / .010)
+    ends = min(1., (y + .100) / .010, (-.045 - y) / .010)
     distance = abs(x - part_center(y))
-    lane = np.clip((distance - .0006) / .0016, 0., 1.)
+    lane = np.clip((distance - .00025) / .0009, 0., 1.)
     return float(ends * (1. - lane * lane * (3. - 2. * lane)))
 
 

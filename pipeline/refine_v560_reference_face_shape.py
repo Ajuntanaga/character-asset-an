@@ -17,7 +17,7 @@ def smooth(t):
     return t * t * (3. - 2. * t)
 
 
-def field():
+def field(chin_weight=1.):
     body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
     donor = bpy.data.objects['V376_FACE_PHOTO_DONOR']
     # Use the established V377/V381 registration, not an independent re-fit.
@@ -43,7 +43,8 @@ def field():
             continue
         nose = math.hypot((p.x - .0016) / .038, (p.z - 1.616) / .043)
         chin = math.hypot((p.x - .0016) / .058, (p.z - 1.539) / .030)
-        weight = max(smooth((1.25 - nose) / .65), smooth((1.15 - chin) / .50))
+        weight = max(smooth((1.25 - nose) / .65),
+                     chin_weight * smooth((1.15 - chin) / .50))
         weight *= smooth((-.025 - p.y) / .025)
         # Keep all lid boundaries and the separate lip/oral seam stationary.
         for cx in (.038, -.0355):
@@ -72,12 +73,13 @@ def field():
         'key_peak_displacement_mm': max(abs(d) for d in displacements.values()) * 1000.,
         'direction': 'world_Y_only', 'maximum_unweighted_displacement_mm': 8.,
         'scope': 'nose_and_central_chin; eyelids_and_lip_seam_excluded',
+        'chin_weight': chin_weight,
     }
     return body, displacements, report
 
 
-def build(output):
-    body, displacements, report = field()
+def build(output, chin_weight=1.):
+    body, displacements, report = field(chin_weight=chin_weight)
     keys = body.data.shape_keys.key_blocks
     assert KEY not in keys, 'Apply the reversible face fit only once'
     basis = keys['Basis']

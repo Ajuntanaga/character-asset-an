@@ -13,13 +13,14 @@ def build(output, delit_face=False):
     from refine_v550_maple_density import build as build_guitar
 
     from build_v557_reference_locks import reduce_skin_microrelief
-    report = {'revision': 'V560', 'skin_microrelief': reduce_skin_microrelief()}
+    report = {'revision': 'V561', 'skin_microrelief': reduce_skin_microrelief()}
     report['groom'] = build_groom(out, save=False, clean_scalp=True)
     report['eyes'] = build_eyes(root, out)
     from refine_v558_eye_surface import build as build_eye_surface
     report['eye_surface'] = build_eye_surface(out)
     from refine_v560_reference_face_shape import build as build_face_shape
-    report['face_shape'] = build_face_shape(out)
+    # V560's full chin displacement created an overprojecting ledge in profile.
+    report['face_shape'] = build_face_shape(out, chin_weight=.35)
     report['guitar'] = build_guitar(out, save=False)
     if delit_face:
         from refine_v555_face_albedo import build as build_face
@@ -27,7 +28,7 @@ def build(output, delit_face=False):
 
     original = bpy.data.materials['V379_DARK_COTTON_JACKET']
     jacket = original.copy()
-    jacket.name = 'V559_MATTE_CHARCOAL_WOVEN_JACKET'
+    jacket.name = 'V561_MATTE_CHARCOAL_CHECK_JACKET'
     ramp = jacket.node_tree.nodes['V388_CharcoalAlbedo']
     previous = [list(e.color) for e in ramp.color_ramp.elements]
     # The scan's grayscale includes broad baked light bands. Use the existing
@@ -49,10 +50,13 @@ def build(output, delit_face=False):
     roughness.inputs[1].default_value = .12
     roughness.inputs[2].default_value = .84
     shader.inputs['Specular IOR Level'].default_value = .10
+    from refine_v561_jacket_check import build as build_jacket_check
+    check = build_jacket_check(jacket)
     affected = []
     for obj in bpy.context.scene.objects:
         for slot in obj.material_slots:
             if slot.material == original:
+                assert obj.data.attributes.get('V372_RestPosition') is not None
                 slot.material = jacket
                 affected.append(obj.name)
     assert affected
@@ -64,6 +68,7 @@ def build(output, delit_face=False):
                         'trial_roughness_range': [.84, .96],
                         'previous_specular_ior_level': previous_specular,
                         'specular_ior_level': .10,
+                        'check': check,
                         'objects': sorted(set(affected))}
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     assert len(rig.animation_data.drivers) == 1957

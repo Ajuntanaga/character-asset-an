@@ -2240,3 +2240,12 @@ V559 reduces macro curl lobes7–11→3–5mm and bundle radius1.8–2.8→.6–
 ## V560 reversible central-face geometry trial, 2026-11-09
 
 Retained V376 donor contains actual V326 FaceBuilder neutral geometry and51 expression shapes. Existing V377 projects color and V381 transfers expression deltas; neither transferred the neutral shape. Avoid a full-head swap. V560 adds a relative key to current V416 from existing registered donor front-surface depth, limited to nose/central chin, with eye/lip exclusions and6mm maximum trial displacement. Live read-only probe:2,329 sampled vertices,1,536 lid vertices excluded, dirty=false. Large registration residuals require matching before/after front/profile clay renders before promotion. Source preserves original rig/drivers and separate lip/cavity mesh. V559 run42594193337 remains in progress.
+
+
+## 2026-11-09 V560 reviewed and V561 prepared
+
+All nine V560 previews reviewed. Nose correction is modest; the full chin field creates an excessive ledge in profile, so V561 reduces chin weight to.35 while retaining nose and lid/lip exclusions. Frontal blink0/.5/1 closes continuously; broader deformation unaccepted. V559 remains unfinished with uneven hand proportions, waxy skin, gray compact hair and jacket.
+
+V561 adds a26/30mm subtle cool check in garment rest coordinates, upper lid6.9mm, a darker55mm scalp part with0.5mm core/2.3mm total width, and matched.65/.90 photo-mask gain front/profile previews. Full scene retains.65 pending actual comparison. Oblique half/full blink images added. Main1957drivers retained by build assertions; actual runtime pending.
+
+Cleanup total13,254,980,777bytes after five more exact-restorable V477/476/475/473/471 scenes; manifest local_archive_cleanup_2026-11-09_pre478.json. Forty BCA_task notifications delivered, latest~09:56UTC. No local heavy jobs.

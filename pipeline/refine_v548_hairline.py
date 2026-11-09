@@ -156,7 +156,7 @@ def build(output, width=.005, short_part=False):
         # the crown. Keep photographic sampling only in the outer hairline.
         scalp_shader = nodes.new('ShaderNodeBsdfPrincipled')
         scalp_shader.name = 'V554_PartScalp'
-        scalp_shader.inputs['Base Color'].default_value = (.30, .145, .078, 1)
+        scalp_shader.inputs['Base Color'].default_value = (.115, .054, .026, 1)
         scalp_shader.inputs['Roughness'].default_value = .65
         scalp_shader.inputs['Specular IOR Level'].default_value = .25
         scalp_shader.inputs['Subsurface Weight'].default_value = .08
@@ -183,6 +183,10 @@ def build(output, width=.005, short_part=False):
               'part_vertices': part_vertices,
               'part_skin_sample_maximum_distance_m': max(part_sample_distances, default=0.),
               'part_source': 'pigmented_scalp_shader' if short_part else 'nearest_clean_photo_uv',
+              'part_length_m': .055 if short_part else None,
+              'part_core_width_m': .0005 if short_part else None,
+              'part_feathered_width_m': .0023 if short_part else None,
+              'part_color': [.115, .054, .026] if short_part else None,
               'geometry_changed': False, 'status': 'TRIAL_REQUIRES_VISUAL_REVIEW'}
     (Path(output) / 'hairline-report.json').write_text(json.dumps(report, indent=2))
     return report

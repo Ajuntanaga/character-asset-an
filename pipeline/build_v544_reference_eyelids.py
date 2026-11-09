@@ -83,9 +83,9 @@ def build(root, out, reopen=False):
         assert not body.get('V547_blink_alignment')
     else:
         assert not body.get('V544_eye_opening_applied')
-    # V556 reference fit: the V549 reopened contour exposed too much sclera.
-    # Retain the iris and the closed targets; lower the open central aperture.
-    upper_height, upper_power = (.0062, .82) if reopen else (.0070, .82)
+    # V561: expose slightly more of the upper iris while retaining the lower
+    # margin, iris size, and exact closed-blink targets from V556.
+    upper_height, upper_power = (.0069, .82) if reopen else (.0070, .82)
     lower_height, lower_power = (.0023, .95) if reopen else (.0028, .95)
     mesh = body.data
     keys = mesh.shape_keys.key_blocks

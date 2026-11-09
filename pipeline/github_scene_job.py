@@ -120,17 +120,18 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         shots = [('guitar-front', guitar.matrix_world @ Vector((.625, 0, 1.)),
                   guitar.matrix_world @ Vector((.625, 0, 0)), .55), shots[0]]
     if args.mode == 'combined-build':
-        # Keep camera and illumination identical for the reversible shape fit.
         shots = [
+            ('character', (.35, -3.5, 1.3), (0, 0, .94), 2.12),
             ('face-front', (0, -2, 1.68), (0, 0, 1.65), .40),
             ('face-profile', (2, 0, 1.65), (0, 0, 1.65), .40),
-            ('face-clay-front-before', (0, -2, 1.68), (0, 0, 1.65), .40),
-            ('face-clay-front-after', (0, -2, 1.68), (0, 0, 1.65), .40),
-            ('face-clay-profile-before', (2, 0, 1.65), (0, 0, 1.65), .40),
-            ('face-clay-profile-after', (2, 0, 1.65), (0, 0, 1.65), .40),
+            ('face-photo90-front', (0, -2, 1.68), (0, 0, 1.65), .40),
+            ('face-photo90-profile', (2, 0, 1.65), (0, 0, 1.65), .40),
+            ('wardrobe-front', (0, -3, 1.24), (0, 0, 1.24), .94),
+            ('wardrobe-detail', (.16, -2, 1.30), (.02, 0, 1.30), .44),
         ]
         if args.delit_face:
-            shots = [shots[0], shots[1],
+            shots = [shots[1],
+                     ('face-profile', (2, 0, 1.65), (0, 0, 1.65), .40),
                      ('face-oblique', (.70, -1.7, 1.68), (0, 0, 1.65), .40),
                      ('face-clay', (.30, -2, 1.70), (0, 0, 1.65), .40)]
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
@@ -140,6 +141,12 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         hidden = []
         override = bpy.context.view_layer.material_override
         shape_key = None
+        photo_gain = None
+        if label.startswith('face-photo90-'):
+            photo_gain = bpy.data.materials['V549_REFERENCE_PHOTO_SKIN_BALANCED'].node_tree.nodes['V549_PhotoSkinBlendGain'].inputs[1]
+            saved_photo_gain = photo_gain.default_value
+            photo_gain.default_value = .90
+            bpy.context.view_layer.update()
         if label.startswith('face-clay-'):
             shape_key = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks['V560_ReferenceCentralFace']
             saved_shape_value = shape_key.value
@@ -155,7 +162,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             bpy.context.view_layer.material_override = clay
             scene.cycles.samples = 16
             scene.render.resolution_x = scene.render.resolution_y = 512
-        if label == 'wardrobe-front':
+        if label.startswith('wardrobe-'):
             for obj in bpy.data.objects['V206_GUITAR_ROOT'].children_recursive:
                 if not obj.hide_render:
                     hidden.append(obj); obj.hide_render = True
@@ -175,6 +182,9 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         camera.data.ortho_scale = scale
         scene.render.filepath = str(out / f'{label}-preview.png')
         bpy.ops.render.render(write_still=True)
+        if photo_gain is not None:
+            photo_gain.default_value = saved_photo_gain
+            bpy.context.view_layer.update()
         if shape_key is not None:
             shape_key.value = saved_shape_value
             bpy.context.view_layer.update()
@@ -206,6 +216,17 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
                 scene.render.filepath = str(out / f'eyes-blink-{value:g}.png')
                 bpy.ops.render.render(write_still=True)
                 report['blink_checks'].append({'requested': value, 'shape_values': actual})
+                (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
+            # Inspect the corneal clearance and closure from a different angle.
+            camera.location = (.8, -1.6, 1.66)
+            camera.rotation_euler = (Vector((0, 0, 1.655)) - camera.location).to_track_quat('-Z', 'Y').to_euler()
+            for value in (.5, 1.):
+                for side in ('L', 'R'):
+                    head['Blink.' + side] = value
+                rig.update_tag(); bpy.context.view_layer.update()
+                scene.render.filepath = str(out / f'eyes-oblique-blink-{value:g}.png')
+                bpy.ops.render.render(write_still=True)
+                report['blink_checks'].append({'requested': value, 'view': 'oblique'})
                 (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
         finally:
             for side, value in original.items():
