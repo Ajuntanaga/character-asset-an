@@ -24,6 +24,13 @@ def build(output):
     links.new(source, mapping.inputs['Vector'])
     links.new(mapping.outputs['Vector'], texture.inputs['Vector'])
     texture.extension = 'MIRROR'
+    contrast = nodes.new('ShaderNodeRGBCurve')
+    contrast.name = 'V550_FigureContrast'
+    contrast.mapping.curves[3].points.new(.35, .18)
+    contrast.mapping.curves[3].points.new(.62, .82)
+    contrast.mapping.update()
+    links.new(texture.outputs['Color'], contrast.inputs['Color'])
+    links.new(contrast.outputs['Color'], nodes['V387_GrayStain'].inputs[1])
     for slot in top.material_slots:
         if slot.material == original:
             slot.material = material
@@ -34,6 +41,7 @@ def build(output):
     bpy.ops.wm.save_as_mainfile(filepath=str(path), compress=True)
     report = {'status': 'TRIAL_REQUIRES_VISUAL_REVIEW', 'original_material': original.name,
               'trial_material': material.name, 'longitudinal_density': 2.5,
+              'figure_contrast_points': [[.35, .18], [.62, .82]],
               'geometry_changed': False, 'burst_changed': False, 'main_drivers': 1957,
               'output': path.name}
     (out / 'maple-density-report.json').write_text(json.dumps(report, indent=2))

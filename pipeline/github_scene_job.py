@@ -107,7 +107,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
     if args.mode == 'guitar-build':
         guitar = bpy.data.objects['V206_GUITAR_ROOT']
         shots = [('guitar-front', guitar.matrix_world @ Vector((.665, 0, 1.)),
-                  guitar.matrix_world @ Vector((.665, 0, 0)), .47), shots[0]]
+                  guitar.matrix_world @ Vector((.665, 0, 0)), .55), shots[0]]
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'
