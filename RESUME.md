@@ -1,3 +1,9 @@
+## 2026-11-08 V545 fretting hand remote fit in progress
+
+Actions run https://github.com/Ajuntanaga/character-asset-an/actions/runs/42564726025 is processing `hand-build` at commit b6f303550276f97d926fe632aa610f8d7fe22261. Poll this exact run before starting another. Six preview views, full-detail trial save, and checked delta packaging are remote; V544 remains the live working scene. Do not promote without viewing the rendered hand.
+
+The previous run 42558406162 failed: final pad errors 181–215 mm and an origin-library record blocked self-contained preflight. A bounded donor-only probe found no linked IDs and analytic/evaluated joint matrices agreeing within 4e-7. Current fix uses a uniform similarity transform (avoids shear decomposition), measures Blender's effective bone-parent frame before setting the inverse, asserts joint/attachment agreement, and removes only origin-library records after asserting all IDs local. Solver step limits now preserve direction and allow more evaluated-skin iterations. Static compilation and diff checks passed; remote visual/contact outcome pending. Main 1,957 drivers and right pick placement remain guarded. The whole character is still incomplete.
+
 ## 2026-11-08 V544 built and reviewed on GitHub Actions
 
 Run https://github.com/Ajuntanaga/character-asset-an/actions/runs/42556229782 succeeded in 5m42s. Build, full-detail save, seven Cycles preview renders, and delta packaging ran remotely on two CPU threads. Downloaded results: github_results/run-42556229782/blender-build-review-4/. Reconstructed production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend (387,351,426 bytes); SHA256 6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02 matches the remote build manifest. Loaded this working scene through live MCP, with both blinks at zero, 1,957 main drivers, and no active render. V543 and earlier checkpoints remain unchanged.
