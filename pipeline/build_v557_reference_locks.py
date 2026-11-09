@@ -95,17 +95,17 @@ def generate(roots, bvh):
     macro_strands = 0
     for root, face, weights in macro_roots:
         normal, tangent, across, nape, side, top = _frame(root, face, rng)
-        children = round((80 + 48 * top) * (1. - nape) + 28 * nape)
-        length = rng.uniform(.011, .018) * (.70 + .30 * top) * (1. - .15 * side)
+        children = round((140 + 80 * top) * (1. - nape) + 28 * nape)
+        length = rng.uniform(.0085, .014) * (.70 + .30 * top) * (1. - .15 * side)
         length = length * (1. - nape) + rng.uniform(.003, .006) * nape
-        amplitude = rng.uniform(.0032, .0048) * (.65 + .35 * top) * (1. - .18 * side) * (1. - .75 * nape)
+        amplitude = rng.uniform(.0045, .0062) * (.65 + .35 * top) * (1. - .18 * side) * (1. - .75 * nape)
         phase = rng.uniform(-math.pi, math.pi)
-        turn = rng.uniform(1.25, 1.75) * (1. - .35 * nape) * (-1 if rng.random() < .45 else 1)
+        turn = rng.uniform(1., 1.45) * (1. - .35 * nape) * (-1 if rng.random() < .45 else 1)
         # The prior centerline traversed 23–35 mm along the scalp while making
         # less than one wave. Reference curls instead turn around an axis that
         # rises from the scalp. Fibers still share one transported guide; they
         # do not become the independent, hollow wire coils rejected in V546.
-        tilt = rng.uniform(math.radians(35), math.radians(55))
+        tilt = rng.uniform(math.radians(40), math.radians(60))
         tilt = tilt * (1. - nape) + math.radians(65) * nape
         axis = normal * math.cos(tilt) + tangent * math.sin(tilt)
         radial_u = tangent - axis * np.dot(tangent, axis)
@@ -119,9 +119,10 @@ def generate(roots, bvh):
         center = (np.asarray(root)[None, :] + normal[None, :] * .0004
                   + axis[None, :] * (length * t)[:, None]
                   + radial * (amplitude * envelope)[:, None])
-        # V557's 3.6–5.6mm bundles merged into thick ropes at render distance.
-        # Keep the real fiber radius; reduce the visible lock cross-section.
-        width = rng.uniform(.0006, .0011) * (1. - .35 * side) * (1. - .72 * nape)
+        # Reference locks overlap at the 9.5mm root spacing. V562's narrow
+        # bundles left smooth scalp exposed between isolated wire-like loops.
+        # Add fibers and bundle volume together; individual radii stay real.
+        width = rng.uniform(.00115, .00175) * (1. - .35 * side) * (1. - .72 * nape)
         spread = (.65 + .45 * np.sin(math.pi * t)) * (1. - .90 * t**3)
         _clear_center(center, bvh, width * spread)
         u, v = _transport_frames(center, normal)
@@ -145,13 +146,13 @@ def generate(roots, bvh):
 
     # Dense short waves break up the underlay without drawing another layer of
     # visible hollow coils. They follow the same local growth direction.
-    base_children = 24
+    base_children = 32
     for root, face, weights in dense_roots:
         normal, tangent, across, nape, side, top = _frame(root, face, rng)
         phase = nprng.uniform(-math.pi, math.pi, base_children)[:, None]
         length = nprng.uniform(.007, .013, base_children)[:, None] * (1. - .72 * nape)
-        amplitude = nprng.uniform(.0004, .0008, base_children)[:, None] * (1. - .65 * nape)
-        height = .00015 + np.sin(math.pi * t)[None, :] * nprng.uniform(.0004, .0012, base_children)[:, None] * (1. - .65 * nape)
+        amplitude = nprng.uniform(.0006, .0010, base_children)[:, None] * (1. - .65 * nape)
+        height = .00015 + np.sin(math.pi * t)[None, :] * nprng.uniform(.0008, .0018, base_children)[:, None] * (1. - .65 * nape)
         lateral = amplitude * np.sin(math.pi * t)[None, :] * np.sin(phase + math.pi * t[None, :])
         block = (np.asarray(root)[None, None, :] + tangent[None, None, :] * (length * t[None, :])[:, :, None]
                  + normal[None, None, :] * height[:, :, None] + across[None, None, :] * lateral[:, :, None])
@@ -178,16 +179,19 @@ def generate(roots, bvh):
     points, radii, uvs = np.concatenate(points), np.concatenate(radii), np.concatenate(uvs).astype(np.float32)
     assert np.isfinite(points).all() and np.isfinite(radii).all()
     assert 100 < len(macro_roots) < len(dense_roots)
-    report = {'geometry_model': 'V562_shared_rising_ringlets_with_wavy_undercoat',
+    report = {'geometry_model': 'V564_overlapping_rising_ringlets_with_wavy_undercoat',
               'guides': len(macro_roots), 'undercoat_guides': len(dense_roots),
               'primary_strands': macro_strands, 'undercoat_strands': len(dense_roots) * base_children,
               'top_root_spacing_m': .0095, 'side_root_spacing_m': .0075,
               'posterior_root_spacing_m': .0045, 'posterior_guides': sum(
                   root.z < 1.655 and root.y > -.022 for root, _, _ in macro_roots),
-              'top_lock_axial_length_m': [.011, .018], 'partial_turns': [1.25, 1.75],
-              'top_lock_amplitude_m': [.0032, .0048],
-              'axis_tilt_from_scalp_normal_degrees': [35, 55],
-              'top_bundle_radius_m': [.0006, .0011],
+              'top_lock_axial_length_m': [.0085, .014], 'partial_turns': [1., 1.45],
+              'top_lock_amplitude_m': [.0045, .0062],
+              'axis_tilt_from_scalp_normal_degrees': [40, 60],
+              'top_bundle_radius_m': [.00115, .00175],
+              'maximum_primary_fibers_per_guide': 220,
+              'undercoat_fibers_per_guide': base_children,
+              'undercoat_lift_m': [.0008, .0018],
               'child_departure_amplitude_m': [.00010, .00030],
               'independent_fiber_coils': False,
               'fiber_frames': 'parallel_transport', 'part_maximum_root_thinning': .72}

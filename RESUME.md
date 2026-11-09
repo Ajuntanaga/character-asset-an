@@ -13,19 +13,17 @@ Updated 2026-11-09 UTC. The character is unfinished. Continue the existing refer
 
 ## Current build and active work
 
-Project /home/ajuntanaga/Projects/Blender/Character Asset_An; remote https://github.com/Ajuntanaga/character-asset-an . V561 source61a73b1dc733dcdff23feeb5facbcfd2299c85ba, Actions42597328082 succeeded10:05:20UTC. All12 previews downloaded under github_results/run-42597328082/previews-combined-build-38/ and reviewed. Main1957drivers,209objects,no missing images. Full artifact13663479186(66.14MB) remains remote.
+Project /home/ajuntanaga/Projects/Blender/Character Asset_An; remote https://github.com/Ajuntanaga/character-asset-an . V563 a7fde73, Actions42601041345 succeeded10:32UTC. All five actual previews in github_results/run-42601041345/previews-combined-build-40/ reviewed. Direct original-photo projection improves central skin detail, but face, eyes, hair and wardrobe remain artificial. Full scene13666615301(96.24MB) remains remote. Main1957drivers preserved.
 
-V561: .90 photo-mask gain does not remove white cheek/temple etching; retain.65. Reduced35% chin field removes V560's worst profile ledge; keep provisionally. Upper lid6.9mm closes continuously at front0/.5/1 and oblique.5/1; open shape still artificial/chalky. Narrow darker part improves contrast but is still straight; flat waves lack reference curl volume. Jacket check is too faint, collar reads rubbery, pocket detail visibly stretched; whole character still has unequal hands. Actual renders are diagnostic, not final acceptance.
+V56242599808028 at a48e79f succeeded; six actual previews in previews-combined-build-39 reviewed. Ringlets remain narrow and sparse on the smooth cap. Straight-front guitar outline is much closer to the product photograph than the oblique view suggested; leave outline unchanged for now. Hardware/detail still needs work. Picking placement remains unchanged after measured rejection of centroid shift below.
 
-V562 Actions42599808028 at a48e79faa031b1d683a84c223b874810f8424822 succeeded10:24UTC: shared rising ringlet guides,35–55deg axis tilt,11–18mm axial length,1.25–1.75turns,3.2–4.8mm lobes,9.5mm top spacing. Six previews downloading: character,front/profile/oblique hair,guitar-front,pick-grip; artifact13666076016(5.06MB). Full artifact13664869232(95.87MB) remains remote. Root sole writer. Guitar child suggests deepening/lengthening the control-side lower scoop and slimming its horn; confirm against the new straight-front view before editing. Picking centroid shift rejected by actual live measurement below.
+V564 prepared: overlapping curl guides with4.5–6.2mm lobes,1.15–1.75mm bundles,8.5–14mm axial length,1–1.45turns and140–220fibers/guide;32undercoat fibers/root,0.8–1.8mm lift. Existing true strand radii retained. Add a0.45mm convex upper-lid fold that vanishes at margin,outer join and canthi; exact closed targets unchanged. Three64sample face views, two collar closeups, whole character and five blink views. Syntax/diff checks pass; runtime/visual acceptance pending dispatch.
 
-V563 prepared: direct original644x813 front-reference projection onto central forehead/nose/cheeks, excluding eyes/lips/beard transition. V326 fitted camera matrix_basis recovered (unlinked matrix_world was identity); read-only MCP landmark projection aligns eyes/nose/mouth with source. Tracked fitted_cameras_v326.json plus refine_v563_front_photo.py reuse V377 registration and barycentric donor transfer. New UV/weight attribute/material preserve geometry, original maps and rig. Five remote views include matched front gain0/1; runtime and visual acceptance pending. Keep delit_face=false.
-
-V56042595153834 full chin field rejected; nine renders retained in previews-combined-build-37. V55942594193337 seven renders retained in previews-combined-build-36. Neither full scene downloaded.
+Current jacket is part of V416_BODY_CLEAN_JOIN, material slot6; V345_TAILORED_CHARCOAL_DENIM_JACKET no longer exists. V426_Scaled_Collar slot9 is the shirt/neck transition, not the outer jacket collar. Read-only18445vertex regional export and report in local_diagnostics/collar_2026-11-09. Collar shaping still pending; use current mesh, not obsolete wardrobe advice.
 
 ## Live Blender and preserved scenes
 
-Live GUI is production_v554_combined_reference/run-42585046848/Character_An_combined_reference_TRIAL_v554.blend; restored SHA256384976aaed800dced83dece932b6717bea29cbe51235990601d9b9bd55d6f9a3. Workspace7, two windows, textured SOLID viewport plus Image Editor displaying V561 character-preview.png. Last MCP10:13UTC dirty=false,1957drivers. Check dirty state before replacing scene. No local render or archive job active.
+Live GUI is production_v554_combined_reference/run-42585046848/Character_An_combined_reference_TRIAL_v554.blend; restored SHA256384976aaed800dced83dece932b6717bea29cbe51235990601d9b9bd55d6f9a3. Workspace7, two windows, textured SOLID viewport plus Image Editor displaying V561 character-preview.png. Last MCP10:41UTC dirty=false,1957drivers. Check dirty state before replacing scene. No local render or archive job active.
 
 Preserve V468 fallback, V483, V514, native handV522, baseV528, V542 hardlink, V543, V544, V545, V547 arc, V554 current. V544 file production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend SHA2566299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02. Base github_release/current-v528.blend SHA256bc4582c0ddccc5e729371e58d3c275f43d41a11e63414a3e307c94d0e6b9e8cd. Remote restore verification already passed; do not repeat without a new restore.
 
@@ -53,16 +51,16 @@ Picking centroid probe10:08UTC in local_diagnostics/picking_contact_2026-11-09/c
 
 ## Cleanup and notifications
 
-Cumulative14,963,460,563bytes (14.96GB/13.94GiB) reclaimed.42 obsolete full scenes are exact-restorable Zstandard deltas against retained V528; decoded SHA256 matched before removal. Latest five V466/460/459/458/456 reclaimed1,708,479,786bytes, manifest local_archive_cleanup_2026-11-09_pre468.json. Previous five V477/476/475/473/471 are in local_archive_cleanup_2026-11-09_pre478.json. Per-folder .blend.archived.json has exact restore command/checksums. Earlier manifests local_archive_cleanup_2026-11-08.json, local_archive_cleanup_2026-11-09_older.json, local_archive_cleanup_2026-11-09_pre500.json. Keep base/checkpoints.
+Cumulative16,638,733,260bytes (16.64GB/15.50GiB) reclaimed.47 obsolete full scenes are exact-restorable Zstandard deltas against retained V528; decoded SHA256 matched before removal. Latest five V455/452/450/449/448 reclaimed1,675,272,697bytes, manifest local_archive_cleanup_2026-11-09_pre456.json. Earlier manifests local_archive_cleanup_2026-11-08.json and local_archive_cleanup_2026-11-09_{older,pre500,pre478,pre468}.json. Per-folder .blend.archived.json has exact restore commands/checksums. Keep base/checkpoints.
 
 Also19 byte-verified redundant installer fragments and4 rejected superseded deltas removed, retaining complete installer, previews/reports and current scenes. Records local_installer_fragment_cleanup_2026-11-09.json and local_rejected_delta_cleanup_2026-11-09.json. Installer underscore/hyphen aliases are hardlinks, not duplicated storage. Do not delete unique .blend1 backups or unrelated projects.
 
-45successful BCA_task notifications, latest~10:26UTC HTTP200. Latest resources:85GiB disk free,19GiB memory available,swap2/8GiB. Viewers chafa/image available. No notification daemon or local heavy process.
+47successful BCA_task notifications, latest~10:40UTC HTTP200. Latest resources:86GiB disk free,19GiB memory available,swap2/8GiB. Viewers chafa/image available. No notification daemon or local heavy process.
 
 ## Immediate next steps
 
-1. Inspect six V562 previews when their download completes. Check the guitar control-side lower scoop against references before changing body outline.
-2. Dispatch V563 matched source-photo trial; retain underlying.65 atlas blend. No further gain-only comparison: pale etching persists in the blended atlas itself. Only procedural Bump feeds Normal; its newer amplitude is already reduced.
+1. Dispatch/review V564 curl and upper-lid correction, including all five blink views. Retain V563 direct central-photo projection provisionally; no final face acceptance.
+2. Inspect new collar closeups and current V416 mesh export to shape actual upper jacket. Do not use removed V345 object.
 3. Restore a newer full scene only when improvement warrants it. Keep pending hand-finger question open; do not repeat failed solver branches.
 
 ## Commands

@@ -2264,3 +2264,12 @@ Five V466/460/459/458/456 scenes converted to exact-restorable deltas; cumulativ
 V562 curl run42599808028 succeeded10:24UTC; six-preview artifact13666076016 downloading, full scene remains remote. V326 atlas visibly contains pale etched/smeared cheek detail; changing its gain did not repair it. Original front644x813 portrait is cleaner. Recovered fitted fbCamera matrix_basis (the unlinked object's matrix_world was identity); live read-only projection puts eyes at(232,340)/(390,337),nose(314,421),mouth(310,510),matching source. Fitted camera metadata is retained beside the references.
 
 V563 projects through the existing registered V376 donor triangles, transfers barycentric coordinates back to original camera space, and assigns a dedicated UV/weight/material only to central forehead,nose,cheeks. Soft exclusions preserve eyelids,lips,beard transition and sides. Original image is packed unchanged; resolution is explicitly644x813. Geometry,expressions and1957main drivers retained. Matched front gain0/1 plus profile,oblique,character previews prepared; runtime and visual acceptance pending.45successful BCA_task pings through~10:26UTC. Cleanup remains14,963,460,563bytes.
+
+
+## 2026-11-09 V563 reviewed and V564 prepared
+
+V562 six views and V563 five views downloaded/reviewed. V563 direct original-photo projection improves central skin detail; eyes remain flat/artificial, hair isolated narrow ringlets on a smooth cap. Keep texture provisionally without claiming reference match. V562 straight-front guitar closely follows product silhouette; leave outline unchanged pending stronger matched evidence. Main1957drivers preserved.
+
+V564 increases overlapping curl volume and fiber count together, keeps actual fiber radii, and adds a0.45mm upper-lid convex fold with zero displacement at margin/join/canthi. Exact closed targets unchanged; frontal0/.5/1 and oblique.5/1 blink views return. Face views64samples; new collar closeups expose current fused V416 geometry. Read-only MCP confirms current jacket is V416 material6, not removed V345 object; export18445upper-cloth vertices in local_diagnostics/collar_2026-11-09.
+
+Five V455/452/450/449/448 scenes became exact-restorable deltas after decoded SHA match;1,675,272,697bytes reclaimed. Cumulative16,638,733,260bytes across47full scenes plus already-recorded redundant installers/rejected deltas. Latest cleanup manifest local_archive_cleanup_2026-11-09_pre456.json.47successful BCA_task pings through10:40UTC. LiveV554 clean,workspace7,1957drivers10:41UTC.

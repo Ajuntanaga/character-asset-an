@@ -98,7 +98,8 @@ def build(root, out, reopen=False):
 
     report = {'eyes':{}, 'aperture_profile': {
         'upper_height_m': upper_height, 'upper_power': upper_power,
-        'lower_height_m': lower_height, 'lower_power': lower_power}}
+        'lower_height_m': lower_height, 'lower_power': lower_power,
+        'upper_fold_depth_m': .00045 if reopen else 0.}}
     backup = {}
     for side in ('L','R'):
         sign = 1 if side == 'L' else -1
@@ -149,7 +150,12 @@ def build(root, out, reopen=False):
             change = new_z-old.z
             v = start
             for row in range(11):
-                delta = Vector((0,0,change*(1-row/11)**1.5))
+                # A convex fold gives the upper lid volume between its margin
+                # and brow join. It vanishes at both edges and both canthi;
+                # the closed target remains unchanged for the rebuilt blink.
+                fold = (.00045 * math.sin(math.pi*row/11) * math.sin(math.pi*u)**1.25
+                        if reopen and upper else 0.)
+                delta = Vector((0,-fold,change*(1-row/11)**1.5))
                 for key in keys:
                     if key.name != 'Blink.'+side:
                         key.data[v].co += delta

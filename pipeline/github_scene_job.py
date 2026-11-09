@@ -122,14 +122,15 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
     if args.mode == 'combined-build':
         guitar = bpy.data.objects['V206_GUITAR_ROOT']
         shots = [
-            ('face-source-before', (0, -2, 1.68), (0, 0, 1.65), .40),
             ('face-front', (0, -2, 1.68), (0, 0, 1.65), .40),
             ('face-profile', (2, 0, 1.65), (0, 0, 1.65), .40),
             ('face-oblique', (.70, -1.7, 1.78), (0, 0, 1.67), .40),
+            ('wardrobe-collar-front', (0, -2, 1.48), (0, 0, 1.43), .48),
+            ('wardrobe-collar-oblique', (.60, -1.6, 1.56), (0, 0, 1.44), .48),
             ('character', (.35, -3.5, 1.3), (0, 0, .94), 2.12),
         ]
         if args.delit_face:
-            shots = [shots[1],
+            shots = [shots[0],
                      ('face-profile', (2, 0, 1.65), (0, 0, 1.65), .40),
                      ('face-oblique', (.70, -1.7, 1.68), (0, 0, 1.65), .40),
                      ('face-clay', (.30, -2, 1.70), (0, 0, 1.65), .40)]
@@ -141,6 +142,8 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         override = bpy.context.view_layer.material_override
         shape_key = None
         photo_gain = None
+        if args.mode == 'combined-build' and label.startswith('face-'):
+            scene.cycles.samples = 64
         if label == 'face-source-before':
             photo_gain = bpy.data.materials['V563_DIRECT_FRONT_PHOTO_SKIN'].node_tree.nodes['V563_FrontPhotoGain'].inputs[1]
             saved_photo_gain = photo_gain.default_value
@@ -194,9 +197,8 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             obj.hide_render = False
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-    # V561 already rendered frontal/oblique blink closure. Repeat that suite
-    # when eyelids change; current combined trials preserve that geometry.
-    if args.mode in ('review', 'build-review', 'blink-build'):
+    # V564 adds upper-lid volume, so check its full interpolated blink again.
+    if args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
         original = {side: head['Blink.' + side] for side in ('L', 'R')}
