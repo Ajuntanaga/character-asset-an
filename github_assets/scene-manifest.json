@@ -24,5 +24,16 @@
     "bytes": 3793925,
     "base": "current-v528.blend",
     "output": "current-v542.blend"
+  },
+  "current-v543.blend": {
+    "sha256": "e9f1f82067791e1381db845d84dda8ae76e9d8095a2f8ce88f1708a3217437ff",
+    "bytes": 357953331,
+    "source": "production_v543_supported_grip/Character_An_supported_grip_TRIAL_v543.blend"
+  },
+  "current-v543.delta.zst": {
+    "sha256": "ad4403d80d76e20e07173eb58b1ec7dd6b24b30e98a2e23216f623a333b30387",
+    "bytes": 3621868,
+    "base": "current-v528.blend",
+    "output": "current-v543.blend"
   }
 }

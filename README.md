@@ -4,13 +4,13 @@ Private working project: reference-led, rigged guitarist character for animation
 
 ## Scene files
 
-The [checkpoint-v542 release](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v542) stores a small Zstandard delta against `current-v528.blend` from the [checkpoint-v528 release](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v528). Actions reconstructs and checksum-verifies the exact `current-v542.blend` before rendering. To restore locally, download both files into one directory and run:
+The [checkpoint-v543 release](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v543) stores a small Zstandard delta against `current-v528.blend` from the [checkpoint-v528 release](https://github.com/Ajuntanaga/character-asset-an/releases/tag/checkpoint-v528). Actions reconstructs and checksum-verifies the exact `current-v543.blend` before rendering. To restore locally, download both files into one directory and run:
 
 ```sh
-zstd -d -M1024MB --patch-from=current-v528.blend current-v542.delta.zst -o current-v542.blend
+zstd -d -M1024MB --patch-from=current-v528.blend current-v543.delta.zst -o current-v543.blend
 ```
 
-Verify the base, delta and reconstructed scene with `github_assets/SHA256SUMS`. V542 is the current hand-pose trial, with the pick attached to the evaluated donor hand and redistributed index curl. The grip remains unaccepted. The earlier release also retains the intact V514 character and V522 native donor rig foundation. The delta avoids uploading another full 358 MB scene over the workstation's slow upstream link; it requires the exact V528 base.
+Verify the base, delta and reconstructed scene with `github_assets/SHA256SUMS`. V543 is the current hand-pose trial, with the pick attached to the evaluated donor hand and opposing evaluated skin surfaces fitted around it. The grip remains unaccepted. The earlier release also retains the intact V514 character and V522 native donor rig foundation. The delta avoids uploading another full 358 MB scene over the workstation's slow upstream link; it requires the exact V528 base.
 
 Blender 5.2.2 LTS. Current scene textures are packed and there are no linked libraries. CloudRig controls and drivers are retained. The original workstation uses a loopback Blender MCP bridge for interactive editing; remote jobs do not expose that bridge.
 
@@ -18,7 +18,7 @@ Blender 5.2.2 LTS. Current scene textures are packed and there are no linked lib
 
 ## Processing
 
-Run **Blender scene check and preview** manually in Actions. It downloads the pinned release scene and Blender version and validates the scene. `preview` makes a 512-pixel, 8-sample instrument render; `review` makes four 768-pixel, 32-sample renders of the instrument, grip, full character and portrait. Both use CPU rendering. Two threads, one job at a time, 20-minute job timeout, seven-day result retention. These previews reduce subdivision and hair children to fit standard hosted runner memory; they are not final quality renders or animation certification.
+Run **Blender scene check and preview** manually in Actions. It downloads the pinned release scene and Blender version and validates the scene. `preview` makes a 512-pixel, 8-sample instrument render; `review` makes four 768-pixel, 32-sample renders of the instrument, grip, full character and portrait. `build-review` constructs V544 from V543: finer curls, an almond eyelid contour with preserved closed-blink targets, and a satin gray-maple finish. It saves the full-detail scene before preview simplification, renders the four views plus three blink close-ups, and returns a checksum manifest and a Zstandard scene delta against V543. All modes use CPU rendering. Two threads, one job at a time, 20-minute job timeout, seven-day result retention. These previews reduce subdivision and hair children to fit standard hosted runner memory; they are not final quality renders or animation certification.
 
 [V542 four-view review](https://github.com/Ajuntanaga/character-asset-an/actions/runs/42554176852) completed in 8m27s. All four images were downloaded and visually inspected: they expose unresolved grip/anatomy, guitar finish, face and hair issues. Scene checksum passed, 169 objects, 1,957 main-rig drivers, no missing images. The images and scene report are retained with the V542 release as well as in the temporary Actions artifact. [First successful remote preview](https://github.com/Ajuntanaga/character-asset-an/actions/runs/42549182718) used V528.
 

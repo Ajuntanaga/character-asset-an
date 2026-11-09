@@ -8,10 +8,14 @@ import bpy
 from mathutils import Vector
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', choices=('check', 'preview', 'review'), default='check')
+parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review'), default='check')
 parser.add_argument('--output', default='results')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
+if args.mode == 'build-review':
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from build_v544_reference_revision import build
+    build(out)
 scene = bpy.context.scene
 rig = bpy.data.objects.get('V357_CLOUDRIG_CONTROLS')
 if rig is None or rig.animation_data is None:
@@ -26,8 +30,8 @@ report = {'blender': bpy.app.version_string, 'scene': Path(bpy.data.filepath).na
           'objects': len(scene.objects), 'main_drivers': count, 'missing_images': missing,
           'mode': args.mode, 'quality_status': 'WORK_IN_PROGRESS_NOT_ACCEPTED'}
 (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-if args.mode in ('preview', 'review'):
-    review = args.mode == 'review'
+if args.mode in ('preview', 'review', 'build-review'):
+    review = args.mode in ('review', 'build-review')
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
     scene.cycles.samples = 32 if review else 8
@@ -64,4 +68,30 @@ if args.mode in ('preview', 'review'):
         bpy.ops.render.render(write_still=True)
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
+    if args.mode == 'build-review':
+        head = rig.pose.bones['Head']
+        keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
+        original = {side: head['Blink.' + side] for side in ('L', 'R')}
+        report['blink_checks'] = []
+        camera.location = (0, -2, 1.655)
+        camera.rotation_euler = (Vector((0, 0, 1.655)) - camera.location).to_track_quat('-Z', 'Y').to_euler()
+        camera.data.ortho_scale = .145
+        scene.render.resolution_x = 640; scene.render.resolution_y = 320
+        scene.cycles.samples = 24
+        try:
+            for value in (0., .5, 1.):
+                for side in ('L', 'R'):
+                    head['Blink.' + side] = value
+                rig.update_tag(); bpy.context.view_layer.update()
+                actual = {side: keys['Blink.' + side].value for side in ('L', 'R')}
+                if any(abs(v - value) > 1e-5 for v in actual.values()):
+                    raise RuntimeError(f'Blink driver did not evaluate: {value}, {actual}')
+                scene.render.filepath = str(out / f'eyes-blink-{value:g}.png')
+                bpy.ops.render.render(write_still=True)
+                report['blink_checks'].append({'requested': value, 'shape_values': actual})
+                (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
+        finally:
+            for side, value in original.items():
+                head['Blink.' + side] = value
+            rig.update_tag(); bpy.context.view_layer.update()
 print(json.dumps(report))
