@@ -14,7 +14,7 @@ Updated 2026-11-08. The character is unfinished. Continue the active reference-l
 ## Current files and branches
 
 Project: `/home/ajuntanaga/Projects/Blender/Character Asset_An`.
-Remote: https://github.com/Ajuntanaga/character-asset-an . `bb84612` added explicit fingertip-pad/nail orientation checks and tighter thumb limits. The next commit adds rounder eyelid apertures, reduced baked-photo influence on skin, varied curl planes and outer-boundary-only hairline feathering. Pupil dilation is 0.60. Preview PNG/JSON artifacts are separated from scene deltas to shorten the visual feedback loop.
+Remote: https://github.com/Ajuntanaga/character-asset-an . HEAD `3cfd7d6` pushed. `bb84612` added explicit fingertip-pad/nail orientation checks and tighter thumb limits. `a08fee1` adds rounder eyelid apertures, reduced baked-photo influence on skin, varied curl planes and outer-boundary-only hairline feathering. Pupil dilation is 0.60. `3cfd7d6` adds the isolated V550 maple-density material trial and `guitar-build` workflow mode. Preview PNG/JSON artifacts are separated from scene deltas to shorten the visual feedback loop.
 
 - Preserved main character: V514. Native hand foundation: V522. V528 remains a retained delta base.
 - Working reference branch V544: `production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend`; SHA256 `6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02`. Its release and remote restore are verified. Do not redo that verification.
@@ -37,20 +37,26 @@ Remote: https://github.com/Ajuntanaga/character-asset-an . `bb84612` added expli
 
 **Groom/hairline run 42572380374 succeeded at `c8dbabb` and is rejected.** Previews downloaded to `github_results/run-42572380374/previews-groom-build-15/`. Front and oblique images show large bald patches inside the curl mass: feathering included internal hair/skin material holes. Read-only MCP topology confirmed 136 boundary components; the largest (456 points, 195mm X span) is the outer hairline. The next trial feathers only that component, skips clean-skin samples farther than 25mm and varies curl axes by 17–57 degrees. Delta has not been downloaded.
 
-**Hand run 42572857511 is processing at `bb84612`.** Uses independent pad/nail frames, pad35deg and nail60deg orientation limits with explicit final acceptance checks, thumb MCP/IP caps20/15deg, priors10/5deg, and one analytic solve. Await actual contact/deformation images before accepting. One running and one pending job maximum: a new submission can replace the pending job even with cancel-in-progress false.
+**Hand run 42572857511 succeeded at `bb84612`.** Preview download in progress; do not duplicate it. Uses independent pad/nail frames, pad35deg and nail60deg orientation limits with explicit final acceptance checks, thumb MCP/IP caps20/15deg, priors10/5deg, and one analytic solve. Await actual contact/deformation images before accepting. One running and one pending job maximum: a new submission can replace the pending job even with cancel-in-progress false.
 
-**Next blink/face trial:** V549 aperture upper8mm/power0.52, lower3.8mm/power0.58, then recompute the V547 blink arc. Preserve the original photo skin material; copy it and multiply its photo blend weight by 0.65. Source syntax and diff passed; runtime and images pending. Read-only guitar follow-up is locating the figured-maple/burst mismatch; no guitar edits yet.
+**Blink/face run 42574020857 is running at `a08fee1`.** V549 aperture upper8mm/power0.52, lower3.8mm/power0.58, then recompute the V547 blink arc. Preserve the original photo skin material; copy it and multiply its photo blend weight by0.65. Source syntax and diff passed; runtime and images pending.
+
+**Groom run 42574697402 is queued at `3cfd7d6`.** Corrected outer hairline and varied curl planes. Wait until this is RUNNING before dispatching guitar, or the queued groom job will be replaced.
+
+**Guitar V550 is prepared, not yet dispatched.** `pipeline/refine_v550_maple_density.py` copies the figured-maple material and scales imageY by2.5 around its center with MIRROR extension. Burst, color and geometry are unchanged. V387's texture contains only15–18 broad ripples; this trial targets38–45. It repeats the same grain, not a newly unique veneer. Workflow adds isolated straight-on and oblique renders. Live MCP confirmed the API and body coordinates; syntax/YAML/diff checks passed. Runtime/visual review pending.
+
+**Facial-hair V551 prepared, not dispatched:** Live MCP confirmed V383 brows and V395 beard visible. V395 supplies4522 fibers with11 shape keys and DEF-Head parent. `pipeline/refine_v551_beard_length.py` clones the existing fibers, preserves roots/moustache and lengthens the other centerlines by1.55 clamped1.4–2.4mm, reprojects extended rings to current face with barycentric expression motion. Original remains hidden rollback. Optional workflow input `facial_hair=true` only with `mode=blink-build`; adds beard-detail render. Syntax/YAML passed; Blender runtime and visual review pending. Root viewed full character vs turnaround: clothing needs stronger denim/seam detail. Read-only wardrobe child owns source diagnosis; root remains sole writer.
 
 ## Cleanup and notifications completed
 
 2026-11-08: archived V530–V541 (12 superseded trials) as Zstandard deltas against retained `github_release/current-v528.blend`. Each decoded stream matched the original SHA256 before the full scene was removed. Recovered **4,250,005,688 bytes**. Aggregate record: `local_archive_cleanup_2026-11-08.json`; each scene folder has `<original>.blend.archived.json` with exact restore command, base/delta checksums and original checksum. These are local archive records, not a remote backup of all history. Do not delete the base. Root filesystem now approximately 77GiB available; memory approximately 20GiB available and swap 466MiB.
 
-Eight BCA_task notifications delivered HTTP200 during this pass (latest about22:35PST Nov8); a transient DNS failure succeeded on retry. Continue at meaningful milestones and during long waits, approximately every5–10minutes. Automatic context compaction is supported by this concise handoff; no manual compaction control is available.
+Nine BCA_task notifications delivered HTTP200 during this pass (latest about22:42PST Nov8); a transient DNS failure succeeded on retry. Continue at meaningful milestones and during long waits, approximately every5–10minutes. Automatic context compaction is supported by this concise handoff; no manual compaction control is available.
 
 ## Next work
 
 1. Retrieve hand42572857511 previews from Actions. Inspect actual images and contact/clearance; do not accept on numerical distance alone.
-2. Dispatch the prepared blink trial, then the groom trial when the pending slot is free. Review actual images. Preserve the approved M3 chord targets.
+2. Blink42574020857 is running; groom42574697402 is queued. Dispatch guitar once groom is running. Review actual images, then queue the V551 facial-hair trial after the slot is free. Preserve the approved M3 chord targets.
 3. Integrate acceptable branches reversibly and inspect the full character. Continue reference face/skin/hair, guitar shape/figured-maple finish, wardrobe, rig/deformation and animation work. None is finished.
 
 ## Commands and important details
@@ -59,6 +65,6 @@ MCP Python: `/home/ajuntanaga/Documents/Codex/Blender-MCP/.venv/bin/python pipel
 
 `gh run view RUN --json status,conclusion,jobs`; `gh run download RUN --dir github_results/run-RUN`. Artifact transfers may take several minutes without output; the temporary `/tmp/gh-artifact.*.zip` grows. Poll an existing process instead of duplicating it.
 
-Workflow `.github/workflows/blender-preview.yml`: Ubuntu24.04, pinned Blender5.2.2, CPU2threads, concurrency1, 20minute limit, artifacts7days. Modes `hand-build`, `groom-build`, `blink-build` restore V544 and save full detail before preview simplification. SHA256 checks and delta manifests are mandatory. `github_assets/scene-manifest.json` records retained bases. `github_release/` includes hardlinks: removing a hardlink does not reclaim its target and editing one in place changes every link.
+Workflow `.github/workflows/blender-preview.yml`: Ubuntu24.04, pinned Blender5.2.2, CPU2threads, concurrency1, 20minute limit, artifacts7days. Modes `hand-build`, `groom-build`, `blink-build`, `guitar-build` restore V544 and save full detail before preview simplification. SHA256 checks and delta manifests are mandatory. `github_assets/scene-manifest.json` records retained bases. `github_release/` includes hardlinks: removing a hardlink does not reclaim its target and editing one in place changes every link.
 
 Authoritative hand targets: `references/m3/m3_chord_mapping_v2.json`; rig fit `pipeline/build_v545_fretting_hand.py`. Groom `pipeline/build_v544_reference_groom.py` plus V546 wrapper. Blink `pipeline/build_v547_blink_alignment.py`. Actions orchestration `pipeline/github_scene_job.py`.

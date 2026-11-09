@@ -10,7 +10,10 @@ from mathutils import Matrix, Vector
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build'), default='check')
 parser.add_argument('--output', default='results')
+parser.add_argument('--facial-hair', action='store_true')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
+if args.facial_hair and args.mode != 'blink-build':
+    parser.error('--facial-hair requires --mode blink-build')
 out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
 if args.mode == 'build-review':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -28,6 +31,9 @@ if args.mode == 'blink-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v547_blink_alignment import build
     build(Path(__file__).resolve().parents[1], out)
+    if args.facial_hair:
+        from refine_v551_beard_length import build as build_beard
+        build_beard(out)
     bpy.ops.wm.save_as_mainfile(filepath=str(out.resolve() / 'Character_An_blink_alignment_TRIAL_v547.blend'), compress=True)
 if args.mode == 'guitar-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -96,6 +102,8 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         ]
     if args.mode == 'blink-build':
         shots = [('face-front', (0, -2, 1.68), (0, 0, 1.65), .40)]
+        if args.facial_hair:
+            shots.append(('beard-detail', (.12, -.8, 1.58), (0, -.045, 1.557), .15))
     if args.mode == 'guitar-build':
         guitar = bpy.data.objects['V206_GUITAR_ROOT']
         shots = [('guitar-front', guitar.matrix_world @ Vector((.665, 0, 1.)),
