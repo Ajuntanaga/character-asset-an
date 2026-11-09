@@ -2190,3 +2190,13 @@ Authoritative hand targets: `references/m3/m3_chord_mapping_v2.json`; rig fit `p
 ## 2026-11-08: own-digit sampling and latest visual review
 
 Own-distal BVH sampling replaces global first-hit rays; live copies verify pad identity and anchors within0.09–0.20mm. Contact pose still fails (I12.15/M4.00/R14.47/P8.16/T10.41mm). Moving-pulp and flex-axis probes saved in local_diagnostics/hand_fit_2026-11-08; positive flex signs correct. Groom42576959425 still wire/spring-like; guitar42577808048 still muddy/faint despite contrast curve. All previews downloaded, viewed and rejected; no new branch promoted. Next groom rotates loop axes outward and reduces pitch. Authorized mapping unchanged; earlier crossed-finger concern at V469 is already known.
+
+## 2026-11-09: guitar finish reviewed, individual curl correction queued
+
+Guitar42581409904 (`71ae1b1`) both previews inspected: dark body edge, broader burst and softer maple contrast improve reference match; fine longitudinal crosshatching remains excessive. No full guitar acceptance. Groom42580685710 rejected for hollow loop bundles and broad straight part; `77337e2` gives child fibers independent anchored curl paths and narrows root gap7mm, queued42582166572. Eye42581882190 (`1d0c743`) rendering thinner margin geometry plus clay-face and wardrobe diagnostic views.
+
+Cleanup removed only four superseded rejected delta files from42568298993/42571052107/42564726025/42566087166 (58,261,755bytes), keeping previews/reports and required bases/current scenes. Manifest local_rejected_delta_cleanup_2026-11-09.json. Total reclaimed4,423,050,972bytes. BCA_task notification20 deliveredHTTP200 at07:54UTC.
+
+## 2026-11-09 V553 maple review and V554 combined preparation
+
+Guitar run42583595731 at b4441fa succeeded; guitar-front visibly reduces vertical crosshatching with the newly generated gray curly maple texture. Hair run42582166572 still shows repeated curl rows and coarse scan cap. Eye42581882190 clay diagnostic is smoother than photo shading; frontal closed lids continuous but doll-like open eye remains. V554 prepares a combined trial: smoothed welded-seam scalp preserving every shape-key delta, actual-current-surface hair roots/collision, short irregular unclamped part, warm continuous upper lid tissue, modest jacket albedo variation, and latest guitar. V544 hands unchanged and unresolved. No visual acceptance before actual combined renders. Cleanup remains4,423,050,972bytes;22 ntfy deliveries latest08:13UTC.

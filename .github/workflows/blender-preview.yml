@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Bounded scene check, CPU preview, hand fit, groom, or blink alignment
+        description: Bounded scene check, CPU preview, isolated correction, or combined trial
         type: choice
-        options: [check, preview, review, build-review, hand-build, groom-build, blink-build, guitar-build]
+        options: [check, preview, review, build-review, hand-build, groom-build, blink-build, guitar-build, combined-build]
         default: check
       facial_hair:
         description: Include the reversible beard-length trial with blink-build
@@ -149,6 +149,19 @@ jobs:
           python3 - <<'PY'
           import hashlib,json,pathlib
           files = [pathlib.Path('scenes/current-v544.blend'), pathlib.Path('results/current-v550.delta.zst'), pathlib.Path('results/Character_An_maple_density_TRIAL_v550.blend')]
+          manifest = {}
+          for p in files:
+              with p.open('rb') as f: digest=hashlib.file_digest(f,'sha256').hexdigest()
+              manifest[p.name] = {'sha256': digest, 'bytes': p.stat().st_size}
+          pathlib.Path('results/build-manifest.json').write_text(json.dumps(manifest,indent=2))
+          PY
+      - name: Package combined scene as a checked delta
+        if: inputs.mode == 'combined-build'
+        run: |
+          zstd -T2 --patch-from=scenes/current-v544.blend results/Character_An_combined_reference_TRIAL_v554.blend -o results/current-v554.delta.zst
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          files = [pathlib.Path('scenes/current-v544.blend'), pathlib.Path('results/current-v554.delta.zst'), pathlib.Path('results/Character_An_combined_reference_TRIAL_v554.blend')]
           manifest = {}
           for p in files:
               with p.open('rb') as f: digest=hashlib.file_digest(f,'sha256').hexdigest()

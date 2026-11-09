@@ -7,7 +7,7 @@ from mathutils import Vector
 from mathutils.kdtree import KDTree
 
 
-def build(output, width=.005):
+def build(output, width=.005, short_part=False):
     body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
     mesh = body.data
     assert not mesh.attributes.get('V548_HairCoverage')
@@ -82,6 +82,9 @@ def build(output, width=.005):
         clean_tree.insert(basis[i].co, i)
     clean_tree.balance()
     coverage = mesh.attributes.new('V548_HairCoverage', 'FLOAT', 'POINT')
+    part_reveal = mesh.attributes.new('V554_PartReveal', 'FLOAT', 'POINT') if short_part else None
+    if short_part:
+        from refine_v554_scalp_surface import part_strength
     photo_weight = mesh.attributes.new('V548_ScalpPhotoBlend', 'FLOAT', 'POINT')
     previous_weight = mesh.attributes['V377_PhotoSkinBlend']
     clean_uv = mesh.uv_layers.new(name='V548_CleanScalp')
@@ -99,7 +102,10 @@ def build(output, width=.005):
         # The interior part needs clean scalp as well as a gap between guides.
         # Keep the visible lane 3 mm wide and feather it to the hair cap over
         # 2.5 mm on either side; the wider root exclusion allows curl overlap.
-        if point.z > 1.720 and -.105 < point.y < .065:
+        if short_part:
+            part_reveal.data[i].value = part_strength(point)
+            part_vertices += int(part_reveal.data[i].value > 0.)
+        elif point.z > 1.720 and -.105 < point.y < .065:
             part = .040 + .13 * (point.y + .070)
             lane = min(1., max(0., (abs(point.x-part)-.0015)/.0025))
             end_fade = min(1., (point.y+.105)/.005, (.065-point.y)/.005)
@@ -145,7 +151,25 @@ def build(output, width=.005):
     links.new(hair_attribute.outputs['Fac'], mix.inputs[0])
     links.new(skin_surface, mix.inputs[1])
     links.new(hair_shader.outputs['BSDF'], mix.inputs[2])
-    links.new(mix.outputs[0], output_node.inputs['Surface'])
+    if short_part:
+        # The part is scalp, not a distant patch of cheek UV transported over
+        # the crown. Keep photographic sampling only in the outer hairline.
+        scalp_shader = nodes.new('ShaderNodeBsdfPrincipled')
+        scalp_shader.name = 'V554_PartScalp'
+        scalp_shader.inputs['Base Color'].default_value = (.30, .145, .078, 1)
+        scalp_shader.inputs['Roughness'].default_value = .65
+        scalp_shader.inputs['Specular IOR Level'].default_value = .25
+        scalp_shader.inputs['Subsurface Weight'].default_value = .08
+        scalp_shader.inputs['Subsurface Scale'].default_value = .001
+        part_attribute = nodes.new('ShaderNodeAttribute')
+        part_attribute.attribute_name = part_reveal.name
+        part_mix = nodes.new('ShaderNodeMixShader')
+        links.new(part_attribute.outputs['Fac'], part_mix.inputs[0])
+        links.new(mix.outputs[0], part_mix.inputs[1])
+        links.new(scalp_shader.outputs['BSDF'], part_mix.inputs[2])
+        links.new(part_mix.outputs[0], output_node.inputs['Surface'])
+    else:
+        links.new(mix.outputs[0], output_node.inputs['Surface'])
     mesh.materials.append(material)
     for polygon in hair_faces:
         polygon.material_index = len(mesh.materials)-1
@@ -158,6 +182,7 @@ def build(output, width=.005):
               'maximum_skin_sample_distance_m': max(distances),
               'part_vertices': part_vertices,
               'part_skin_sample_maximum_distance_m': max(part_sample_distances, default=0.),
+              'part_source': 'pigmented_scalp_shader' if short_part else 'nearest_clean_photo_uv',
               'geometry_changed': False, 'status': 'TRIAL_REQUIRES_VISUAL_REVIEW'}
     (Path(output) / 'hairline-report.json').write_text(json.dumps(report, indent=2))
     return report

@@ -13,7 +13,7 @@ from mathutils.bvhtree import BVHTree
 
 import gzip
 
-def build(root, out, *, coherent=False):
+def build(root, out, *, coherent=False, scalp=None):
     version = "V546" if coherent else "V544"
     assert not bpy.app.is_job_running('RENDER')
     started = time.monotonic()
@@ -21,8 +21,12 @@ def build(root, out, *, coherent=False):
     body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
     assert len(rig.animation_data.drivers) == 1957
     assert bpy.data.objects.get(version + '_CURL_GROOM') is None
-    source = json.loads(gzip.decompress((root/'github_assets/groom/scalp_surface.json.gz').read_bytes()))
-    mask = set(json.loads(gzip.decompress((root/'github_assets/groom/hair_mask.json.gz').read_bytes()))['faces'])
+    if scalp is None:
+        source = json.loads(gzip.decompress((root/'github_assets/groom/scalp_surface.json.gz').read_bytes()))
+        mask = set(json.loads(gzip.decompress((root/'github_assets/groom/hair_mask.json.gz').read_bytes()))['faces'])
+    else:
+        from refine_v554_scalp_surface import part_center, part_strength
+        source, mask = scalp
     positions = {int(i):Vector(p) for i,p in source['vertices'].items()}
     faces = [f for f in source['faces'] if f['id'] in mask]
     indices = {old:i for i,old in enumerate(positions)}
@@ -37,7 +41,7 @@ def build(root, out, *, coherent=False):
     rng = random.Random(382)
     nprng = np.random.default_rng(382)
     spacing = .0065
-    part_root_half_width = .0035
+    part_root_half_width = .0022 if scalp is not None else .0035
     roots,grid = [],defaultdict(list)
     for _ in range(130000):
         face = faces[bisect.bisect_left(areas,rng.random()*area)]
@@ -45,8 +49,10 @@ def build(root, out, *, coherent=False):
         u,v = math.sqrt(rng.random()),rng.random()
         weights = (1.-u,u*(1.-v),u*v)
         root = a*weights[0]+b*weights[1]+c*weights[2]
-        part = .040+.13*(root.y+.070)
-        if root.z>1.720 and -.105<root.y<.065 and abs(root.x-part)<part_root_half_width:
+        part = part_center(root.y) if scalp is not None else .040+.13*(root.y+.070)
+        skip = (part_strength(root) > .15 if scalp is not None else
+                root.z>1.720 and -.105<root.y<.065 and abs(root.x-part)<part_root_half_width)
+        if skip:
             continue
         cell = tuple(math.floor(v/spacing) for v in root)
         neighbors = (p for x in range(cell[0]-1,cell[0]+2)
@@ -69,8 +75,8 @@ def build(root, out, *, coherent=False):
         if normal.dot(ellipsoid)<0:
             normal.negate()
         normal = (normal*.35+ellipsoid*.65).normalized()
-        part = .040+.13*(root.y+.070)
-        in_part = root.z>1.720 and -.105<root.y<.065
+        part = part_center(root.y) if scalp is not None else .040+.13*(root.y+.070)
+        in_part = root.z>1.720 and -.105<root.y<(-.035 if scalp is not None else .065)
         direction = Vector((-.85,.30,.05))
         if root.x>part and root.y<.035:
             direction = Vector((.25,.65,-.30))
@@ -87,6 +93,8 @@ def build(root, out, *, coherent=False):
             flow = rng.uniform(-1., 1.)
             size_field = rng.random()
             theta = .16 * flow + .70 * theta
+            if scalp is not None:
+                theta = .30 * flow + .90 * theta
         tangent = (tangent*math.cos(theta)+across*math.sin(theta)).normalized()
         across = normal.cross(tangent).normalized()
         curl_axis, curl_normal, curl_across = tangent, normal, across
@@ -95,6 +103,8 @@ def build(root, out, *, coherent=False):
             # rise for neighboring fiber bundles to overlap naturally.
             clump = rng.uniform(-1., 1.)
             tilt = .78 + .14 * clump
+            if scalp is not None:
+                tilt = .55 + .35 * clump
             curl_axis = (tangent*math.cos(tilt) + normal*math.sin(tilt)).normalized()
             curl_normal = (normal-curl_axis*normal.dot(curl_axis)).normalized()
             curl_across = curl_normal.cross(curl_axis).normalized()
@@ -108,6 +118,11 @@ def build(root, out, *, coherent=False):
             curl_radius = (.0055 + .0015 * size_field) * (.60 + .40 * topness) * (1. - .68 * side_weight)
             axial_length = (.007 + .004 * size_field) * (.50 + .50 * topness) * (1. - .55 * side_weight)
             turns = (.78 + .32 * size_field) * (1. - .30 * side_weight)
+            if scalp is not None:
+                curl_radius = (.0045 + .003 * size_field) * (.60 + .40 * topness) * (1. - .40 * side_weight)
+                axial_length = rng.uniform(.007, .012) * (.50 + .50 * topness) * (1. - .45 * side_weight)
+                turns = rng.uniform(.80, 1.40) * (1. - .20 * side_weight)
+                turns *= -1 if rng.random() < .40 else 1
         if in_part and abs(root.x-part)<.012:
             curl_radius *= .77
         phase_warp = t+rng.uniform(-.14,.14)*np.sin(math.pi*t)
@@ -165,7 +180,7 @@ def build(root, out, *, coherent=False):
             near,n,_,_ = bvh.find_nearest(Vector(block[k,0]))
             if near is not None:
                 block[k,0] = near+n*.00006
-        if in_part:
+        if in_part and scalp is None:
             edge = .040+.13*(block[:,:,1]+.070)
             if root.x<part:
                 block[:,:,0] = np.minimum(block[:,:,0],edge-.0015)
@@ -189,7 +204,7 @@ def build(root, out, *, coherent=False):
         if normal.dot(outward)<0:
             normal.negate()
         normal = (normal*.35+outward*.65).normalized()
-        part = .040+.13*(root.y+.070)
+        part = part_center(root.y) if scalp is not None else .040+.13*(root.y+.070)
         direction = Vector((-.85,.30,.05)) if root.x<part else Vector((.25,.65,-.30))
         if root.y>.035:
             direction = Vector((0.,.65,-.50))
@@ -216,7 +231,7 @@ def build(root, out, *, coherent=False):
             near,n,_,_ = bvh.find_nearest(Vector(block[k,0]))
             if near is not None:
                 block[k,0] = near+n*.00005
-        if root.z>1.720 and -.105<root.y<.065:
+        if scalp is None and root.z>1.720 and -.105<root.y<.065:
             edge = .040+.13*(block[:,:,1]+.070)
             if root.x<part:
                 block[:,:,0] = np.minimum(block[:,:,0],edge-.0015)
@@ -252,7 +267,7 @@ def build(root, out, *, coherent=False):
     curves.attributes.new('radius','FLOAT','POINT').data.foreach_set('value',radii.ravel())
     curves.attributes.new('surface_uv_coordinate','FLOAT2','CURVE').data.foreach_set('vector',uvs.ravel())
     curves.surface = body
-    curves.surface_uv_map = body.data.uv_layers.active.name
+    curves.surface_uv_map = 'UVMap' if scalp is not None else body.data.uv_layers.active.name
     curves.surface_collision_distance = .0002
     mat = bpy.data.objects['V389_CURL_GROOM'].data.materials[0].copy()
     mat.name = version + '_BLACK_CURL_FIBER'
@@ -288,6 +303,14 @@ def build(root, out, *, coherent=False):
         report['guide_variation'] = 'seeded_aperiodic'
         report['part_root_half_width_m'] = part_root_half_width
         report['visible_part_half_width_m'] = .0015
+    if scalp is not None:
+        report['root_surface'] = source['source']
+        report['hard_part_clamp'] = False
+        report['part_y_extent_m'] = [-.105, -.035]
+        report['curl_axis_tilt_radians'] = [.20, .90]
+        report['mixed_curl_handedness'] = True
+        report['top_curl_pitch_m'] = [.007, .012]
+        report['visible_part_half_width_m'] = .0022
     report['version'] = version
     (out/'groom-report.json').write_text(json.dumps(report,indent=2))
     return report

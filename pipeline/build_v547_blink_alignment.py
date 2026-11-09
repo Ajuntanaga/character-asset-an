@@ -70,6 +70,22 @@ def build(root, out):
     body['V547_blink_alignment'] = True
     from build_v544_reference_eyelids import rebuild_lashes
     rebuild_lashes(out)
+    # The upper margin is a continuous tissue edge, not a continuous black
+    # eyelash. Keep the individual lashes on their original dark material.
+    upper_edge = bpy.data.materials['V367_WATERLINE'].copy()
+    upper_edge.name = 'V554_UPPER_LID_TISSUE'
+    upper_shader = upper_edge.node_tree.nodes['Principled BSDF']
+    upper_shader.inputs['Roughness'].default_value = .45
+    upper_shader.inputs['Coat Weight'].default_value = 0.
+    margins = {}
+    for side in ('L', 'R'):
+        margin = bpy.data.objects['V369_LID_MARGIN.' + side]
+        original = margin.data.materials[0]
+        assert original.name == 'V367_LASH_LINE'
+        margin.data.materials[0] = upper_edge
+        margins[side] = {'previous_material': original.name,
+                         'upper_edge_material': upper_edge.name}
+    report['lid_margin_materials'] = margins
     # Linear shape interpolation cuts through the convex cornea. Add a smooth
     # outward arc whose influence is zero at both accepted endpoint shapes.
     dg = bpy.context.evaluated_depsgraph_get()

@@ -4,7 +4,7 @@ from pathlib import Path
 import bpy
 
 
-def build(output):
+def build(output, save=True):
     out = Path(output).resolve()
     out.mkdir(parents=True, exist_ok=True)
     top = bpy.data.objects['V206_FIGURED_TOP']
@@ -61,7 +61,8 @@ def build(output):
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     assert len(rig.animation_data.drivers) == 1957
     path = out / 'Character_An_maple_density_TRIAL_v550.blend'
-    bpy.ops.wm.save_as_mainfile(filepath=str(path), compress=True)
+    if save:
+        bpy.ops.wm.save_as_mainfile(filepath=str(path), compress=True)
     report = {'status': 'TRIAL_REQUIRES_VISUAL_REVIEW', 'original_material': original.name,
               'trial_material': material.name, 'longitudinal_density': 1.0,
               'texture': 'assets/generated/gray_maple_v553/gray_curly_maple_albedo.png',
@@ -70,6 +71,6 @@ def build(output):
               'edge_material': edge_material.name,
               'body_geometry_changed': False, 'hardware': hardware,
               'burst_changed': True, 'burst_exponent': 3.5, 'main_drivers': 1957,
-              'output': path.name}
+              'output': path.name if save else None}
     (out / 'maple-density-report.json').write_text(json.dumps(report, indent=2))
     return report

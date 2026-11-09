@@ -13,20 +13,26 @@ Updated 2026-11-09 UTC. The character is unfinished. Continue the active referen
 
 ## Current state (2026-11-09 UTC)
 
-Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://github.com/Ajuntanaga/character-asset-an . Source through `cad82e4` pushed. Main rig remains V357_CLOUDRIG_CONTROLS with 1,957 drivers. New groom run42580685710 is active; no other render queued. Root is sole writer.
+Project `/home/ajuntanaga/Projects/Blender/Character Asset_An`; remote https://github.com/Ajuntanaga/character-asset-an . Source through `b4441fa` pushed; V554 combined trial prepared next. Main rig remains V357_CLOUDRIG_CONTROLS with 1,957 drivers. Recent Actions runs completed. Root is sole writer; face_next_correction is doing a read-only texture-source diagnosis.
 - Preserved main V514, native hand V522, delta base V528. Reference branch V544: `production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend`; SHA256 `6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02`. Release and remote restore verified; do not repeat.
 - Live GUI on workspace7: `production_v545_fretting_hand/run-42568146113/Character_An_fretting_hand_TRIAL_v545.blend`. Main1957 drivers. Temporary read-only diagnostics used copies and removed them; check dirty state before replacing the scene.
 - V545 hands, V546 groom, V547 face/blinks, V550 guitar, V551 beard are INDEPENDENT V544 trials. None is merged or production accepted.
-- Guitar run42579739576 (`959931a`) and eye run42580180604 (`cdaaf5d`) succeeded; previews downloaded and root visually reviewed. New deltas not downloaded.
 
-## Latest visual results
+## Latest visual results and V554 trial
 
-- Hand42572857511 (`bb84612`): REJECTED. Index12.17, middle4.04, ring14.46, pinky8.19, thumb10.41mm errors. Earlier smaller-distance42568146113 also rejected for hooked thumb/straight distal joints. Main/native drivers1957/48.
-- Face/blink42580180604 (`cdaaf5d`), `github_results/run-42580180604/previews-blink-build-25/`: all4 frames reviewed. Upper54/lower8 lashes, lower length0.55–0.75mm before fade. Sparse lower lashes help; open eyes still have a continuous heavy black rim, chalky sclera and doll stare. Frontal closed lids continuous, no visible corneal pop-through. Arc minimum boundary clearance0.20mm; no full-surface/oblique animation acceptance. Child face_next_correction investigating source of rim read-only.
-- Groom42578933062 (`5b2a16a`), `github_results/run-42578933062/previews-groom-build-23/`: all3 views inspected, REJECTED hollow hoops over dark cap, hard temple blocks, no scalp part. Active42580685710 (`cad82e4`): coherent axis tilt .78+.14clump, axial pitch7–11mm, turns .78–1.10, bundle width1.5–2.2mm,28% radius fade, roots excluded within±8mm part; scalp shader clean central3mm plus2.5mm falloff each side. Preview required.
-- Guitar42579739576 (`959931a`), `github_results/run-42579739576/previews-guitar-build-24/`: both images reviewed. New rounded bridge housings/knurled tuners, pickup seams/lettering and thin selector improve hardware, all saddle transforms unchanged. Maple too bright/coarse and fabric-like; brown side/tan rim wrong. Curve .22→.075,.32→.72 over-amplifies linear input .222–.321. Needs softer contrast, broader burst and dark edges. Not accepted as a whole.
-- Beard42575549129 (`77cebb5`): 1.4–2.4mm fibers still dominated by blurry photo beard/moustache; short chin and flat moustache. Not accepted.
-- Wardrobe actual active body slot6 V379_DARK_COTTON_JACKET, refined V384/V388; V345 suggestion was stale. Floral buttonup collar is intentional in approved design. Child wardrobe_next_correction reading active shaders, no writes.
+- Eye42581882190 (`1d0c743`): all6 views reviewed. Frontal closed lids continuous; clay smoother than textured skin. Open face still has a heavy continuous black upper rim, chalky sclera, doll stare, baked photographic creases/beard. No oblique/full-surface blink acceptance.
+- Groom42582166572 (`77337e2`): reviewed; still repeated hollow curl rows, coarse scanned cap/sideburn blocks and an unnaturally straight scalp trench. Not accepted.
+- Guitar42583595731 (`b4441fa`): both previews downloaded; guitar-front reviewed. New generated V553 maple albedo reduces distracting vertical crosshatching and improves broad soft flame. Shape/hardware still require reference review. `assets/generated/gray_maple_v553/SOURCE.json` preserves image provenance; old texture retained.
+- Beard42575549129 (`77cebb5`): short fibers still dominated by blurry photo beard and flat moustache; not accepted or merged.
+- Wardrobe front reviewed: leather-like broad highlights, weak weave/check variation. V379 already uses Poly Haven roughness/height. V388 HSV is correct; no mode change. Floral collar intentional.
+
+V554 combined trial is prepared in `pipeline/build_v554_combined_trial.py`, mode `combined-build`, but has NOT run or been visually accepted. It combines V546 groom, V547 eye alignment and V553 maple/V552 hardware without intermediate saves. Hands remain V544 and unresolved. Six views: whole character, face, side groom, wardrobe, guitar, instrument.
+
+- New `refine_v554_scalp_surface.py`: weld coincident UV seam coordinates, select456-group outer hairline, flood its interior, smooth120 passes with fixed boundary and7mm movement cap. Apply identical displacement to every shape key. Fill internal skin-labelled holes. Root sampling and collision use this same current smoothed scalp, triangulated with original UVMap; never use the archived lumpy V371 surface for this trial. Offline actual-mesh topology confirmed15536 interior groups and no face flood.
+- Remove global strand x-clamp. Replace170mm straight part with70mm irregular tapered part and pigmented scalp shader. Vary curl axes/radius/handedness; no claim of natural hair until rendered.
+- Replace only continuous upper-margin slot0 black material with copied warm waterline tissue; individual V394 lashes retain dark material.
+- Raise V388 jacket light albedo(.026,.029,.028)→(.045,.050,.048) to restore cloth variation; original material retained. Does not create missing macro-check pattern.
+- Python syntax8 modules, YAML and git diff whitespace checked before last triangulation correction; final syntax/run needed. V554 must preserve1957 drivers and save full detail before simplified previews.
 
 ## Hand diagnosis and next change
 
@@ -40,15 +46,15 @@ IMPORTANT: PROJECT_HISTORY.md:375 already records the authorized index/ring fret
 
 ## Cleanup, notifications and local resources
 
-Archived V530–V541 (12 obsolete full trials) as Zstandard deltas against retained `github_release/current-v528.blend`; each decoded SHA256 matched before original removal. Reclaimed4,250,005,688bytes from scenes, plus114,783,529bytes from19 obsolete KeenTools range/tail/race fragments, each byte-compared to retained complete installer at exact offsets. **Total4,364,789,217bytes (4.36GB/4.07GiB)**. Fragment manifest `local_installer_fragment_cleanup_2026-11-09.json`. Keep complete147MB core installer; underscore/hyphen names are hardlinks, not duplicated storage. `local_archive_cleanup_2026-11-08.json` plus per-folder `.blend.archived.json` record exact restore commands/checksums. Keep base, references, V514/V522/V528/V544+.
+Archived V530–V541 (12 obsolete full trials) as Zstandard deltas against retained `github_release/current-v528.blend`; each decoded SHA256 matched before original removal. Reclaimed4,250,005,688bytes from scenes, plus114,783,529bytes from19 obsolete KeenTools range/tail/race fragments, each byte-compared to retained complete installer at exact offsets. **Previous subtotal4,364,789,217bytes**. Also removed4 superseded, rejected generated deltas from runs42568298993/42571052107/42564726025/42566087166, retaining all previews/reports and current V545. Reclaimed58,261,755bytes; manifest `local_rejected_delta_cleanup_2026-11-09.json`. **Total4,423,050,972bytes (4.42GB/4.12GiB)**. Fragment manifest `local_installer_fragment_cleanup_2026-11-09.json`. Keep complete147MB core installer; underscore/hyphen names are hardlinks, not duplicated storage. `local_archive_cleanup_2026-11-08.json` plus per-folder `.blend.archived.json` record exact restore commands/checksums. Keep base, references, V514/V522/V528/V544+.
 
-Seventeen BCA_task notifications delivered HTTP200, latest07:44UTC. Continue every5–10minutes or milestones; no daemon. Approximately76GiB disk free,21GiB memory available, swap1.4GiB; keep heavy rendering remote. Local viewers `chafa`, `image` available. Manual compaction unavailable; keep this handoff current.
+Twenty-two BCA_task notifications delivered HTTP200, latest08:13UTC. Continue every5–10minutes or milestones; no daemon. Approximately76GiB disk free,19GiB memory available, swap1.8GiB; keep heavy rendering remote. Local viewers `chafa`, `image` available. Manual compaction unavailable; keep this handoff current.
 
 ## Next work
 
-1. Download and inspect all3 previews from groom42580685710 when complete. Do not queue more than one pending Actions job (third replaces pending).
-2. Correct maple finish and dark body edge. Source `pipeline/refine_v550_maple_density.py`; hardware `pipeline/refine_v552_guitar_hardware.py` has38 new/58 hidden objects, live temporary-copy geometry/1957-driver/saddle verification already passed. No repeat needed.
-3. Apply grounded eye/wardrobe corrections, then integrate improvements reversibly and review the whole character in Blender workspace7. Native hand pose remains unresolved. Character substantially below reference and unfinished.
+1. Commit/push and dispatch V554 combined-build; monitor existing job rather than duplicate. Inspect all6 resulting images and structural report.
+2. Restore its SHA-verified delta locally, check GUI dirty state, then load on workspace7 for whole-character review. Preserve prior scenes and keep trial status.
+3. Correct photographic face texture from actual source diagnosis. Native hand pose remains unresolved; do not rerun stopped solver sweeps. Continue reference-led corrections.
 
 ## Commands and important details
 
@@ -56,6 +62,6 @@ MCP Python: `/home/ajuntanaga/Documents/Codex/Blender-MCP/.venv/bin/python pipel
 
 `gh run view RUN --json status,conclusion,jobs`; `gh run download RUN --dir github_results/run-RUN`. Artifact transfers may take several minutes without output; the temporary `/tmp/gh-artifact.*.zip` grows. Poll an existing process instead of duplicating it.
 
-Workflow `.github/workflows/blender-preview.yml`: Ubuntu24.04, pinned Blender5.2.2, CPU2threads, concurrency1, 20minute limit, artifacts7days. Modes `hand-build`, `groom-build`, `blink-build`, `guitar-build` restore V544 and save full detail before preview simplification. SHA256 checks and delta manifests are mandatory. `github_assets/scene-manifest.json` records retained bases. `github_release/` includes hardlinks: removing a hardlink does not reclaim its target and editing one in place changes every link.
+Workflow `.github/workflows/blender-preview.yml`: Ubuntu24.04, pinned Blender5.2.2, CPU2threads, concurrency1, 20minute limit, artifacts7days. Modes `hand-build`, `groom-build`, `blink-build`, `guitar-build`, `combined-build` restore V544 and save full detail before preview simplification. SHA256 checks and delta manifests are mandatory. `github_assets/scene-manifest.json` records retained bases. `github_release/` includes hardlinks: removing a hardlink does not reclaim its target and editing one in place changes every link.
 
 Authoritative hand targets: `references/m3/m3_chord_mapping_v2.json`; rig fit `pipeline/build_v545_fretting_hand.py`. Groom `pipeline/build_v544_reference_groom.py` plus V546 wrapper. Blink `pipeline/build_v547_blink_alignment.py`. Actions orchestration `pipeline/github_scene_job.py`.

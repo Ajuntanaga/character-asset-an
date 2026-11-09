@@ -8,7 +8,7 @@ import bpy
 from mathutils import Matrix, Vector
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build'), default='check')
+parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build', 'combined-build'), default='check')
 parser.add_argument('--output', default='results')
 parser.add_argument('--facial-hair', action='store_true')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
@@ -39,6 +39,10 @@ if args.mode == 'guitar-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from refine_v550_maple_density import build
     build(out)
+if args.mode == 'combined-build':
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from build_v554_combined_trial import build
+    build(out)
 scene = bpy.context.scene
 rig = bpy.data.objects.get('V357_CLOUDRIG_CONTROLS')
 if rig is None or rig.animation_data is None:
@@ -53,7 +57,7 @@ report = {'blender': bpy.app.version_string, 'scene': Path(bpy.data.filepath).na
           'objects': len(scene.objects), 'main_drivers': count, 'missing_images': missing,
           'mode': args.mode, 'quality_status': 'WORK_IN_PROGRESS_NOT_ACCEPTED'}
 (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build'):
+if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build', 'combined-build'):
     review = args.mode != 'preview'
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
@@ -112,6 +116,17 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         guitar = bpy.data.objects['V206_GUITAR_ROOT']
         shots = [('guitar-front', guitar.matrix_world @ Vector((.625, 0, 1.)),
                   guitar.matrix_world @ Vector((.625, 0, 0)), .55), shots[0]]
+    if args.mode == 'combined-build':
+        guitar = bpy.data.objects['V206_GUITAR_ROOT']
+        shots = [
+            ('character', (.35, -3.5, 1.3), (0, 0, .94), 2.12),
+            ('face-front', (0, -2, 1.68), (0, 0, 1.65), .40),
+            ('groom-side', (1.8, 0, 1.74), (0, 0, 1.70), .38),
+            ('wardrobe-front', (0, -3, 1.24), (0, 0, 1.24), .94),
+            ('guitar-front', guitar.matrix_world @ Vector((.625, 0, 1.)),
+             guitar.matrix_world @ Vector((.625, 0, 0)), .55),
+            shots[0],
+        ]
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'
