@@ -13,7 +13,7 @@ def build(output, delit_face=False):
     from refine_v550_maple_density import build as build_guitar
 
     from build_v557_reference_locks import reduce_skin_microrelief
-    report = {'revision': 'V566', 'skin_microrelief': reduce_skin_microrelief()}
+    report = {'revision': 'V567', 'skin_microrelief': reduce_skin_microrelief()}
     report['groom'] = build_groom(out, save=False, clean_scalp=True)
     report['eyes'] = build_eyes(root, out)
     from refine_v558_eye_surface import build as build_eye_surface
@@ -93,6 +93,8 @@ def build(output, delit_face=False):
                         'objects': sorted(set(affected))}
     from refine_v565_jacket_collar import build as build_collar
     report['collar_shape'] = build_collar(out)
+    from refine_v567_rear_collar import build as build_rear_collar
+    report['rear_collar_material'] = build_rear_collar(out)
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     assert len(rig.animation_data.drivers) == 1957
     report['main_drivers'] = 1957

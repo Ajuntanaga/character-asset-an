@@ -1,0 +1,106 @@
+"""Package allowlisted inputs for the authorized, private V567 GPU trial."""
+import ast
+import base64
+import gzip
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import time
+import urllib.error
+import urllib.request
+import zipfile
+
+
+root = Path(__file__).resolve().parents[1]
+staging = root / 'kaggle_payload/v567'
+dataset = staging / 'input'
+kernel = staging / 'kernel'
+dataset.mkdir(parents=True, exist_ok=True)
+kernel.mkdir(parents=True, exist_ok=True)
+staging.chmod(0o700)
+assert not (dataset / 'current-v544.blend').exists(), 'Do not upload the full scene locally'
+assets = [
+    'assets/generated/gray_maple_v553/gray_curly_maple_albedo.png',
+    'assets/generated/gray_maple_v553/SOURCE.json',
+    'references/derived/photoreal_facebuilder_v1/character_an_front_v1.png',
+    'references/derived/photoreal_facebuilder_v1/fitted_cameras_v326.json',
+    'github_assets/v567-rear-collar-mask.json',
+]
+archive = dataset / 'reference-inputs.zip'
+with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1) as bundle:
+    for name in assets:
+        bundle.write(root / name, name)
+archive_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
+sources, pending = {}, ['github_scene_job']
+while pending:
+    name = pending.pop()
+    relative = 'pipeline/' + name + '.py'
+    path = root / relative
+    if relative in sources or not path.is_file():
+        continue
+    source = path.read_text()
+    sources[relative] = source
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.ImportFrom) and node.module:
+            pending.append(node.module.split('.')[0])
+        elif isinstance(node, ast.Import):
+            pending.extend(alias.name.split('.')[0] for alias in node.names)
+encoded = base64.b64encode(gzip.compress(json.dumps(sources, sort_keys=True).encode(), mtime=0)).decode()
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, response, code, message, headers, new_url):
+        return None
+
+
+# Only expiring, single-asset URLs enter the ignored private kernel. The
+# GitHub credential remains in this process and never enters the bundle.
+token = subprocess.check_output(['gh', 'auth', 'token'], text=True).strip()
+opener = urllib.request.build_opener(NoRedirect)
+manifest = json.loads((root / 'github_assets/scene-manifest.json').read_text())
+downloads = []
+for version, name in [('528', 'current-v528.blend'),
+                      ('543', 'current-v543.delta.zst'),
+                      ('544', 'current-v544.delta.zst')]:
+    release = json.loads(subprocess.check_output([
+        'gh', 'api', f'repos/Ajuntanaga/character-asset-an/releases/tags/checkpoint-v{version}']))
+    asset = next(asset for asset in release['assets'] if asset['name'] == name)
+    request = urllib.request.Request(asset['url'] + f'?fresh={time.time_ns()}', headers={
+        'Authorization': 'Bearer ' + token, 'Accept': 'application/octet-stream',
+        'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Character-An-private-render'})
+    try:
+        response = opener.open(request, timeout=30)
+        response.close()
+        raise RuntimeError('Expected a temporary release-asset redirect')
+    except urllib.error.HTTPError as error:
+        if error.code != 302:
+            raise RuntimeError(f'Asset redirect failed: HTTP {error.code}') from None
+        url = error.headers['Location']
+        assert url.startswith('https://release-assets.githubusercontent.com/')
+    downloads.append(dict(manifest[name], name=name, url=url))
+del token
+program = (f'INPUTS_SHA256 = {archive_hash!r}\nSOURCES_B64 = {encoded!r}\n'
+           f'SCENE_DOWNLOADS = {downloads!r}\nSCENE_MANIFEST = {manifest!r}\n' +
+           (root / 'pipeline/kaggle_character_job.py').read_text())
+ast.parse(program)
+(kernel / 'character_job.py').write_text(program)
+(kernel / 'character_job.py').chmod(0o600)
+(dataset / 'dataset-metadata.json').write_text(json.dumps({
+    'id': 'anthovargas/character-an-v544-render-inputs',
+    'title': 'Character An V544 Render Inputs',
+    'licenses': [{'name': 'other'}],
+    'description': 'Private working inputs for one bounded character render. Copyright remains with the original authors. No redistribution license is granted; not a public asset release.',
+}, indent=2))
+(kernel / 'kernel-metadata.json').write_text(json.dumps({
+    'id': 'anthovargas/character-an-v567-gpu-preview',
+    'title': 'Character An V567 GPU Preview',
+    'code_file': 'character_job.py', 'language': 'python', 'kernel_type': 'script',
+    'is_private': True, 'enable_gpu': True, 'enable_internet': True,
+    'machine_shape': 'NvidiaTeslaT4',
+    'dataset_sources': ['anthovargas/character-an-v544-render-inputs'],
+}, indent=2))
+print(json.dumps({'dataset': str(dataset), 'kernel': str(kernel),
+                  'upload_bytes': archive.stat().st_size + len(program.encode()),
+                  'new_local_bytes': archive.stat().st_size + len(program.encode()),
+                  'script_count': len(sources), 'archive_sha256': archive_hash}, indent=2))

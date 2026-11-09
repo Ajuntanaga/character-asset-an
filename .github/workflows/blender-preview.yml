@@ -23,7 +23,7 @@ concurrency:
 jobs:
   blender:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 35
     env:
       OMP_NUM_THREADS: '2'
       OPENBLAS_NUM_THREADS: '2'

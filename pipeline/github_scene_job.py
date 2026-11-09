@@ -1,4 +1,4 @@
-"""Read a release scene and emit a bounded CPU preview and scene report."""
+"""Read a release scene and emit bounded previews and a scene report."""
 import argparse
 import json
 import math
@@ -12,11 +12,26 @@ parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-revi
 parser.add_argument('--output', default='results')
 parser.add_argument('--facial-hair', action='store_true')
 parser.add_argument('--delit-face', action='store_true')
+parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 if args.facial_hair and args.mode != 'blink-build':
     parser.error('--facial-hair requires --mode blink-build')
 if args.delit_face and args.mode != 'combined-build':
     parser.error('--delit-face requires --mode combined-build')
+render_device = {'requested': args.device, 'selected': 'CPU'}
+if args.device == 'CUDA':
+    preferences = bpy.context.preferences.addons['cycles'].preferences
+    preferences.compute_device_type = 'CUDA'
+    preferences.refresh_devices()
+    devices = [device for device in preferences.devices if device.type == 'CUDA']
+    if not devices:
+        raise RuntimeError('CUDA requested but no CUDA GPU is available')
+    # One GPU is sufficient for these previews. Do not silently fall back
+    # to CPU and spend the remote budget without acceleration.
+    selected = devices[0]
+    for device in preferences.devices:
+        device.use = device == selected
+    render_device['selected'] = selected.name
 out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
 if args.mode == 'build-review':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -63,7 +78,9 @@ report = {'blender': bpy.app.version_string, 'scene': Path(bpy.data.filepath).na
 if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build', 'combined-build'):
     review = args.mode != 'preview'
     scene.render.engine = 'CYCLES'
-    scene.cycles.device = 'CPU'
+    scene.cycles.device = 'GPU' if args.device == 'CUDA' else 'CPU'
+    report['render_device'] = render_device
+    (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
     scene.cycles.samples = 32 if review else 8
     scene.cycles.use_denoising = True
     scene.render.threads_mode = 'FIXED'; scene.render.threads = 2
@@ -127,6 +144,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             ('face-oblique', (.70, -1.7, 1.78), (0, 0, 1.67), .40),
             ('wardrobe-collar-front', (0, -2, 1.48), (0, 0, 1.43), .48),
             ('wardrobe-collar-oblique', (.60, -1.6, 1.56), (0, 0, 1.44), .48),
+            ('wardrobe-collar-rear', (0, 2, 1.60), (0, .06, 1.52), .28),
             ('character', (.35, -3.5, 1.3), (0, 0, .94), 2.12),
         ]
         if args.delit_face:
@@ -222,7 +240,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             # Inspect the corneal clearance and closure from a different angle.
             camera.location = (.8, -1.6, 1.66)
             camera.rotation_euler = (Vector((0, 0, 1.655)) - camera.location).to_track_quat('-Z', 'Y').to_euler()
-            for value in (() if args.mode == 'combined-build' else (.5, 1.)):
+            for value in (.5, 1.):
                 for side in ('L', 'R'):
                     head['Blink.' + side] = value
                 rig.update_tag(); bpy.context.view_layer.update()

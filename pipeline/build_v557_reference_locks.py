@@ -100,13 +100,12 @@ def generate(roots, bvh):
         length = length * (1. - nape) + rng.uniform(.003, .006) * nape
         amplitude = rng.uniform(.0045, .0062) * (.65 + .35 * top) * (1. - .18 * side) * (1. - .75 * nape)
         phase = rng.uniform(-math.pi, math.pi)
-        turn = rng.uniform(1., 1.45) * (1. - .35 * nape) * (-1 if rng.random() < .45 else 1)
-        # The prior centerline traversed 23–35 mm along the scalp while making
-        # less than one wave. Reference curls instead turn around an axis that
-        # rises from the scalp. Fibers still share one transported guide; they
-        # do not become the independent, hollow wire coils rejected in V546.
-        tilt = rng.uniform(math.radians(40), math.radians(60))
-        tilt = tilt * (1. - nape) + math.radians(65) * nape
+        turn = rng.uniform(.60, .85) * (1. - .25 * nape) * (-1 if rng.random() < .45 else 1)
+        # V564's upright full helices read as repeated springs. Lay partial
+        # curls along the scalp so neighboring bundles overlap in the growth
+        # direction. Keep density, bundle width and true fiber radii unchanged.
+        tilt = rng.uniform(math.radians(68), math.radians(78))
+        tilt = tilt * (1. - nape) + math.radians(75) * nape
         axis = normal * math.cos(tilt) + tangent * math.sin(tilt)
         radial_u = tangent - axis * np.dot(tangent, axis)
         radial_u /= np.linalg.norm(radial_u)
@@ -179,15 +178,15 @@ def generate(roots, bvh):
     points, radii, uvs = np.concatenate(points), np.concatenate(radii), np.concatenate(uvs).astype(np.float32)
     assert np.isfinite(points).all() and np.isfinite(radii).all()
     assert 100 < len(macro_roots) < len(dense_roots)
-    report = {'geometry_model': 'V564_overlapping_rising_ringlets_with_wavy_undercoat',
+    report = {'geometry_model': 'V567_overlapping_scalp_following_partial_curls',
               'guides': len(macro_roots), 'undercoat_guides': len(dense_roots),
               'primary_strands': macro_strands, 'undercoat_strands': len(dense_roots) * base_children,
               'top_root_spacing_m': .0095, 'side_root_spacing_m': .0075,
               'posterior_root_spacing_m': .0045, 'posterior_guides': sum(
                   root.z < 1.655 and root.y > -.022 for root, _, _ in macro_roots),
-              'top_lock_axial_length_m': [.0085, .014], 'partial_turns': [1., 1.45],
+              'top_lock_axial_length_m': [.0085, .014], 'partial_turns': [.60, .85],
               'top_lock_amplitude_m': [.0045, .0062],
-              'axis_tilt_from_scalp_normal_degrees': [40, 60],
+              'axis_tilt_from_scalp_normal_degrees': [68, 78],
               'top_bundle_radius_m': [.00115, .00175],
               'maximum_primary_fibers_per_guide': 220,
               'undercoat_fibers_per_guide': base_children,
