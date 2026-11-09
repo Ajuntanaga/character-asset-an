@@ -45,10 +45,10 @@ def minimize(residual, initial, low, high, iterations=40):
         jac = np.array(columns).T
         damping = np.eye(len(x)) * 1e-7
         delta = np.linalg.solve(jac.T @ jac + damping, -jac.T @ r)
-        delta[:3] = np.clip(delta[:3], -.012, .012)
-        delta[3:] = np.clip(delta[3:], -.18, .18)
+        delta /= max(1., float(np.max(np.abs(delta[:3]))) / .012,
+                     float(np.max(np.abs(delta[3:]))) / .18)
         best = (float(r @ r), x.copy())
-        for rate in (1., .5, .2):
+        for rate in (1., .5, .2, .05, .01):
             v = np.clip(x + rate * delta, low, high)
             rr = residual(v)
             if float(rr @ rr) < best[0]:
@@ -87,7 +87,7 @@ def build(out):
     source_palm = source['DEF-Finger_Middle1.R'].head_local - wrist_source
     right_palm = (right.matrix_world.to_3x3() @ source_palm).length
     posed = main.matrix_world @ main.pose.bones['DEF-Hand.L'].matrix @ main.data.bones['DEF-Hand.L'].matrix_local.inverted()
-    initial_linear = posed.to_3x3() @ tf @ sf.inverted()
+    initial_linear = posed.to_quaternion().to_matrix() @ tf @ sf.inverted()
     # Match the existing donor's palm length, without copying the enlarged old hand.
     scale = right_palm / (initial_linear @ source_palm).length
     initial_linear = initial_linear * scale
@@ -238,10 +238,15 @@ def build(out):
         r.extend((values[3:] - prior[3:]) * .00035)
         return np.array(r)
 
+    contacts(prior, True)
+    expected_world, expected_pose, _ = matrices(prior)
+    joint_error = max((expected_world @ expected_pose[b.name].translation -
+                       rig.matrix_world @ b.head).length for b in rig.pose.bones)
+    assert joint_error < 1e-5, f'Analytic/evaluated joint mismatch: {joint_error}'
     print('Fitting native left hand: analytic joints', flush=True)
     values, coarse_history = minimize(residual, prior, low, high, 55)
     print(f'Coarse fit loss: {coarse_history[-1]}; refining evaluated skin', flush=True)
-    values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 12)
+    values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 40)
     print(f'Surface fit loss: {surface_history[-1]}; attaching to main arm', flush=True)
     points, desired_world, pose = contacts(values, True)
     desired_wrist = desired_world @ wrist_source
@@ -258,10 +263,16 @@ def build(out):
     actual_wrist = main.matrix_world @ main.pose.bones['DEF-Hand.L'].head
     wrist_error = (actual_wrist - desired_wrist).length
     assert wrist_error < .002, f'Arm cannot reach donor wrist: {wrist_error}'
-    parent_frame = main.matrix_world @ main.pose.bones['DEF-Hand.L'].matrix @ Matrix.Translation((0, main.data.bones['DEF-Hand.L'].length, 0))
     rig.parent = main; rig.parent_type = 'BONE'; rig.parent_bone = 'DEF-Hand.L'
-    rig.matrix_parent_inverse = parent_frame.inverted() @ desired_world
+    rig.matrix_parent_inverse = Matrix.Identity(4)
     rig.matrix_basis = Matrix.Identity(4)
+    bpy.context.view_layer.update()
+    parent_frame = rig.matrix_world.copy()
+    rig.matrix_parent_inverse = parent_frame.inverted() @ desired_world
+    bpy.context.view_layer.update()
+    attachment_error = max(abs(rig.matrix_world[i][j] - desired_world[i][j])
+                           for i in range(4) for j in range(4))
+    assert attachment_error < 1e-5, f'Donor attachment changed placement: {attachment_error}'
     # Expose flexion and MCP spread through the existing character controls.
     for index, digit in enumerate(DIGITS[:4]):
         for j in (1, 2, 3):
@@ -305,6 +316,10 @@ def build(out):
               'values': values.tolist(), 'coarse_loss': coarse_history, 'surface_loss': surface_history,
               'nail_polygons': sum(p.material_index == 1 for p in hand.data.polygons)}
     (out / 'hand-fit-report.json').write_text(json.dumps(report, indent=2))
+    # Appending retains a weak origin-library record even with all IDs local.
+    assert not any(item.library for item in bpy.data.user_map()), 'Linked donor dependency'
+    for library in list(bpy.data.libraries):
+        bpy.data.libraries.remove(library)
     bpy.ops.wm.save_as_mainfile(filepath=str((out / 'Character_An_fretting_hand_TRIAL_v545.blend').resolve()))
     print(json.dumps(report), flush=True)
     return report
