@@ -20,7 +20,7 @@ Blender 5.2.2 LTS. Current scene textures are packed and there are no linked lib
 
 Run **Blender scene check and preview** manually in Actions. It downloads the pinned release scene and Blender version and validates the scene. `preview` makes a 512-pixel, 8-sample instrument render; `review` makes four 768-pixel, 32-sample renders of the instrument, grip, full character and portrait. Both use CPU rendering. Two threads, one job at a time, 20-minute job timeout, seven-day result retention. These previews reduce subdivision and hair children to fit standard hosted runner memory; they are not final quality renders or animation certification.
 
-[First successful remote preview](https://github.com/Ajuntanaga/character-asset-an/actions/runs/42549182718): scene checksum passed, 169 objects, 1,957 main-rig drivers, no missing images; returned PNG visually inspected.
+[V542 four-view review](https://github.com/Ajuntanaga/character-asset-an/actions/runs/42554176852) completed in 8m27s. All four images were downloaded and visually inspected: they expose unresolved grip/anatomy, guitar finish, face and hair issues. Scene checksum passed, 169 objects, 1,957 main-rig drivers, no missing images. The images and scene report are retained with the V542 release as well as in the temporary Actions artifact. [First successful remote preview](https://github.com/Ajuntanaga/character-asset-an/actions/runs/42549182718) used V528.
 
 No scheduled rendering, paid GPU runner, Modal job, or automatic batch fan-out. Private Actions consumes included usage and may be billable under account settings after quota; account billing/spending limits remain authoritative. Kaggle free GPU may be considered separately for a small explicitly bounded render, with no paid expansion.
 
