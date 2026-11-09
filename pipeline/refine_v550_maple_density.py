@@ -15,12 +15,15 @@ def build(output):
     material.name = 'V550_DENSE_FIGURED_MAPLE'
     nodes, links = material.node_tree.nodes, material.node_tree.links
     texture = nodes['V387_FiguredMaple']
+    image_path = Path(__file__).resolve().parents[1] / 'assets/generated/gray_maple_v553/gray_curly_maple_albedo.png'
+    texture.image = bpy.data.images.load(str(image_path), check_existing=True)
+    texture.image.pack()
     source = texture.inputs['Vector'].links[0].from_socket
     mapping = nodes.new('ShaderNodeMapping')
     mapping.name = 'V550_FigureDensity'
     mapping.vector_type = 'POINT'
-    mapping.inputs['Location'].default_value = (0, -.75, 0)
-    mapping.inputs['Scale'].default_value = (1, 2.5, 1)
+    mapping.inputs['Location'].default_value = (0, 0, 0)
+    mapping.inputs['Scale'].default_value = (1, 1, 1)
     links.new(source, mapping.inputs['Vector'])
     links.new(mapping.outputs['Vector'], texture.inputs['Vector'])
     texture.extension = 'MIRROR'
@@ -29,11 +32,11 @@ def build(output):
     links.new(texture.outputs['Color'], luminance.inputs['Color'])
     contrast = nodes.new('ShaderNodeRGBCurve')
     contrast.name = 'V550_FigureContrast'
-    # Input is decoded linear RGB: luminance p05/p95 are .222/.321.
+    # New broad-flame albedo: decoded luminance p05/p95 are .287/.491.
     # Keep the flame visible without amplifying fine longitudinal grain into
     # white scratches. The reference has a restrained silver/olive center.
-    contrast.mapping.curves[3].points.new(.22, .18)
-    contrast.mapping.curves[3].points.new(.32, .48)
+    contrast.mapping.curves[3].points.new(.287, .18)
+    contrast.mapping.curves[3].points.new(.491, .48)
     contrast.mapping.update()
     links.new(luminance.outputs['Val'], contrast.inputs['Color'])
     links.new(contrast.outputs['Color'], nodes['V387_GrayStain'].inputs[1])
@@ -60,8 +63,9 @@ def build(output):
     path = out / 'Character_An_maple_density_TRIAL_v550.blend'
     bpy.ops.wm.save_as_mainfile(filepath=str(path), compress=True)
     report = {'status': 'TRIAL_REQUIRES_VISUAL_REVIEW', 'original_material': original.name,
-              'trial_material': material.name, 'longitudinal_density': 2.5,
-              'figure_contrast_points': [[.22, .18], [.32, .48]],
+              'trial_material': material.name, 'longitudinal_density': 1.0,
+              'texture': 'assets/generated/gray_maple_v553/gray_curly_maple_albedo.png',
+              'figure_contrast_points': [[.287, .18], [.491, .48]],
               'stain_tint': [.47, .52, .45, 1],
               'edge_material': edge_material.name,
               'body_geometry_changed': False, 'hardware': hardware,

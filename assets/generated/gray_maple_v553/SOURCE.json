@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "generated_utc": "2026-11-09",
+  "prompt": "Use case: photorealistic-natural. Asset type: square 2048x2048 seamless albedo texture for a Blender figured-maple guitar top. Input image 1 is a MATERIAL REFERENCE ONLY: use the broad smooth horizontal flame figuring visible on the guitar's pale central wood. Generate a flat, front-on, edge-to-edge sheet of silvery neutral-gray curly maple, without any guitar silhouette or hardware. About 28 to 35 gently wavy horizontal flame bands across the image height, irregular in spacing and softly feathered, with continuous flowing pearlescent wood structure. Very subdued vertical longitudinal grain, natural extremely fine pores; horizontal flame must dominate rather than a woven fabric/crosshatch appearance. Color should be unstained neutral medium-light gray, average sRGB around 0.56, pale flame around 0.66 and dark flame around 0.45. Uniform diffuse lighting, no directional highlights, no ambient shadows, no darkened edges or burst (Blender adds that), no baked specular lighting, no knots, no scratches, no grunge, no fabric, no text, no logo, no objects. Seamlessly tileable in both directions. Photographically credible maple wood, not regular sine-wave stripes. Output only the square texture.",
+  "reference": "references/props/strandberg/strandberg_full_product.jpg",
+  "image": "gray_curly_maple_albedo.png",
+  "actual_dimensions": [
+    1254,
+    1254
+  ],
+  "sha256": "ce1f414359a3d7c10efb77e7d1ec21a8a3d101198618173fba14743c04311993",
+  "purpose": "Reversible maple material trial to reduce prominent longitudinal crosshatching; original v387 texture retained.",
+  "linear_luminance_p05_p95": [
+    0.2865193111737938,
+    0.4910150405829994
+  ]
+}
