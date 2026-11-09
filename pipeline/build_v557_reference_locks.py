@@ -98,7 +98,9 @@ def generate(roots, bvh):
         children = round((140 + 80 * top) * (1. - nape) + 28 * nape)
         length = rng.uniform(.0085, .014) * (.70 + .30 * top) * (1. - .15 * side)
         length = length * (1. - nape) + rng.uniform(.003, .006) * nape
-        amplitude = rng.uniform(.0045, .0062) * (.65 + .35 * top) * (1. - .18 * side) * (1. - .75 * nape)
+        # V571's broad curl loops read as tiled ribbons. Reduce only their
+        # radial excursion; retain guide spacing, fiber density and width.
+        amplitude = rng.uniform(.0032, .0045) * (.65 + .35 * top) * (1. - .18 * side) * (1. - .75 * nape)
         phase = rng.uniform(-math.pi, math.pi)
         turn = rng.uniform(.60, .85) * (1. - .25 * nape) * (-1 if rng.random() < .45 else 1)
         # V564's upright full helices read as repeated springs. Lay partial
@@ -178,14 +180,14 @@ def generate(roots, bvh):
     points, radii, uvs = np.concatenate(points), np.concatenate(radii), np.concatenate(uvs).astype(np.float32)
     assert np.isfinite(points).all() and np.isfinite(radii).all()
     assert 100 < len(macro_roots) < len(dense_roots)
-    report = {'geometry_model': 'V567_overlapping_scalp_following_partial_curls',
+    report = {'geometry_model': 'V577_compact_scalp_following_partial_curls',
               'guides': len(macro_roots), 'undercoat_guides': len(dense_roots),
               'primary_strands': macro_strands, 'undercoat_strands': len(dense_roots) * base_children,
               'top_root_spacing_m': .0095, 'side_root_spacing_m': .0075,
               'posterior_root_spacing_m': .0045, 'posterior_guides': sum(
                   root.z < 1.655 and root.y > -.022 for root, _, _ in macro_roots),
               'top_lock_axial_length_m': [.0085, .014], 'partial_turns': [.60, .85],
-              'top_lock_amplitude_m': [.0045, .0062],
+              'top_lock_amplitude_m': [.0032, .0045],
               'axis_tilt_from_scalp_normal_degrees': [68, 78],
               'top_bundle_radius_m': [.00115, .00175],
               'maximum_primary_fibers_per_guide': 220,

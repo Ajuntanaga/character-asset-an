@@ -83,9 +83,10 @@ def build(root, out, reopen=False):
         assert not body.get('V547_blink_alignment')
     else:
         assert not body.get('V544_eye_opening_applied')
-    # V567: V564's upper lid obscures too much iris in all three face views.
+    # V578: the V575 neutral aperture still obscures too much iris in both
+    # front and oblique views against the registered source portrait.
     # Raise only the upper opening; retain the lower margin, iris and canthi.
-    upper_height, upper_power = (.0088, .82) if reopen else (.0070, .82)
+    upper_height, upper_power = (.0115, .82) if reopen else (.0070, .82)
     lower_height, lower_power = (.0023, .95) if reopen else (.0028, .95)
     mesh = body.data
     keys = mesh.shape_keys.key_blocks

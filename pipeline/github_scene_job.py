@@ -13,14 +13,14 @@ parser.add_argument('--output', default='results')
 parser.add_argument('--facial-hair', action='store_true')
 parser.add_argument('--delit-face', action='store_true')
 parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
-parser.add_argument('--review-scope', choices=('full', 'mouth'), default='full')
+parser.add_argument('--review-scope', choices=('full', 'mouth', 'appearance'), default='full')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 if args.facial_hair and args.mode != 'blink-build':
     parser.error('--facial-hair requires --mode blink-build')
 if args.delit_face and args.mode != 'combined-build':
     parser.error('--delit-face requires --mode combined-build')
-if args.review_scope == 'mouth' and args.mode != 'combined-build':
-    parser.error('--review-scope mouth requires --mode combined-build')
+if args.review_scope != 'full' and args.mode != 'combined-build':
+    parser.error('--review-scope mouth/appearance requires --mode combined-build')
 render_device = {'requested': args.device, 'selected': 'CPU'}
 if args.device == 'CUDA':
     preferences = bpy.context.preferences.addons['cycles'].preferences
@@ -221,7 +221,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             obj.hide_render = False
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-    if args.review_scope == 'full' and args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
+    if args.review_scope != 'mouth' and args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
         original = {side: head['Blink.' + side] for side in ('L', 'R')}
@@ -258,7 +258,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             for side, value in original.items():
                 head['Blink.' + side] = value
             rig.update_tag(); bpy.context.view_layer.update()
-    if args.mode == 'combined-build':
+    if args.mode == 'combined-build' and args.review_scope != 'appearance':
         head = rig.pose.bones['Head']
         original = {name: head[name] for name in ('MouthPucker', 'JawOpen')}
         report['mouth_checks'] = []

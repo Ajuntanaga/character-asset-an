@@ -16,9 +16,9 @@ on:
         type: boolean
         default: false
       review_scope:
-        description: Full review, or face and mouth views for a mouth-only correction
+        description: Full review, mouth correction, or hair/eyes/wardrobe appearance
         type: choice
-        options: [full, mouth]
+        options: [full, mouth, appearance]
         default: full
 permissions:
   contents: read

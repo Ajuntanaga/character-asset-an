@@ -13,7 +13,7 @@ def build(output, delit_face=False):
     from refine_v550_maple_density import build as build_guitar
 
     from build_v557_reference_locks import reduce_skin_microrelief
-    report = {'revision': 'V575', 'skin_microrelief': reduce_skin_microrelief()}
+    report = {'revision': 'V578', 'skin_microrelief': reduce_skin_microrelief()}
     report['groom'] = build_groom(out, save=False, clean_scalp=True)
     report['eyes'] = build_eyes(root, out)
     from refine_v558_eye_surface import build as build_eye_surface
@@ -102,6 +102,8 @@ def build(output, delit_face=False):
     report['collar_shape'] = build_collar(out)
     from refine_v567_rear_collar import build as build_rear_collar
     report['rear_collar_material'] = build_rear_collar(out)
+    from refine_v578_collar_rim import build as build_collar_rim
+    report['collar_rim_material'] = build_collar_rim(out)
     from refine_v568_pen_cloth import build as build_pen_cloth
     report['pen_cloth_material'] = build_pen_cloth(out)
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
