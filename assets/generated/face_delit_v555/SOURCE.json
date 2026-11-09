@@ -1,0 +1,19 @@
+{
+  "tool": "built-in image_gen",
+  "generated_utc": "2026-11-09",
+  "source": "production_v326_photoreal_facebuilder/textures/Character_An_photoreal_head_basecolor_v326.png",
+  "source_sha256": "aa09646354554ea5c634dcbaa1083367894addc067784de6174c76e4dc1691fd",
+  "image": "face_delit_albedo.png",
+  "sha256": "fa8bbf0db871b3b77461fae8f728025a045498a374c6a4a3fb7912e79aa0af1a",
+  "actual_dimensions": [
+    1254,
+    1254
+  ],
+  "requested_dimensions": [
+    4096,
+    4096
+  ],
+  "status": "PREVIEW_TRIAL_LOWER_RESOLUTION_NOT_PRODUCTION_ACCEPTED",
+  "instructions": "Preserve the original square human-head UV atlas layout, identity, complexion, hair/beard pigmentation and every feature placement. Remove directional illumination, cast shadows and specular highlights, including nose shine, cheek and neck shading; remove harsh etched pores while preserving natural small color details. Keep stretched seams, padding and black unused areas. Do not reproject, unwrap, crop, rotate, recenter, alter anatomy or reorganize islands. No portrait or normal-map conversion.",
+  "original_preserved": true
+}

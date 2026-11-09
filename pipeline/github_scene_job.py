@@ -11,9 +11,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build', 'combined-build'), default='check')
 parser.add_argument('--output', default='results')
 parser.add_argument('--facial-hair', action='store_true')
+parser.add_argument('--delit-face', action='store_true')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 if args.facial_hair and args.mode != 'blink-build':
     parser.error('--facial-hair requires --mode blink-build')
+if args.delit_face and args.mode != 'combined-build':
+    parser.error('--delit-face requires --mode combined-build')
 out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
 if args.mode == 'build-review':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -42,7 +45,7 @@ if args.mode == 'guitar-build':
 if args.mode == 'combined-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v554_combined_trial import build
-    build(out)
+    build(out, delit_face=args.delit_face)
 scene = bpy.context.scene
 rig = bpy.data.objects.get('V357_CLOUDRIG_CONTROLS')
 if rig is None or rig.animation_data is None:
@@ -127,6 +130,10 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
              guitar.matrix_world @ Vector((.625, 0, 0)), .55),
             shots[0],
         ]
+        if args.delit_face:
+            shots = [shots[0], shots[1],
+                     ('face-oblique', (.70, -1.7, 1.68), (0, 0, 1.65), .40),
+                     ('face-profile', (1.8, -.15, 1.68), (0, 0, 1.65), .40)]
     report['preview'] = {'samples': scene.cycles.samples, 'size': size, 'threads': 2,
                          'reduced_detail': True, 'completed_shots': []}
     camera.data.type = 'ORTHO'

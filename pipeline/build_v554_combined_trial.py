@@ -4,7 +4,7 @@ from pathlib import Path
 import bpy
 
 
-def build(output):
+def build(output, delit_face=False):
     out = Path(output).resolve()
     out.mkdir(parents=True, exist_ok=True)
     root = Path(__file__).resolve().parents[1]
@@ -15,6 +15,9 @@ def build(output):
     report = {'groom': build_groom(out, save=False, clean_scalp=True)}
     report['eyes'] = build_eyes(root, out)
     report['guitar'] = build_guitar(out, save=False)
+    if delit_face:
+        from refine_v555_face_albedo import build as build_face
+        report['face_albedo'] = build_face(out)
 
     original = bpy.data.materials['V379_DARK_COTTON_JACKET']
     jacket = original.copy()

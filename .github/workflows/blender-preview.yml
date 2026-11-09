@@ -11,6 +11,10 @@ on:
         description: Include the reversible beard-length trial with blink-build
         type: boolean
         default: false
+      delit_face:
+        description: Test the lower-resolution de-lit albedo with combined-build
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -25,6 +29,7 @@ jobs:
       OPENBLAS_NUM_THREADS: '2'
       MODE: ${{ inputs.mode }}
       FACIAL_HAIR: ${{ inputs.facial_hair }}
+      DELIT_FACE: ${{ inputs.delit_face }}
     steps:
       - uses: actions/checkout@v4
       - name: Download pinned scene
@@ -89,6 +94,7 @@ jobs:
         run: |
           extra=()
           if [ "$FACIAL_HAIR" = true ]; then extra+=(--facial-hair); fi
+          if [ "$DELIT_FACE" = true ]; then extra+=(--delit-face); fi
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec "scenes/$SCENE" --threads 2 --python-exit-code 1 --python pipeline/github_scene_job.py -- --mode "$MODE" --output results "${extra[@]}"
       - name: Package built scene as a checked delta
         if: inputs.mode == 'build-review'
