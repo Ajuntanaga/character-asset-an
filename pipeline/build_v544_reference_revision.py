@@ -31,7 +31,7 @@ def build(output):
     shader.inputs['Roughness'].default_value = .44
     shader.inputs['Coat Weight'].default_value = .04
     shader.inputs['Coat Roughness'].default_value = .38
-    # Neutral gray stain retains the reference's pale, fine horizontal figuring.
+    # Reduce gloss and stain contrast; reference fidelity still needs visual review.
     stain.inputs[2].default_value = (.52, .55, .52, 1.)
     report['guitar_after'] = {'roughness': .44, 'coat': .04, 'coat_roughness': .38,
                              'stain': [.52, .55, .52, 1.]}

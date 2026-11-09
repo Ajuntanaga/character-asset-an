@@ -68,7 +68,7 @@ if args.mode in ('preview', 'review', 'build-review'):
         bpy.ops.render.render(write_still=True)
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-    if args.mode == 'build-review':
+    if review:
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
         original = {side: head['Blink.' + side] for side in ('L', 'R')}

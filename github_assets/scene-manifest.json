@@ -35,5 +35,16 @@
     "bytes": 3621868,
     "base": "current-v528.blend",
     "output": "current-v543.blend"
+  },
+  "current-v544.blend": {
+    "sha256": "6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02",
+    "bytes": 387351426,
+    "source": "production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend"
+  },
+  "current-v544.delta.zst": {
+    "sha256": "b13f3788dd0fc7bcedc5001ef6f789b597687eff4250e810b9ee7402c986036a",
+    "bytes": 36882831,
+    "base": "current-v543.blend",
+    "output": "current-v544.blend"
   }
 }

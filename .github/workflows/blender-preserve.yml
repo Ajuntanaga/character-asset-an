@@ -1,0 +1,65 @@
+name: Preserve Blender checkpoint
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful build-review run containing the checkpoint
+        required: true
+        type: string
+      version:
+        description: Checkpoint version already recorded in scene-manifest.json
+        required: true
+        default: v544
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: character-blender-processing
+  cancel-in-progress: false
+jobs:
+  preserve:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_ID: ${{ inputs.run_id }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preserve verified build output without a workstation upload
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, subprocess
+          version = os.environ['VERSION']
+          run_id = os.environ['RUN_ID']
+          assert re.fullmatch(r'v[0-9]+', version), 'Invalid checkpoint version'
+          assert run_id.isdecimal(), 'Invalid run ID'
+          def gh(*args):
+              return subprocess.check_output(['gh', *args], text=True)
+          run = json.loads(gh('run', 'view', run_id, '--json', 'conclusion,headSha,url,workflowName'))
+          assert run['conclusion'] == 'success', run
+          assert run['workflowName'] == 'Blender scene check and preview', run
+          subprocess.run(['gh', 'run', 'download', run_id, '--pattern', 'blender-build-review-*', '--dir', 'download'], check=True)
+          candidates = list(pathlib.Path('download').rglob(f'current-{version}.delta.zst'))
+          assert len(candidates) == 1, candidates
+          delta = candidates[0]
+          registry = json.loads(pathlib.Path('github_assets/scene-manifest.json').read_text())
+          expected = registry[delta.name]
+          with delta.open('rb') as f:
+              digest = hashlib.file_digest(f, 'sha256').hexdigest()
+          assert digest == expected['sha256'] and delta.stat().st_size == expected['bytes'], 'Delta mismatch'
+          manifest = json.loads((delta.parent / 'build-manifest.json').read_text())
+          assert manifest[delta.name]['sha256'] == digest, 'Build manifest mismatch'
+          output = registry[expected['output']]
+          assert manifest[pathlib.Path(output['source']).name]['sha256'] == output['sha256'], 'Scene manifest mismatch'
+          checksum = delta.parent / 'SHA256SUMS'
+          checksum.write_text(''.join(f"{registry[name]['sha256']}  {name}\n" for name in (expected['base'], delta.name, expected['output'])))
+          assets = [delta, checksum, *sorted(delta.parent.glob('*.png')), *sorted(delta.parent.glob('*.json'))]
+          notes = pathlib.Path('release-notes.md')
+          notes.write_text(f"Work-in-progress checkpoint; not production-ready.\n\nBuilt and rendered on GitHub Actions: {run['url']}\n\nRestore the delta against `{expected['base']}`. See README and scene-manifest.json for the exact base and output checksums. Preview images use reduced detail.\n")
+          subprocess.run(['gh', 'release', 'create', f'checkpoint-{version}', '--target', run['headSha'], '--title', f'{version.upper()} reference revision working checkpoint', '--notes-file', str(notes), *map(str, assets)], check=True)
+          print(f'Preserved {len(assets)} assets; delta SHA256 {digest}')
+          PY
