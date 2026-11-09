@@ -1,3 +1,7 @@
+## 2026-11-08 V545 rendered but rejected; bounded solver correction
+
+Run 42564726025 succeeded in 11m08s, with all six previews and 1,957 main drivers. Downloaded `github_results/run-42564726025/blender-hand-build-7/`. Viewed front/oblique/rear fretting and full character: matching 94mm donor palms resolves bilateral scale mismatch, but fingers intersect/miss neck and pad errors remain 15–57mm. Do NOT promote this scene. V544 remains working checkpoint. Both analytic and attachment assertions passed; surface solver stopped immediately at joint bounds. Replaced clipping of an unconstrained Gauss–Newton step with a bounded quadratic coordinate solve, and report explicitly rejects contact error above 3mm while retaining diagnostic renders. Next remote trial pending dispatch. Full character goal remains incomplete.
+
 ## 2026-11-08 V545 fretting hand remote fit in progress
 
 Actions run https://github.com/Ajuntanaga/character-asset-an/actions/runs/42564726025 is processing `hand-build` at commit b6f303550276f97d926fe632aa610f8d7fe22261. Poll this exact run before starting another. Six preview views, full-detail trial save, and checked delta packaging are remote; V544 remains the live working scene. Do not promote without viewing the rendered hand.

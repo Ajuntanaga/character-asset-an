@@ -43,10 +43,23 @@ def minimize(residual, initial, low, high, iterations=40):
             v = x.copy(); v[j] += step
             columns.append((residual(v) - r) / step)
         jac = np.array(columns).T
-        damping = np.eye(len(x)) * 1e-7
-        delta = np.linalg.solve(jac.T @ jac + damping, -jac.T @ r)
-        delta /= max(1., float(np.max(np.abs(delta[:3]))) / .012,
-                     float(np.max(np.abs(delta[3:]))) / .18)
+        # Solve the bounded quadratic step itself: clipping an unconstrained
+        # solution can eliminate descent when several joints hit their limits.
+        trust = np.r_[[.012] * 3, [.18] * (len(x) - 3)]
+        scaled = jac * trust
+        hessian = scaled.T @ scaled + np.eye(len(x)) * 1e-7
+        gradient = scaled.T @ r
+        lower = np.maximum(-1., (low - x) / trust)
+        upper = np.minimum(1., (high - x) / trust)
+        step = np.zeros(len(x))
+        for _ in range(160):
+            previous = step.copy()
+            for j in range(len(x)):
+                step[j] = np.clip(step[j] - (hessian[j] @ step + gradient[j]) /
+                                  hessian[j, j], lower[j], upper[j])
+            if np.max(np.abs(step - previous)) < 1e-6:
+                break
+        delta = step * trust
         best = (float(r @ r), x.copy())
         for rate in (1., .5, .2, .05, .01):
             v = np.clip(x + rate * delta, low, high)
@@ -244,9 +257,9 @@ def build(out):
                        rig.matrix_world @ b.head).length for b in rig.pose.bones)
     assert joint_error < 1e-5, f'Analytic/evaluated joint mismatch: {joint_error}'
     print('Fitting native left hand: analytic joints', flush=True)
-    values, coarse_history = minimize(residual, prior, low, high, 55)
+    values, coarse_history = minimize(residual, prior, low, high, 100)
     print(f'Coarse fit loss: {coarse_history[-1]}; refining evaluated skin', flush=True)
-    values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 40)
+    values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 24)
     print(f'Surface fit loss: {surface_history[-1]}; attaching to main arm', flush=True)
     points, desired_world, pose = contacts(values, True)
     desired_wrist = desired_world @ wrist_source
@@ -309,7 +322,10 @@ def build(out):
     actual_palm = (rig.matrix_world.to_3x3() @ source_palm).length
     pick_error = max(abs(pick.matrix_world[i][j] - pick_before[i][j]) for i in range(4) for j in range(4))
     assert pick_error < 1e-5 and len(main.animation_data.drivers) == 1957
-    report = {'status': 'TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW', 'main_drivers': 1957,
+    fit_status = ('TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW' if
+                  max(c['distance_m'] for c in final.values()) < .003 else
+                  'REJECTED_CONTACT_FIT')
+    report = {'status': fit_status, 'main_drivers': 1957,
               'native_drivers': len(rig.animation_data.drivers), 'targets': target_meta,
               'contacts': final, 'left_palm_m': actual_palm, 'right_palm_m': right_palm,
               'wrist_anchor_error_m': wrist_error, 'pick_matrix_error': pick_error,
