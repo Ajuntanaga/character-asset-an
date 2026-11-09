@@ -89,12 +89,26 @@ def build(output, width=.005):
     original_uv = mesh.uv_layers['UVMap']
     photo_uv = mesh.uv_layers['V377_FacePhotoProjection']
     sources, distances, feathered = {}, [], 0
+    part_vertices, part_sample_distances = 0, []
     for i in hair_vertices:
         point = basis[i].co
         distance = edge_tree.find(point)[2]
         _, source, source_distance = clean_tree.find(point)
         t = min(1., distance / width) if source_distance < .025 else 1.
-        coverage.data[i].value = t*t*(3.-2.*t)
+        value = t*t*(3.-2.*t)
+        # The interior part needs clean scalp as well as a gap between guides.
+        # Keep the visible lane 3 mm wide and feather it to the hair cap over
+        # 2.5 mm on either side; the wider root exclusion allows curl overlap.
+        if point.z > 1.720 and -.105 < point.y < .065:
+            part = .040 + .13 * (point.y + .070)
+            lane = min(1., max(0., (abs(point.x-part)-.0015)/.0025))
+            end_fade = min(1., (point.y+.105)/.005, (.065-point.y)/.005)
+            part_coverage = 1. - end_fade * (1. - lane*lane*(3.-2.*lane))
+            value = min(value, part_coverage)
+            if part_coverage < 1.:
+                part_vertices += 1
+                part_sample_distances.append(source_distance)
+        coverage.data[i].value = value
         sources[i] = skin_loops[source]
         photo_weight.data[i].value = previous_weight.data[source].value
         if t < 1.:
@@ -142,6 +156,8 @@ def build(output, width=.005):
               'feather_width_m': width, 'feathered_vertices': feathered,
               'clean_skin_candidates': len(clean),
               'maximum_skin_sample_distance_m': max(distances),
+              'part_vertices': part_vertices,
+              'part_skin_sample_maximum_distance_m': max(part_sample_distances, default=0.),
               'geometry_changed': False, 'status': 'TRIAL_REQUIRES_VISUAL_REVIEW'}
     (Path(output) / 'hairline-report.json').write_text(json.dumps(report, indent=2))
     return report

@@ -37,6 +37,7 @@ def build(root, out, *, coherent=False):
     rng = random.Random(382)
     nprng = np.random.default_rng(382)
     spacing = .0065
+    part_root_half_width = .008 if coherent else .0035
     roots,grid = [],defaultdict(list)
     for _ in range(130000):
         face = faces[bisect.bisect_left(areas,rng.random()*area)]
@@ -45,7 +46,7 @@ def build(root, out, *, coherent=False):
         weights = (1.-u,u*(1.-v),u*v)
         root = a*weights[0]+b*weights[1]+c*weights[2]
         part = .040+.13*(root.y+.070)
-        if root.z>1.720 and -.105<root.y<.065 and abs(root.x-part)<.0035:
+        if root.z>1.720 and -.105<root.y<.065 and abs(root.x-part)<part_root_half_width:
             continue
         cell = tuple(math.floor(v/spacing) for v in root)
         neighbors = (p for x in range(cell[0]-1,cell[0]+2)
@@ -90,11 +91,11 @@ def build(root, out, *, coherent=False):
         across = normal.cross(tangent).normalized()
         curl_axis, curl_normal, curl_across = tangent, normal, across
         if coherent:
-            # Reference ringlets lie along the head surface. A mostly tangent
-            # axis turns their loops edge-on and makes the crown read as wire.
+            # Partly project each lock along the head, with enough outward
+            # rise for neighboring fiber bundles to overlap naturally.
             clump = (.60 * math.sin(root.x * math.tau / .021 + root.y * math.tau / .027)
                      + .40 * math.sin(root.x * math.tau / .014 - root.y * math.tau / .019 + 1.7))
-            tilt = 1.25 + .22 * clump
+            tilt = .78 + .14 * clump
             curl_axis = (tangent*math.cos(tilt) + normal*math.sin(tilt)).normalized()
             curl_normal = (normal-curl_axis*normal.dot(curl_axis)).normalized()
             curl_across = curl_normal.cross(curl_axis).normalized()
@@ -106,10 +107,8 @@ def build(root, out, *, coherent=False):
         turns = rng.uniform(.85,1.65)*(1.-.30*side_weight)
         if coherent:
             curl_radius = (.0055 + .0015 * size_field) * (.60 + .40 * topness) * (1. - .68 * side_weight)
-            # With the axis pointing mostly outward, keep pitch shallow so the
-            # curl forms a low ringlet rather than a stack projecting off scalp.
-            axial_length = (.0015 + .0015 * size_field) * (.50 + .50 * topness) * (1. - .55 * side_weight)
-            turns = (1.05 + .15 * size_field) * (1. - .30 * side_weight)
+            axial_length = (.007 + .004 * size_field) * (.50 + .50 * topness) * (1. - .55 * side_weight)
+            turns = (.78 + .32 * size_field) * (1. - .30 * side_weight)
         if in_part and abs(root.x-part)<.012:
             curl_radius *= .77
         phase_warp = t+rng.uniform(-.14,.14)*np.sin(math.pi*t)
@@ -118,7 +117,7 @@ def build(root, out, *, coherent=False):
         angle = turns*math.tau*phase_warp
         radius = curl_radius*(1.-rng.uniform(.05,.35)*t)
         if coherent:
-            radius = curl_radius * (1. - .12 * t)
+            radius = curl_radius * (1. - .28 * t)
         height = radius*(1.-np.cos(angle))+.0006+.0005*np.sin(math.pi*t)
         side = radius*np.sin(angle)
         center = (np.asarray(root)[None,:]
@@ -130,7 +129,8 @@ def build(root, out, *, coherent=False):
         radial = (np.asarray(curl_normal)[None,:]*np.cos(angle)[:,None]
                   +np.asarray(curl_across)[None,:]*np.sin(angle)[:,None])
         spread_angle = nprng.uniform(0.,math.tau,children)
-        spread_radius = np.sqrt(nprng.uniform(0.,1.,children))*rng.uniform(.0008,.00125)
+        bundle_width = rng.uniform(.0015,.0022) if coherent else rng.uniform(.0008,.00125)
+        spread_radius = np.sqrt(nprng.uniform(0.,1.,children))*bundle_width
         offset_radial = (np.cos(spread_angle)*spread_radius)[:,None,None]*radial[None,:,:]
         offset_axial = ((np.sin(spread_angle)*spread_radius)[:,None,None]
                         *np.asarray(curl_axis)[None,None,:])
@@ -265,8 +265,11 @@ def build(root, out, *, coherent=False):
     report['coherent_flow'] = coherent
     report['local_direction_variation_radians'] = .28 if coherent else .40
     if coherent:
-        report['curl_axis_tilt_radians'] = [1.03, 1.47]
-        report['top_curl_pitch_m'] = [.0015, .003]
+        report['curl_axis_tilt_radians'] = [.64, .92]
+        report['top_curl_pitch_m'] = [.007, .011]
+        report['bundle_radius_m'] = [.0015, .0022]
+        report['part_root_half_width_m'] = part_root_half_width
+        report['visible_part_half_width_m'] = .0015
     report['version'] = version
     (out/'groom-report.json').write_text(json.dumps(report,indent=2))
     return report
