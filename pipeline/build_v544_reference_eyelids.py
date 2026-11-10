@@ -89,13 +89,20 @@ def build(root, out, reopen=False):
     # the earlier closure until the opening has an evaluated corrective.
     upper_height, upper_power = (.0088, .82) if reopen else (.0070, .82)
     variant = os.environ.get('EYE_APERTURE_VARIANT', 'baseline')
-    if variant not in ('baseline', 'narrow-upper'):
+    if variant not in ('baseline', 'narrow-upper', 'rounded-lower'):
         raise ValueError(f'Unknown eye aperture variant: {variant}')
     # V616 isolated reference trial: more upper-iris coverage, unchanged lower lid.
     # Run before closed alignment/arc reconstruction; evaluated blink still needs review.
     if reopen and variant == 'narrow-upper':
         upper_height = .0070
     lower_height, lower_power = (.0023, .95) if reopen else (.0028, .95)
+    # V626 reference silhouette trial: retain V616 upper-iris coverage,
+    # fill out the lower arc and soften the pointed aperture shoulders.
+    # Values are a visual-fit trial, not measured anatomical ground truth.
+    # Closed targets stay exact; V547 rebuilds the intermediate blink arc.
+    if reopen and variant == 'rounded-lower':
+        upper_height, upper_power = .0070, .70
+        lower_height, lower_power = .0035, .70
     mesh = body.data
     keys = mesh.shape_keys.key_blocks
     basis = keys['Basis']

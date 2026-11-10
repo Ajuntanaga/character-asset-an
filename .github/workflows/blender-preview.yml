@@ -29,9 +29,9 @@ on:
         options: [baseline, separated, staggered]
         default: baseline
       eye_aperture_variant:
-        description: Isolated upper-lid coverage trial with portrait and blink review
+        description: Isolated eyelid contour trial with portrait and blink review
         type: choice
-        options: [baseline, narrow-upper]
+        options: [baseline, narrow-upper, rounded-lower]
         default: baseline
       review_scope:
         description: Full review, mouth, hair/eyes/wardrobe appearance, or picking hands
