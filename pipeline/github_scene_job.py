@@ -22,8 +22,9 @@ if args.facial_hair and args.mode != 'blink-build':
     parser.error('--facial-hair requires --mode blink-build')
 if args.delit_face and args.mode != 'combined-build':
     parser.error('--delit-face requires --mode combined-build')
-if args.review_scope != 'full' and args.mode != 'combined-build':
-    parser.error('--review-scope mouth/appearance/hands/wardrobe requires --mode combined-build')
+if args.review_scope != 'full' and args.mode != 'combined-build' and not (
+        args.mode == 'hand-build' and args.review_scope == 'hands'):
+    parser.error('--review-scope requires combined-build, or hand-build with hands')
 render_device = {'requested': args.device, 'selected': 'CPU'}
 if args.device == 'CUDA':
     preferences = bpy.context.preferences.addons['cycles'].preferences
