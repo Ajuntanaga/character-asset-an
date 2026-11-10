@@ -304,7 +304,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
             result[digit] = (point, n, nail_direction)
         return result, world, pose
 
-    def residual(values, evaluated=False, cone_weight=.08):
+    def residual(values, evaluated=False, cone_weight=.08, avoid_digits=False):
         points, world, pose = contacts(values, evaluated)
         r = []
         for digit, (point, n, nail_direction) in points.items():
@@ -350,6 +350,10 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         r.extend((values[24:26] - prior[24:26]) * .003)
         if len(values) > 27:
             r.extend(values[27:29] * .0005)
+        if avoid_digits:
+            assert evaluated
+            from hand_surface_clearance import repulsion
+            r.extend(repulsion(hand))
         return np.array(r)
 
     contacts(prior, True)
@@ -398,6 +402,14 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         values, orientation_history = minimize(
             lambda v: residual(v, True, cone_weight=.24), values, low, high, 24)
         print(f'Orientation refinement loss: {orientation_history[-1]}', flush=True)
+    collision_history = []
+    if axial_trial:
+        # V624 has measured Index/Middle and Middle/Ring skin crossings.
+        # Preserve target mapping and joint bounds while separating skin.
+        values, collision_history = minimize(
+            lambda v: residual(v, True, cone_weight=.24, avoid_digits=True),
+            values, low, high, 24)
+        print(f'Inter-digit refinement loss: {collision_history[-1]}', flush=True)
     print('Attaching to main arm', flush=True)
     points, desired_world, pose = contacts(values, True)
     desired_wrist = desired_world @ wrist_source
@@ -495,10 +507,16 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
                   else 'REJECTED_CONTACT_OR_ORIENTATION_FIT')
     from hand_surface_clearance import measure
     inter_digit_surface = measure(hand)
+    inter_digit_ok = all(p['intersecting_face_pairs'] == 0
+                         for p in inter_digit_surface['pairs'].values())
+    if not inter_digit_ok:
+        fit_status = 'REJECTED_INTER_DIGIT_INTERSECTION'
     report = {'status': fit_status, 'main_drivers': 1957,
               'wrist_extension': wrist_report,
               'inter_digit_surface': inter_digit_surface,
-              'revision': 'V624' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
+              'inter_digit_ok': inter_digit_ok,
+              'collision_refinement_loss': collision_history,
+              'revision': 'V627' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
               'relaxed_index_ring_dip_minimum': relaxed_contact_dips,
               'index_ring_axial_degrees': {digit: math.degrees(values[i]) for digit, i in axial_indices.items()},
               'index_ring_spread_limit_degrees': 35 if spread_trial else 25,
