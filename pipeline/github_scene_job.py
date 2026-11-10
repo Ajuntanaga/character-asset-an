@@ -43,7 +43,7 @@ if args.mode == 'build-review':
 if args.mode == 'hand-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v545_fretting_hand import build
-    build(out, thumb_support='sliding_rear', relaxed_contact_dips=True)
+    build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True)
 if args.mode == 'groom-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v546_coherent_groom import build
