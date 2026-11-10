@@ -34,6 +34,11 @@ assets = [
     'github_assets/v567-rear-collar-mask.json',
     'github_assets/v568-pen-cloth-mask.json',
     'github_assets/v578-collar-rim-mask.json',
+    'github_assets/antonia-hand/arms_albedo.png',
+    'github_assets/antonia-hand/arms_bump.png',
+    'github_assets/antonia-hand/arms_gloss.png',
+    'github_assets/antonia-hand/SOURCE.json',
+    'licenses/Antonia.txt',
 ]
 inputs_manifest = json.dumps({'format': 1, 'files': {
     name: {'bytes': (root / name).stat().st_size,

@@ -16,9 +16,9 @@ on:
         type: boolean
         default: false
       review_scope:
-        description: Full review, mouth correction, or hair/eyes/wardrobe appearance
+        description: Full review, mouth, hair/eyes/wardrobe appearance, or picking hands
         type: choice
-        options: [full, mouth, appearance]
+        options: [full, mouth, appearance, hands]
         default: full
 permissions:
   contents: read

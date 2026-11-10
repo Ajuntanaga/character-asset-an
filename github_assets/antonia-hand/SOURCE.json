@@ -1,0 +1,26 @@
+{
+  "title": "Antonia Polygon hand surface maps",
+  "author": "Olaf Delgado-Friedrichs",
+  "additional_authors": "phantom3D, MikeJ, DieTrying (Morphs), Fenrissa and others",
+  "source_package": "CharMorph v0.4.0-3 / CharMorph-data / characters/antonia",
+  "source_url": "https://sites.google.com/site/antoniapolygon/",
+  "license": "CC-BY-3.0",
+  "license_url": "https://creativecommons.org/licenses/by/3.0/",
+  "license_file": "../../licenses/Antonia.txt",
+  "license_basis": "Bundled characters/antonia/config.yaml and existing Antonia license notice",
+  "changes": "Source image bytes unchanged. V585 uses the preserved donor UVMap with skin/nail roughness and bump settings.",
+  "files": {
+    "arms_albedo.png": {
+      "bytes": 2108534,
+      "sha256": "835295eb1099ce09a0107ee273e8b1a4a72ca41a7c76babbb0e9dfe0c4ea9fd1"
+    },
+    "arms_bump.png": {
+      "bytes": 399133,
+      "sha256": "205f369f00d1d743ced117a73dbc3fba16d377a6351ccb460c651867d4ab219e"
+    },
+    "arms_gloss.png": {
+      "bytes": 354269,
+      "sha256": "00e2c29a7418f87c694a9caa0c10c25930d73f1d383b568eeab9032baaa99ea8"
+    }
+  }
+}
