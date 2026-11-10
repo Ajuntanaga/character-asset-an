@@ -1,14 +1,16 @@
 # Character Asset_An: current handoff
 
-Updated 2026-11-10 00:21 UTC. Character remains unfinished; preserve reference-led build and actual visual acceptance. Earlier complete handoffs are in PROJECT_HISTORY.md.
+Updated 2026-11-10 00:43 UTC. Character remains unfinished; preserve reference-led build and actual visual acceptance. Earlier complete handoffs are in PROJECT_HISTORY.md.
 
 ## Current state and next actions
 
 V584 commit ea3ff3e / Actions 42635554578 succeeded. All 12 appearance images reviewed: curl lift and rear collar accepted as intermediate improvements only; curls remain molded/shiny and collar/neck atlas unfinished. V583 run42634096386 fixes stale Basis initialization, preserving clean half/full blink, but eyes and likeness remain unfinished. Reviews saved under github_results/run-RUN/previews-combined-build-48 or -47/visual-review.json.
 
-V585 hand material update is ready to commit and dispatch with review_scope=hands (three views: grip, dorsal and full character). Four local before/after images were viewed in local_diagnostics/hand_v585_surface_2026-11-09; skin/nail texture improves, pose and geometry unchanged, crowded pinch remains unaccepted. New CC-BY-3.0 Antonia maps are 2,861,936 bytes with hashes and attribution in github_assets/antonia-hand/SOURCE.json. Syntax, YAML, texture hash and diff checks pass. No cloud V585 run yet. Dispatch, review actual images, then download/restore/load the verified scene on workspace 7. Do not duplicate local rendering.
+V585 hand material update was committed and dispatched with review_scope=hands (three views: grip, dorsal and full character). Four local before/after images were viewed in local_diagnostics/hand_v585_surface_2026-11-09; skin/nail texture improves, pose and geometry unchanged, crowded pinch remains unaccepted. New CC-BY-3.0 Antonia maps are 2,861,936 bytes with hashes and attribution in github_assets/antonia-hand/SOURCE.json. Syntax, YAML, texture hash and diff checks pass. V585 commit88a18bf pushed; Actions42728493754 started00:27:59UTCNov10, hands scope, SUCCEEDED. All three previews reviewed: ACCEPT_MATERIAL_IMPROVEMENT_ONLY_CHARACTER_UNFINISHED. Full artifact downloaded and restored against V544 with SHA256 59788ffafd282f76f571fef7a57ba64070fea4451139a414ff3afbcfaf433471. Loaded existing GUI on workspace7,247 objects,1957drivers,clean scene. Local production_v585_combined_reference/run-42728493754/Character_An_combined_reference_TRIAL_v554.blend (519197716 bytes). Review under github_results/run-42728493754/previews-combined-build-49/visual-review.json.
 
-Read-only hand review returned: next isolated trial may contract ONLY V421_REGULAR_SLEEVE_CUFF.R middle loft ring vertices[424:520] local XY around its centroid by 0.90, with reversible entire-Basis-initialized shape key. Keep other rings, wrist opening, jacket boundary, hand, pick and poses unchanged. Intended to reduce cuff bell; validate silhouette and wrist clearance. Not implemented. No general jaw X widening: reference/current normalized widths do not support it.
+Read-only hand review returned: next isolated trial may contract ONLY V421_REGULAR_SLEEVE_CUFF.R middle loft ring vertices[424:520] local XY around its centroid by 0.90, with reversible entire-Basis-initialized shape key. Keep other rings, wrist opening, jacket boundary, hand, pick and poses unchanged. Intended to reduce cuff bell; validate silhouette and wrist clearance. Implemented and REJECTED after four Workbench renders: little wrist silhouette improvement, sharper pinch higher up sleeve/seam. All scene changes restored, 1957 drivers. runtime-check.json and visual-review.json plus rejected script in local_diagnostics/cuff_v586_2026-11-10. Do not integrate or repeat this middle-ring-only trim. No general jaw X widening: reference/current normalized widths do not support it.
+
+Cuff diagnosis: posed ring7 perimeter220.35mm vs rest148.87mm; DEF-Hand.R deformation scale[1.00003,1.04032,1.38662] despite pose scale1, while forearm is unit. Disabling preserve-volume only reduces opening to211.18mm, so not a fix. V587 reversible trial contracts lower rings by20percent with smooth upper transition and coordinated stitches/button: closer wrist fit but exposes protruding donor forearm (confirmed by color identity render); HOLD_NOT_PROMOTED. Four actual Workbench views, all scene changes restored,1957drivers. Evidence/scripts in local_diagnostics/cuff_v586_2026-11-10 and cuff_v587_2026-11-10. V588 masking55 proximal donor vertices reduces protrusion but leaves a flap: HOLD_NOT_PROMOTED. Its study and review are archived under local_diagnostics/cuff_v588_2026-11-10. All trials restored; do not change rig/hand scale.
 
 ## Constraints
 
@@ -16,8 +18,8 @@ Preserve V357_CLOUDRIG_CONTROLS and 1957 drivers. MCP workspace7, loopback9876, 
 
 ## Live Blender and preservation
 
-Live GUI is V575 at the path above, workspace 7, PID 1228082, two windows. MCP remains loopback 9876. Studies restored their changes and all 1957 drivers. Existing researchos-blender-mcp.service now points to V575; backup ~/.config/systemd/user/researchos-blender-mcp.service.before-v575-20261109. Daemon reloaded without restarting Blender. No reboot test. Do not start another instance.
-Retain V468 fallback, V483, V514, native hand V522, base V528, V542 hardlink, V543, V544, V545, V547, V554 and V575.
+Live GUI is V585 at the path above, workspace 7, PID 1228082, two windows. MCP remains loopback 9876. Studies restored their changes and all 1957 drivers. Existing researchos-blender-mcp.service now points to V585; backup ~/.config/systemd/user/researchos-blender-mcp.service.before-v585-20261110. Daemon reloaded without restarting Blender. No reboot test. Do not start another instance.
+Retain V468 fallback, V483, V514, native hand V522, base V528, V542 hardlink, V543, V544, V545, V547, V554, V575 and V585.
 V528 base github_release/current-v528.blend SHA256 bc4582c0ddccc5e729371e58d3c275f43d41a11e63414a3e307c94d0e6b9e8cd.
 V544 production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend SHA256 6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02.
 
@@ -46,7 +48,7 @@ Previously reclaimed32,060,063,086bytes across108 obsolete scenes after decode/S
 
 ## Notifications and cloud
 
-BCA_task publisher: CURL_HOME=/tmp/character-ntfy-curl /home/ajuntanaga/.local/bin/researchos-ntfy-publish BCA_task TITLE MESSAGE. Scoped curl resolution preserves TLS; refresh DNS using Google DoH before expired entries. No OS DNS changes or new notification daemon. Prior88confirmed pings; last15:45Nov9attempt outcome not captured.
+BCA_task publisher: CURL_HOME=/tmp/character-ntfy-curl /home/ajuntanaga/.local/bin/researchos-ntfy-publish BCA_task TITLE MESSAGE. Scoped curl resolution preserves TLS; refresh DNS using Google DoH before expired entries. No OS DNS changes or new notification daemon. Two confirmed HTTP200 pings this resumed turn, latest00:29UTCNov10. Prior88confirmed pings; old15:45Nov9attempt outcome not captured.
 
 Kaggle V583v2 CANCEL_ACKNOWLEDGED externally14:18Nov9, no root cancellation/reason. Inputs restored and hashes verified, next Blender download; no GPU result. Do not retry now. prepare_kaggle_character adds V585 maps/license for future use only. Signed ignored mode600 payloads expired; never print/commit.
 
