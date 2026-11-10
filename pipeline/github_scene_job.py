@@ -13,14 +13,14 @@ parser.add_argument('--output', default='results')
 parser.add_argument('--facial-hair', action='store_true')
 parser.add_argument('--delit-face', action='store_true')
 parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
-parser.add_argument('--review-scope', choices=('full', 'mouth', 'appearance', 'hands'), default='full')
+parser.add_argument('--review-scope', choices=('full', 'mouth', 'appearance', 'hands', 'wardrobe'), default='full')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 if args.facial_hair and args.mode != 'blink-build':
     parser.error('--facial-hair requires --mode blink-build')
 if args.delit_face and args.mode != 'combined-build':
     parser.error('--delit-face requires --mode combined-build')
 if args.review_scope != 'full' and args.mode != 'combined-build':
-    parser.error('--review-scope mouth/appearance/hands requires --mode combined-build')
+    parser.error('--review-scope mouth/appearance/hands/wardrobe requires --mode combined-build')
 render_device = {'requested': args.device, 'selected': 'CPU'}
 if args.device == 'CUDA':
     preferences = bpy.context.preferences.addons['cycles'].preferences
@@ -158,6 +158,13 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
                      ('face-clay', (.30, -2, 1.70), (0, 0, 1.65), .40)]
         if args.review_scope == 'mouth':
             shots = [shot for shot in shots if shot[0] in ('face-front', 'face-oblique')]
+        elif args.review_scope == 'wardrobe':
+            shots = [
+                ('wardrobe-stitch-before', (0,-2,1.29), (0,0,1.29), .4956),
+                ('wardrobe-stitch-after', (0,-2,1.29), (0,0,1.29), .4956),
+                ('wardrobe-stitch-oblique', (.6,-2,1.29), (0,0,1.29), .4956),
+                ('character', (.35,-3.5,1.3), (0,0,.94), 2.12),
+            ]
         elif args.review_scope == 'hands':
             shots = [
                 ('pick-grip', center + Vector((.13, -.20, .04)), center, .20),
@@ -194,6 +201,9 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             bpy.context.view_layer.material_override = clay
             scene.cycles.samples = 16
             scene.render.resolution_x = scene.render.resolution_y = 512
+        if label == 'wardrobe-stitch-before':
+            stitch=bpy.data.objects['V596_POCKET_TOPSTITCH_TRIAL']
+            hidden.append(stitch); stitch.hide_render=True
         if label.startswith('wardrobe-'):
             for obj in bpy.data.objects['V206_GUITAR_ROOT'].children_recursive:
                 if not obj.hide_render:
@@ -227,7 +237,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             obj.hide_render = False
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-    if args.review_scope not in ('mouth', 'hands') and args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
+    if args.review_scope not in ('mouth', 'hands', 'wardrobe') and args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
         original = {side: head['Blink.' + side] for side in ('L', 'R')}

@@ -13,7 +13,7 @@ def build(output, delit_face=False):
     from refine_v550_maple_density import build as build_guitar
 
     from build_v557_reference_locks import reduce_skin_microrelief
-    report = {'revision': 'V591', 'skin_microrelief': reduce_skin_microrelief()}
+    report = {'revision': 'V596', 'skin_microrelief': reduce_skin_microrelief()}
     report['groom'] = build_groom(out, save=False, clean_scalp=True)
     report['eyes'] = build_eyes(root, out)
     from refine_v558_eye_surface import build as build_eye_surface
@@ -112,10 +112,14 @@ def build(output, delit_face=False):
     report['native_hand_surface'] = build_hand_surface(out)
     from refine_v591_picking_cuff import build as build_picking_cuff
     report['picking_cuff'] = build_picking_cuff(out)
+    from rig_v593_thumb_controls import build as build_thumb_controls
+    report['thumb_controls'] = build_thumb_controls()
+    from refine_v596_pocket_stitch_trial import build as build_topstitch
+    report['pocket_topstitch'] = build_topstitch()
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     assert len(rig.animation_data.drivers) == 1957
     report['main_drivers'] = 1957
-    report['hands'] = 'V591_CUFF_TRIAL_V544_POSES_UNCHANGED_UNRESOLVED'
+    report['hands'] = 'V593_THUMB_CONTROLS_V591_CUFF_CONTACT_UNRESOLVED'
     report['status'] = 'COMBINED_TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW'
     path = out / 'Character_An_combined_reference_TRIAL_v554.blend'
     bpy.ops.wm.save_as_mainfile(filepath=str(path), compress=True)

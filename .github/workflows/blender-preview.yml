@@ -18,7 +18,7 @@ on:
       review_scope:
         description: Full review, mouth, hair/eyes/wardrobe appearance, or picking hands
         type: choice
-        options: [full, mouth, appearance, hands]
+        options: [full, mouth, appearance, hands, wardrobe]
         default: full
 permissions:
   contents: read
