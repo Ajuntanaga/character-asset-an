@@ -1,6 +1,6 @@
 # Character Asset_An: current handoff
 
-Updated 2026-11-10 00:43 UTC. Character remains unfinished; preserve reference-led build and actual visual acceptance. Earlier complete handoffs are in PROJECT_HISTORY.md.
+Updated 2026-11-10 02:59 UTC. Character remains unfinished; preserve reference-led build and actual visual acceptance. Earlier complete handoffs are in PROJECT_HISTORY.md.
 
 ## Current state and next actions
 
@@ -12,13 +12,15 @@ Read-only hand review returned: next isolated trial may contract ONLY V421_REGUL
 
 Cuff diagnosis: posed ring7 perimeter220.35mm vs rest148.87mm; DEF-Hand.R deformation scale[1.00003,1.04032,1.38662] despite pose scale1, while forearm is unit. Disabling preserve-volume only reduces opening to211.18mm, so not a fix. V587 reversible trial contracts lower rings by20percent with smooth upper transition and coordinated stitches/button: closer wrist fit but exposes protruding donor forearm (confirmed by color identity render); HOLD_NOT_PROMOTED. Four actual Workbench views, all scene changes restored,1957drivers. Evidence/scripts in local_diagnostics/cuff_v586_2026-11-10 and cuff_v587_2026-11-10. V588 masking55 proximal donor vertices reduces protrusion but leaves a flap: HOLD_NOT_PROMOTED. Its study and review are archived under local_diagnostics/cuff_v588_2026-11-10. All trials restored; do not change rig/hand scale.
 
+V591 continuation: color identity confirms donor forearm flap. V590 proximal mask at wrist still retains interpolated Subsurf boundary; V591 mask threshold0.999 removes large flap. Combined reversible lower-cuff fit20percent, coordinated stitches/button, mask75 proximal donor vertices. Two clay closeups viewed: ACCEPT_INTERMEDIATE_CUFF_FIT_PENDING_TEXTURED_AND_DEFORMATION_REVIEW, tiny seam edge and crowded pinch remain. Exact module ran successfully in GUI,1957drivers; saved separately as production_v591_picking_cuff_trial/Character_An_picking_cuff_TRIAL_v591.blend. GUI currently shows V591 trial; service fallback stays verified V585. Pipeline now includes refine_v591_picking_cuff.py. Next: GitHub textured hands review, then open/curl deformation before acceptance. Diagnostics local_diagnostics/cuff_v591_2026-11-10. Notification BCA_task confirmed HTTP200 at02:57UTC.
+
 ## Constraints
 
 Preserve V357_CLOUDRIG_CONTROLS and 1957 drivers. MCP workspace7, loopback9876, prompt approval, no addon autostart. GitHub commit/push/uploads/Actions authorized, repo PRIVATE and working; Modal unavailable. One writer, at most two read-only children, all finished. Serialize local heavy jobs and preserve Codex processes. BCA_task notifications every5–10minutes/milestones via existing encrypted publisher. No manual compaction tool: keep this handoff concise. Delete only obsolete/reproducible data after restoration/redundancy checks; preserve unique backups and references.
 
 ## Live Blender and preservation
 
-Live GUI is V585 at the path above, workspace 7, PID 1228082, two windows. MCP remains loopback 9876. Studies restored their changes and all 1957 drivers. Existing researchos-blender-mcp.service now points to V585; backup ~/.config/systemd/user/researchos-blender-mcp.service.before-v585-20261110. Daemon reloaded without restarting Blender. No reboot test. Do not start another instance.
+Verified fallback is V585 at the path above; live GUI now displays the separate V591 cuff trial, workspace 7, PID 1228082, two windows. MCP remains loopback 9876. Studies restored their changes and all 1957 drivers. Existing researchos-blender-mcp.service now points to V585; backup ~/.config/systemd/user/researchos-blender-mcp.service.before-v585-20261110. Daemon reloaded without restarting Blender. No reboot test. Do not start another instance.
 Retain V468 fallback, V483, V514, native hand V522, base V528, V542 hardlink, V543, V544, V545, V547, V554, V575 and V585.
 V528 base github_release/current-v528.blend SHA256 bc4582c0ddccc5e729371e58d3c275f43d41a11e63414a3e307c94d0e6b9e8cd.
 V544 production_v544_reference_revision/Character_An_reference_revision_TRIAL_v544.blend SHA256 6299f505f4b9d31b481143e70db83c04215ff2426c7752592b35686e6fd27c02.
