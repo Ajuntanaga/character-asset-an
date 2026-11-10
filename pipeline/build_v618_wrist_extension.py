@@ -2,6 +2,7 @@
 import bmesh
 import bpy
 from mathutils import Matrix, Vector
+from donor_forearm_uv import ForearmUV
 
 
 def extend_wrist(hand, rig, main, side, length_m=.045, rings=4):
@@ -32,6 +33,20 @@ def extend_wrist(hand, rig, main, side, length_m=.045, rings=4):
             assert len(candidates) == 1 and candidates[0] not in ordered
             ordered.append(candidates[0])
         assert any(e.other_vert(ordered[-1]) == first for e in ordered[-1].link_edges)
+        uv_layer = bm.loops.layers.uv.get('UVMap')
+        assert uv_layer is not None, 'Donor atlas UVMap missing'
+        atlas = ForearmUV()
+        strips = []
+        for j, vertex in enumerate(ordered):
+            other = ordered[(j + 1) % len(ordered)]
+            edge = next(e for e in vertex.link_edges if e.other_vert(vertex) == other)
+            source_face = edge.link_faces[0]
+            uv_pair = [next(l[uv_layer].uv.copy() for l in source_face.loops if l.vert == v)
+                       for v in (vertex, other)]
+            chart = atlas.chart_for(vertex.co, uv_pair[0])
+            strips.append((chart, uv_pair))
+        uv_areas = []
+        max_projection_distance = 0.0
         world = rig.matrix_world.copy()
         hand_world = hand.matrix_world.copy()
         center = sum((hand_world @ v.co for v in ordered), Vector()) / len(ordered)
@@ -76,6 +91,9 @@ def extend_wrist(hand, rig, main, side, length_m=.045, rings=4):
         deform = bm.verts.layers.deform.verify()
         weights = [dict(v[deform]) for v in ordered]
         assert all(abs(sum(w.values()) - 1) < .01 for w in weights)
+        native_axis = (rig.data.bones['DEF-Hand.R'].head_local -
+                       rig.data.bones['DEF-Finger_Middle1.R'].head_local).normalized()
+        native_length = length_m / (hand_world.to_3x3() @ native_axis).length
         rim = [hand_world @ v.co for v in ordered]
         inverse = hand_world.inverted()
         previous = ordered
@@ -93,10 +111,25 @@ def extend_wrist(hand, rig, main, side, length_m=.045, rings=4):
             for j in range(len(ordered)):
                 k = (j + 1) % len(ordered)
                 face = bm.faces.new((previous[j], previous[k], current[k], current[j]))
+                chart, prior_uvs = strips[j]
+                next_uvs = []
+                for index, hint in zip((j, k), prior_uvs):
+                    source_point = ordered[index].co + native_axis * (native_length * t)
+                    mapped, distance = atlas.sample(source_point, chart, hint)
+                    max_projection_distance = max(max_projection_distance, distance)
+                    next_uvs.append(mapped)
+                quad_uvs = (prior_uvs[0], prior_uvs[1], next_uvs[1], next_uvs[0])
+                for loop, mapped in zip(face.loops, quad_uvs):
+                    loop[uv_layer].uv = mapped
+                area = abs(sum(quad_uvs[i].x * quad_uvs[(i + 1) % 4].y -
+                               quad_uvs[(i + 1) % 4].x * quad_uvs[i].y for i in range(4))) * .5
+                uv_areas.append(area)
+                strips[j] = (chart, next_uvs)
                 face.material_index = 0
                 face.smooth = True
                 new_faces.append(face)
             previous = current
+        assert min(uv_areas) > 1e-12, f'Collapsed wrist UV quad: min={min(uv_areas)} max_distance={max_projection_distance}'
         bm.normal_update()
         assert all(face.calc_area() > 1e-12 for face in new_faces)
         assert sum(e.is_boundary for e in bm.edges) == 28
@@ -108,6 +141,8 @@ def extend_wrist(hand, rig, main, side, length_m=.045, rings=4):
         assert bind_error < 1e-5
         return {'added_vertices': len(hand.data.vertices) - old_count,
                 'added_quads': len(new_faces), 'length_m': length_m,
+                'uv_min_quad_area': min(uv_areas),
+                'uv_max_projection_distance': max_projection_distance,
                 'bind_matrix_error': bind_error, 'anchor': anchor.name,
                 'status': 'TRIAL_REQUIRES_CUFF_AND_DEFORMATION_REVIEW'}
     finally:
