@@ -12,10 +12,13 @@ parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-revi
 parser.add_argument('--output', default='results')
 parser.add_argument('--facial-hair', action='store_true')
 parser.add_argument('--wrist-extension', action='store_true')
+parser.add_argument('--axial-trial', action='store_true')
 parser.add_argument('--delit-face', action='store_true')
 parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
 parser.add_argument('--review-scope', choices=('full', 'mouth', 'appearance', 'hands', 'wardrobe'), default='full')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
+if args.axial_trial and args.mode != 'hand-build':
+    parser.error('--axial-trial requires --mode hand-build')
 if args.wrist_extension and args.mode != 'hand-build':
     parser.error('--wrist-extension requires --mode hand-build')
 if args.facial_hair and args.mode != 'blink-build':
@@ -47,7 +50,7 @@ if args.mode == 'build-review':
 if args.mode == 'hand-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v545_fretting_hand import build
-    build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension)
+    build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension, axial_trial=args.axial_trial)
 if args.mode == 'groom-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v546_coherent_groom import build

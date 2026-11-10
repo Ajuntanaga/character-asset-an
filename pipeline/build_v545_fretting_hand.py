@@ -110,7 +110,7 @@ def minimize(residual, initial, low, high, iterations=40):
     return x, history
 
 
-def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=False, wrist_extension=False):
+def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=False, wrist_extension=False, axial_trial=False):
     assert thumb_support in ('fixed', 'sliding_rear')
     assert Path(bpy.data.filepath).name == 'current-v544.blend'
     scene = bpy.context.scene
@@ -255,6 +255,8 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
     high = np.r_[[center_x + .09, .185, .025], [1.5] * 3,
                  np.radians([95, 105, 80, 25] * 4 + [60, 75, 20, 15, 90])]
 
+    axial_indices = {'Index': 27, 'Ring': 28} if axial_trial else {}
+
     def matrices(values):
         linear = Euler(tuple(values[3:6]), 'XYZ').to_matrix() @ initial_linear
         world = linear.to_4x4()
@@ -274,6 +276,8 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
                         # CMC opposition includes axial rotation. Without it,
                         # the solver folds MCP/IP to turn the pad toward the neck.
                         q = q @ Quaternion((0., 1., 0.), float(values[26]))
+                    if digit in axial_indices and len(values) > 27:
+                        q = q @ Quaternion((0., 1., 0.), float(values[axial_indices[digit]]))
                 rotations[name] = q
                 pose[name] = pose[source[name].parent.name] @ relative[name] @ q.to_matrix().to_4x4()
         return world, pose, rotations
@@ -344,6 +348,8 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
             r.append((values[offset + 2] - .55 * values[offset + 1]) * .0025)
         r.extend((values[[22, 23, 26]] - prior[[22, 23, 26]]) * .0004)
         r.extend((values[24:26] - prior[24:26]) * .003)
+        if len(values) > 27:
+            r.extend(values[27:29] * .0005)
         return np.array(r)
 
     contacts(prior, True)
@@ -374,6 +380,12 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         seed = json.loads((Path(__file__).resolve().parents[1] / 'github_assets/fretting-seed-v612.json').read_text())
         initial = np.asarray(seed['values'], dtype=float)
         assert initial.shape == prior.shape and np.all(np.isfinite(initial))
+    if axial_trial:
+        assert spread_trial, 'Axial trial requires the unchanged V612 baseline'
+        prior = np.r_[prior, 0., 0.]
+        initial = np.r_[initial, 0., 0.]
+        low = np.r_[low, np.radians([-25., -25.])]
+        high = np.r_[high, np.radians([25., 25.])]
     values, coarse_history = minimize(residual, initial, low, high, 90)
     print(f'Coarse fit loss: {coarse_history[-1]}; refining evaluated skin', flush=True)
     values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 24)
@@ -414,12 +426,26 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
             cross = z.cross(a); dot = z.dot(a)
             expressions = [f'cos(s/2)*cos(f/2)-({dot})*sin(s/2)*sin(f/2)']
             expressions += [f'({a[k]})*cos(s/2)*sin(f/2)+({z[k]})*sin(s/2)*cos(f/2)+({cross[k]})*sin(s/2)*sin(f/2)' for k in range(3)]
+            axial = j == 1 and digit in axial_indices
+            if axial:
+                control_bone.rotation_euler.y = float(values[axial_indices[digit]])
+                # Compact coefficients keep composed expressions below Blender's
+                # 255-character driver limit; six significant digits suffice here.
+                expressions = [f'cos(s/2)*cos(f/2)-{dot:.6g}*sin(s/2)*sin(f/2)']
+                expressions += [f'({a[k]:.6g}*cos(s/2)+{cross[k]:.6g}*sin(s/2))*sin(f/2)+{z[k]:.6g}*sin(s/2)*cos(f/2)' for k in range(3)]
+                w, x, y, z_expr = expressions
+                # Hamilton product q * (cos(a/2), 0, sin(a/2), 0).
+                expressions = [f'({w})*cos(a/2)-({y})*sin(a/2)',
+                               f'({x})*cos(a/2)-({z_expr})*sin(a/2)',
+                               f'({y})*cos(a/2)+({w})*sin(a/2)',
+                               f'({z_expr})*cos(a/2)+({x})*sin(a/2)']
             for component, expression in enumerate(expressions):
                 driver = b.driver_add('rotation_quaternion', component).driver
-                for var_name, axis_index in [('f', 0), ('s', 2)]:
+                for var_name, axis_index in [('f', 0), ('s', 2)] + ([('a', 1)] if axial else []):
                     variable = driver.variables.new(); variable.name = var_name; variable.type = 'SINGLE_PROP'
                     variable.targets[0].id = main
                     variable.targets[0].data_path = f'pose.bones["{control_bone.name}"].rotation_euler[{axis_index}]'
+                assert len(expression) <= 255, len(expression)
                 driver.expression = expression
     wrist_report = None
     if wrist_extension:
@@ -460,8 +486,9 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
                   else 'REJECTED_CONTACT_OR_ORIENTATION_FIT')
     report = {'status': fit_status, 'main_drivers': 1957,
               'wrist_extension': wrist_report,
-              'revision': 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
+              'revision': 'V620' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
               'relaxed_index_ring_dip_minimum': relaxed_contact_dips,
+              'index_ring_axial_degrees': {digit: math.degrees(values[i]) for digit, i in axial_indices.items()},
               'index_ring_spread_limit_degrees': 35 if spread_trial else 25,
               'thumb_support_mode': thumb_support,
               'thumb_support_x_bounds_m': list(support_x),
