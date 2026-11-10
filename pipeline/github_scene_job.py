@@ -2,6 +2,7 @@
 import argparse
 import json
 import math
+import os
 from pathlib import Path
 import sys
 import bpy
@@ -30,9 +31,15 @@ if args.review_scope != 'full' and args.mode != 'combined-build' and not (
     parser.error('--review-scope requires combined-build, or hand-build with hands')
 render_device = {'requested': args.device, 'selected': 'CPU'}
 if args.device == 'CUDA':
+    def gpu_trace(stage):
+        if os.environ.get('CHARACTER_GPU_TRACE') == '1':
+            print(json.dumps({'gpu_stage': stage}), flush=True)
+    gpu_trace('DEVICE_SETUP_START')
     preferences = bpy.context.preferences.addons['cycles'].preferences
     preferences.compute_device_type = 'CUDA'
+    gpu_trace("DEVICE_REFRESH_START")
     preferences.refresh_devices()
+    gpu_trace("DEVICE_REFRESH_DONE")
     devices = [device for device in preferences.devices if device.type == 'CUDA']
     if not devices:
         raise RuntimeError('CUDA requested but no CUDA GPU is available')
@@ -42,6 +49,7 @@ if args.device == 'CUDA':
     for device in preferences.devices:
         device.use = device == selected
     render_device['selected'] = selected.name
+    gpu_trace('DEVICE_SELECTED_' + selected.name)
 out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
 if args.mode == 'build-review':
     sys.path.insert(0, str(Path(__file__).resolve().parent))

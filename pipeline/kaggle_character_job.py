@@ -15,7 +15,7 @@ import urllib.request
 
 
 started = time.monotonic()
-budget_seconds = 1800
+budget_seconds = globals().get("JOB_BUDGET_SECONDS", 1800)
 work = Path('/tmp/character-an')
 work.mkdir(parents=True, exist_ok=True)
 output = Path('/kaggle/working/results')
@@ -28,6 +28,26 @@ def checkpoint(stage, **details):
     status.update(stage=stage, elapsed_seconds=round(time.monotonic() - started, 2), **details)
     (output / 'kaggle-progress.json').write_text(json.dumps(status, indent=2))
     print(json.dumps(status), flush=True)
+
+
+def resources(pid):
+    """Small retained snapshot; missing cgroup files are not fatal."""
+    result = {'pid': pid}
+    try:
+        for line in Path(f'/proc/{pid}/status').read_text().splitlines():
+            key, _, value = line.partition(':')
+            if key in {'VmRSS', 'VmHWM', 'VmSize', 'Threads'}:
+                result[key] = value.strip()
+    except OSError:
+        result['process_status'] = 'unavailable'
+    for name in ('memory.current', 'memory.peak', 'memory.max', 'memory.events',
+                 'memory/memory.usage_in_bytes', 'memory/memory.limit_in_bytes',
+                 'memory/memory.failcnt'):
+        try:
+            result[name] = (Path('/sys/fs/cgroup') / name).read_text().strip()
+        except OSError:
+            pass
+    return result
 
 
 def remaining():
@@ -144,7 +164,7 @@ try:
                '--mode', 'review' if globals().get('BUILT_SCENE_DELTA') else 'combined-build',
                '--review-scope', 'full' if globals().get('BUILT_SCENE_DELTA') else 'appearance',
                '--device', 'CUDA', '--output', str(output)]
-    environment = dict(os.environ, OMP_NUM_THREADS='2', OPENBLAS_NUM_THREADS='2', PYTHONUNBUFFERED='1')
+    environment = dict(os.environ, OMP_NUM_THREADS='2', OPENBLAS_NUM_THREADS='2', PYTHONUNBUFFERED='1', CHARACTER_GPU_TRACE='1')
     status['status'] = 'RENDERING'
     checkpoint('BLENDER_STARTING')
     with (output / 'blender.log').open('w') as log:
@@ -165,7 +185,7 @@ try:
                         break
                     remaining()
                     if time.monotonic() - heartbeat >= 5:
-                        checkpoint('BLENDER_RUNNING', blender_pid=process.pid)
+                        checkpoint('BLENDER_RUNNING', blender_pid=process.pid, resources=resources(process.pid))
                         heartbeat = time.monotonic()
                     if not chunk:
                         time.sleep(1)
