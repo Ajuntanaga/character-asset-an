@@ -2,12 +2,11 @@
 import math
 
 
-def build():
+def build(name='V596_POCKET_TOPSTITCH_TRIAL', interpolate_weights=True):
     import bpy
     from mathutils import Vector
     from mathutils.bvhtree import BVHTree
     body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
-    name = 'V596_POCKET_TOPSTITCH_TRIAL'
     assert name not in bpy.data.objects
     from mathutils.geometry import barycentric_transform
     evaluated=body.evaluated_get(bpy.context.evaluated_depsgraph_get())
@@ -52,6 +51,15 @@ def build():
                 center=location+n*.0004
                 nearest=min(tri,key=lambda i:(body.data.vertices[i].co-location).length_squared)
                 skin=[(g.group,g.weight) for g in body.data.vertices[nearest].groups]
+                if interpolate_weights:
+                    bary=barycentric_transform(p,*posed_tri,Vector((1,0,0)),Vector((0,1,0)),Vector((0,0,1)))
+                    combined={}
+                    for vertex,factor in zip(tri,bary):
+                        for group in body.data.vertices[vertex].groups:
+                            combined[group.group]=combined.get(group.group,0.)+max(0.,factor)*group.weight
+                    total=sum(combined.values())
+                    assert total>0
+                    skin=[(group,weight/total) for group,weight in combined.items() if weight>0]
                 assert skin
                 base=len(vertices)
                 for along in (-.00095,.00095):
@@ -76,4 +84,4 @@ def build():
     ob.data.materials.append(material)
     for p in mesh.polygons:p.use_smooth=True
     ob['status']='POCKET_ALIGNMENT_AND_DEFORMATION_REVIEW_REQUIRED'
-    return {'object':ob.name,'stitches':stitches,'vertices':len(vertices)}
+    return {'object':ob.name,'stitches':stitches,'vertices':len(vertices),'interpolated_weights':interpolate_weights}
