@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tarfile
 import time
+import urllib.error
 import urllib.request
 
 
@@ -44,13 +45,22 @@ def digest(path):
 def download(url, target, expected_hash):
     checkpoint('DOWNLOADING', download_file=target.name, downloaded_bytes=0)
     reported = time.monotonic()
-    with urllib.request.urlopen(url, timeout=min(30, remaining())) as response, target.open('wb') as stream:
-        while block := response.read(1024 * 1024):
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=min(30, remaining())) as response, target.open('wb') as stream:
+                while block := response.read(1024 * 1024):
+                    remaining()
+                    stream.write(block)
+                    if time.monotonic() - reported >= 15:
+                        checkpoint('DOWNLOADING', downloaded_bytes=stream.tell())
+                        reported = time.monotonic()
+            break
+        except (TimeoutError, urllib.error.URLError) as error:
+            if attempt == 2:
+                raise
             remaining()
-            stream.write(block)
-            if time.monotonic() - reported >= 15:
-                checkpoint('DOWNLOADING', downloaded_bytes=stream.tell())
-                reported = time.monotonic()
+            checkpoint('DOWNLOAD_RETRY', attempt=attempt + 2,
+                       download_error=type(error).__name__)
     assert digest(target) == expected_hash, target.name
     checkpoint('DOWNLOAD_VERIFIED', downloaded_bytes=target.stat().st_size)
 
