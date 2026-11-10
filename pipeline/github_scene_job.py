@@ -202,8 +202,10 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             scene.cycles.samples = 16
             scene.render.resolution_x = scene.render.resolution_y = 512
         if label == 'wardrobe-stitch-before':
-            stitch=bpy.data.objects['V596_POCKET_TOPSTITCH_TRIAL']
-            hidden.append(stitch); stitch.hide_render=True
+            for name in ('V596_POCKET_TOPSTITCH_TRIAL', 'V600_POCKET_SNAP_COVERS'):
+                detail=bpy.data.objects.get(name)
+                if detail is not None and not detail.hide_render:
+                    hidden.append(detail); detail.hide_render=True
         if label.startswith('wardrobe-'):
             for obj in bpy.data.objects['V206_GUITAR_ROOT'].children_recursive:
                 if not obj.hide_render:
