@@ -13,7 +13,7 @@ def build(output, delit_face=False):
     from refine_v550_maple_density import build as build_guitar
 
     from build_v557_reference_locks import reduce_skin_microrelief
-    report = {'revision': 'V607', 'skin_microrelief': reduce_skin_microrelief()}
+    report = {'revision': 'V610', 'skin_microrelief': reduce_skin_microrelief()}
     report['groom'] = build_groom(out, save=False, clean_scalp=True)
     report['eyes'] = build_eyes(root, out)
     from refine_v558_eye_surface import build as build_eye_surface
@@ -116,6 +116,8 @@ def build(output, delit_face=False):
     report['thumb_controls'] = build_thumb_controls()
     from refine_v596_pocket_stitch_trial import build as build_topstitch
     report['pocket_topstitch'] = build_topstitch()
+    from refine_v610_placket_patch import build as build_placket_patch
+    report['placket_patch'] = build_placket_patch()
     from refine_v600_pocket_hardware import build as build_hardware
     report['pocket_hardware'] = build_hardware(clear_surface=True, include_placket=True)
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']

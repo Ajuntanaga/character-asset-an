@@ -9,6 +9,12 @@ def build(clear_surface=True, include_placket=False):
     from mathutils.geometry import barycentric_transform
     body=bpy.data.objects['V416_BODY_CLEAN_JOIN']
     assert 'V600_POCKET_SNAP_COVERS' not in bpy.data.objects
+    rest_positions=[v.co.copy() for v in body.data.vertices]
+    keys=body.data.shape_keys
+    patch=keys.key_blocks.get('V610_PlacketPatch') if keys else None
+    if patch is not None:
+        basis=keys.key_blocks['Basis']
+        rest_positions=[co+(patch.data[i].co-basis.data[i].co)*patch.value for i,co in enumerate(rest_positions)]
     ev=body.evaluated_get(bpy.context.evaluated_depsgraph_get());mesh=ev.to_mesh()
     try:
         assert len(mesh.vertices)==len(body.data.vertices)
@@ -19,7 +25,7 @@ def build(clear_surface=True, include_placket=False):
     finally:ev.to_mesh_clear()
     cloth_tree=BVHTree.FromPolygons(posed,cloth_triangles,all_triangles=True)
     full_tree=BVHTree.FromPolygons(posed,all_triangles,all_triangles=True) if include_placket else None
-    rest_tree=BVHTree.FromPolygons([v.co for v in body.data.vertices], [tuple(p.vertices) for p in body.data.polygons]) if clear_surface else None
+    rest_tree=BVHTree.FromPolygons(rest_positions, [tuple(p.vertices) for p in body.data.polygons]) if clear_surface else None
     vertices=[];faces=[];weights=[];report=[]
     locations = [(149,265),(507,302)]
     if include_placket:
@@ -30,7 +36,7 @@ def build(clear_surface=True, include_placket=False):
         x=(px-320)*.4956/640;z=1.29+(320-py)*.4956/640
         hit,normal,index,_=tree.ray_cast(Vector((x,-1,z)),Vector((0,1,0)),1.2)
         assert hit is not None and hit.y<0, ('Hardware projection missed', px, py)
-        tri=triangles[index];posed_tri=[posed[i] for i in tri];rest=[body.data.vertices[i].co for i in tri]
+        tri=triangles[index];posed_tri=[posed[i] for i in tri];rest=[rest_positions[i] for i in tri]
         center=barycentric_transform(hit,*posed_tri,*rest)
         surrounding=[]
         for dx,dz in [(.012,0),(-.012,0),(0,.012),(0,-.012)]:
@@ -39,7 +45,7 @@ def build(clear_surface=True, include_placket=False):
                 surrounding.append(None)
                 continue
             ids=triangles[face]
-            surrounding.append(barycentric_transform(q,*[posed[i] for i in ids],*[body.data.vertices[i].co for i in ids]))
+            surrounding.append(barycentric_transform(q,*[posed[i] for i in ids],*[rest_positions[i] for i in ids]))
         if all(q is not None for q in surrounding):
             normal=(surrounding[0]-surrounding[1]).cross(surrounding[2]-surrounding[3]).normalized()
         else:
