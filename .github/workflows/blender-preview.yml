@@ -15,6 +15,11 @@ on:
         description: Test the lower-resolution de-lit albedo with combined-build
         type: boolean
         default: false
+      groom_variant:
+        description: Optional separated curl subclump trial
+        type: choice
+        options: [baseline, separated]
+        default: baseline
       review_scope:
         description: Full review, mouth, hair/eyes/wardrobe appearance, or picking hands
         type: choice
@@ -36,6 +41,7 @@ jobs:
       FACIAL_HAIR: ${{ inputs.facial_hair }}
       DELIT_FACE: ${{ inputs.delit_face }}
       REVIEW_SCOPE: ${{ inputs.review_scope }}
+      GROOM_VARIANT: ${{ inputs.groom_variant }}
     steps:
       - uses: actions/checkout@v4
       - name: Download pinned scene

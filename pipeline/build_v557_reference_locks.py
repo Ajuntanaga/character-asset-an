@@ -1,6 +1,7 @@
 """Generate shared ringlet guides and a wavy undercoat on the current scalp."""
 from collections import defaultdict
 import math
+import os
 import random
 
 import numpy as np
@@ -78,6 +79,7 @@ def _anchor(block, bvh):
 
 
 def generate(roots, bvh):
+    separated = os.environ.get('GROOM_VARIANT', 'baseline') == 'separated'
     rng, nprng = random.Random(557), np.random.default_rng(557)
     # Keep the established root, radius and undercoat random streams intact.
     subclump_rng = random.Random(582)
@@ -156,23 +158,25 @@ def generate(roots, bvh):
         fiber_v = np.broadcast_to(v, block.shape).copy()
         for group in range(subclumps):
             selected = np.arange(group, children, subclumps)
-            group_amplitude = amplitude * subclump_rng.uniform(.85, 1.15)
-            group_turn = turn * subclump_rng.uniform(.88, 1.12)
-            phase_warp = subclump_rng.uniform(-.35, .35) * np.sin(math.pi * t)
+            group_amplitude = amplitude * subclump_rng.uniform(*((.75, 1.25) if separated else (.85, 1.15)))
+            group_turn = turn * subclump_rng.uniform(*((.80, 1.20) if separated else (.88, 1.12)))
+            phase_warp = (subclump_rng.uniform(-.9, .9) * (1. - np.exp(-t / .12))
+                          if separated else subclump_rng.uniform(-.35, .35) * np.sin(math.pi * t))
             group_angle = phase + math.tau * group_turn * warped_t + phase_warp
             group_radial = (radial_u[None, :] * np.cos(group_angle)[:, None]
                             + radial_v[None, :] * np.sin(group_angle)[:, None])
+            group_width = width * (.32 if separated else 1.)
             group_center = (np.asarray(root)[None, :] + normal[None, :] * .0004
                             + axis[None, :] * (length * t)[:, None]
                             + group_radial * (group_amplitude * envelope)[:, None])
             _suspend_center(group_center, normal, axis, radial_u, length, t,
-                            group_amplitude, envelope, width * spread)
-            _clear_center(group_center, bvh, width * spread)
+                            group_amplitude, envelope, group_width * spread)
+            _clear_center(group_center, bvh, group_width * spread)
             group_u, group_v = _transport_frames(group_center, normal)
             group_offsets = (np.cos(disk_angle[selected])[:, None, None] * group_u[None, :, :]
                              + np.sin(disk_angle[selected])[:, None, None] * group_v[None, :, :])
             group_block = (group_center[None, :, :]
-                           + group_offsets * disk_radius[selected, None, None] * spread[None, :, None])
+                           + group_offsets * disk_radius[selected, None, None] * (.32 if separated else 1.) * spread[None, :, None])
             block[selected] += (group_block - block[selected]) * departure[None, :, None]
             fiber_v[selected] = group_v
         # Small, tapered child departures avoid the perfectly parallel bands
@@ -223,7 +227,7 @@ def generate(roots, bvh):
     points, radii, uvs = np.concatenate(points), np.concatenate(radii), np.concatenate(uvs).astype(np.float32)
     assert np.isfinite(points).all() and np.isfinite(radii).all()
     assert 100 < len(macro_roots) < len(dense_roots)
-    report = {'geometry_model': 'V584_suspended_partial_curl_trajectories',
+    report = {'geometry_model': 'V608_separated_curl_subclumps' if separated else 'V584_suspended_partial_curl_trajectories',
               'guides': len(macro_roots), 'undercoat_guides': len(dense_roots),
               'primary_strands': macro_strands, 'undercoat_strands': len(dense_roots) * base_children,
               'top_root_spacing_m': .0095, 'side_root_spacing_m': .0075,
@@ -238,9 +242,10 @@ def generate(roots, bvh):
               'undercoat_lift_m': [.0008, .0018],
               'child_departure_amplitude_m': [.00010, .00030],
               'trajectory_subclumps_per_guide': subclumps,
-              'subclump_amplitude_factor': [.85, 1.15],
-              'subclump_turn_factor': [.88, 1.12],
-              'subclump_phase_warp_radians': [-.35, .35],
+              'subclump_radius_factor': .32 if separated else 1.,
+              'subclump_amplitude_factor': [.75, 1.25] if separated else [.85, 1.15],
+              'subclump_turn_factor': [.80, 1.20] if separated else [.88, 1.12],
+              'subclump_phase_warp_radians': [-.9, .9] if separated else [-.35, .35],
               'guide_clearance': 'analytic radial suspension before BVH safety projection',
               'independent_fiber_coils': False,
               'fiber_frames': 'parallel_transport', 'part_maximum_root_thinning': .72}
