@@ -7,10 +7,10 @@ import bpy
 
 def build(output, save=True):
     variant = os.environ.get('MAPLE_VARIANT', 'baseline')
-    if variant not in ('baseline', 'fine-flame'):
+    if variant not in ('baseline', 'fine-flame', 'restrained'):
         raise ValueError(f'Unknown maple variant: {variant}')
     texture_relative = ('assets/generated/gray_maple_v629/fine_flame_albedo.png'
-                        if variant == 'fine-flame' else
+                        if variant in ('fine-flame', 'restrained') else
                         'assets/generated/gray_maple_v553/gray_curly_maple_albedo.png')
     out = Path(output).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -42,13 +42,22 @@ def build(output, save=True):
     # New broad-flame albedo: decoded luminance p05/p95 are .287/.491.
     # Keep the flame visible without amplifying fine longitudinal grain into
     # white scratches. The reference has a restrained silver/olive center.
-    contrast.mapping.curves[3].points.new(.287, .18)
-    contrast.mapping.curves[3].points.new(.491, .48)
+    contrast_points = ([[.287, .26], [.491, .36]] if variant == 'restrained'
+                       else [[.287, .18], [.491, .48]])
+    for x, y in contrast_points:
+        contrast.mapping.curves[3].points.new(x, y)
     contrast.mapping.update()
     links.new(luminance.outputs['Val'], contrast.inputs['Color'])
     links.new(contrast.outputs['Color'], nodes['V387_GrayStain'].inputs[1])
     nodes['V387_GrayStain'].inputs[2].default_value = (.47, .52, .45, 1)
-    nodes['V380_BurstFalloff'].inputs[1].default_value = 3.5
+    # The mask mixes dark edge at zero into figured maple at one.
+    # A smaller exponent keeps maple visible closer to the perimeter.
+    burst_exponent = .45 if variant == 'restrained' else 3.5
+    nodes['V380_BurstFalloff'].inputs[1].default_value = burst_exponent
+    if variant == 'restrained':
+        shader = next(node for node in nodes if node.type == 'BSDF_PRINCIPLED')
+        shader.inputs['Roughness'].default_value = .42
+        shader.inputs['Coat Weight'].default_value = .05
     edge_object = bpy.data.objects['V206_BODY_CORE']
     edge_original = bpy.data.materials['V356_NATURAL_MAPLE_EDGE']
     edge_material = edge_original.copy()
@@ -73,11 +82,11 @@ def build(output, save=True):
     report = {'status': 'TRIAL_REQUIRES_VISUAL_REVIEW', 'original_material': original.name,
               'trial_material': material.name, 'longitudinal_density': 1.0,
               'texture': texture_relative, 'maple_variant': variant,
-              'figure_contrast_points': [[.287, .18], [.491, .48]],
+              'figure_contrast_points': contrast_points,
               'stain_tint': [.47, .52, .45, 1],
               'edge_material': edge_material.name,
               'body_geometry_changed': False, 'hardware': hardware,
-              'burst_changed': True, 'burst_exponent': 3.5, 'main_drivers': 1957,
+              'burst_changed': True, 'burst_exponent': burst_exponent, 'main_drivers': 1957,
               'output': path.name if save else None}
     (out / 'maple-density-report.json').write_text(json.dumps(report, indent=2))
     return report

@@ -41,7 +41,7 @@ on:
       maple_variant:
         description: Isolated finer maple albedo comparison; existing finish remains default
         type: choice
-        options: [baseline, fine-flame]
+        options: [baseline, fine-flame, restrained]
         default: baseline
       review_scope:
         description: Full review, portrait with blinks, appearance, mouth, wardrobe, hands, or hair layer isolation
