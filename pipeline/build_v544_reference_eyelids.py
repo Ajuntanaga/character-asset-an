@@ -3,6 +3,7 @@ from collections import defaultdict, deque
 from pathlib import Path
 import json
 import math
+import os
 import bpy
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
@@ -87,6 +88,13 @@ def build(root, out, reopen=False):
     # below the seam despite the unchanged stored closed target. Preserve
     # the earlier closure until the opening has an evaluated corrective.
     upper_height, upper_power = (.0088, .82) if reopen else (.0070, .82)
+    variant = os.environ.get('EYE_APERTURE_VARIANT', 'baseline')
+    if variant not in ('baseline', 'narrow-upper'):
+        raise ValueError(f'Unknown eye aperture variant: {variant}')
+    # V616 isolated reference trial: more upper-iris coverage, unchanged lower lid.
+    # Run before closed alignment/arc reconstruction; evaluated blink still needs review.
+    if reopen and variant == 'narrow-upper':
+        upper_height = .0070
     lower_height, lower_power = (.0023, .95) if reopen else (.0028, .95)
     mesh = body.data
     keys = mesh.shape_keys.key_blocks
@@ -98,7 +106,7 @@ def build(root, out, reopen=False):
             edge_counts[tuple(sorted(edge))] += 1
 
     report = {'eyes':{}, 'aperture_profile': {
-        'upper_height_m': upper_height, 'upper_power': upper_power,
+        'variant': variant, 'upper_height_m': upper_height, 'upper_power': upper_power,
         'lower_height_m': lower_height, 'lower_power': lower_power,
         'upper_fold_depth_m': .00045 if reopen else 0.}}
     backup = {}

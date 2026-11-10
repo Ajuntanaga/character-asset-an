@@ -20,6 +20,11 @@ on:
         type: choice
         options: [baseline, separated]
         default: baseline
+      eye_aperture_variant:
+        description: Isolated upper-lid coverage trial with portrait and blink review
+        type: choice
+        options: [baseline, narrow-upper]
+        default: baseline
       review_scope:
         description: Full review, mouth, hair/eyes/wardrobe appearance, or picking hands
         type: choice
@@ -42,6 +47,7 @@ jobs:
       DELIT_FACE: ${{ inputs.delit_face }}
       REVIEW_SCOPE: ${{ inputs.review_scope }}
       GROOM_VARIANT: ${{ inputs.groom_variant }}
+      EYE_APERTURE_VARIANT: ${{ inputs.eye_aperture_variant }}
     steps:
       - uses: actions/checkout@v4
       - name: Download pinned scene
