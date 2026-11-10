@@ -1,10 +1,17 @@
 """Reference maple finish and reversible hardware; retain the traced body."""
 import json
+import os
 from pathlib import Path
 import bpy
 
 
 def build(output, save=True):
+    variant = os.environ.get('MAPLE_VARIANT', 'baseline')
+    if variant not in ('baseline', 'fine-flame'):
+        raise ValueError(f'Unknown maple variant: {variant}')
+    texture_relative = ('assets/generated/gray_maple_v629/fine_flame_albedo.png'
+                        if variant == 'fine-flame' else
+                        'assets/generated/gray_maple_v553/gray_curly_maple_albedo.png')
     out = Path(output).resolve()
     out.mkdir(parents=True, exist_ok=True)
     top = bpy.data.objects['V206_FIGURED_TOP']
@@ -15,7 +22,7 @@ def build(output, save=True):
     material.name = 'V550_DENSE_FIGURED_MAPLE'
     nodes, links = material.node_tree.nodes, material.node_tree.links
     texture = nodes['V387_FiguredMaple']
-    image_path = Path(__file__).resolve().parents[1] / 'assets/generated/gray_maple_v553/gray_curly_maple_albedo.png'
+    image_path = Path(__file__).resolve().parents[1] / texture_relative
     texture.image = bpy.data.images.load(str(image_path), check_existing=True)
     texture.image.pack()
     source = texture.inputs['Vector'].links[0].from_socket
@@ -65,7 +72,7 @@ def build(output, save=True):
         bpy.ops.wm.save_as_mainfile(filepath=str(path), compress=True)
     report = {'status': 'TRIAL_REQUIRES_VISUAL_REVIEW', 'original_material': original.name,
               'trial_material': material.name, 'longitudinal_density': 1.0,
-              'texture': 'assets/generated/gray_maple_v553/gray_curly_maple_albedo.png',
+              'texture': texture_relative, 'maple_variant': variant,
               'figure_contrast_points': [[.287, .18], [.491, .48]],
               'stain_tint': [.47, .52, .45, 1],
               'edge_material': edge_material.name,
