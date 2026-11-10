@@ -16,7 +16,7 @@ parser.add_argument('--wrist-extension', action='store_true')
 parser.add_argument('--axial-trial', action='store_true')
 parser.add_argument('--delit-face', action='store_true')
 parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
-parser.add_argument('--review-scope', choices=('full', 'mouth', 'appearance', 'hands', 'wardrobe'), default='full')
+parser.add_argument('--review-scope', choices=('full', 'mouth', 'appearance', 'portrait', 'hands', 'wardrobe'), default='full')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 if args.axial_trial and args.mode != 'hand-build':
     parser.error('--axial-trial requires --mode hand-build')
@@ -176,6 +176,8 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
                      ('face-clay', (.30, -2, 1.70), (0, 0, 1.65), .40)]
         if args.review_scope == 'mouth':
             shots = [shot for shot in shots if shot[0] in ('face-front', 'face-oblique')]
+        elif args.review_scope == 'portrait':
+            shots = [shot for shot in shots if shot[0].startswith('face-')]
         elif args.review_scope == 'wardrobe':
             shots = [
                 ('wardrobe-stitch-before', (0,-2,1.29), (0,0,1.29), .4956),
