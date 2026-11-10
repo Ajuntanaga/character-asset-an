@@ -29,6 +29,11 @@ if args.delit_face and args.mode != 'combined-build':
 if args.review_scope != 'full' and args.mode != 'combined-build' and not (
         args.mode == 'hand-build' and args.review_scope == 'hands'):
     parser.error('--review-scope requires combined-build, or hand-build with hands')
+cuff_variant = os.environ.get('CUFF_VARIANT', 'baseline') or 'baseline'
+if cuff_variant not in ('baseline', 'distance-weighted'):
+    parser.error('Unknown CUFF_VARIANT')
+if cuff_variant != 'baseline' and not (args.mode == 'hand-build' and args.wrist_extension):
+    parser.error('Cuff trial requires hand-build with wrist-extension')
 render_device = {'requested': args.device, 'selected': 'CPU'}
 if args.device == 'CUDA':
     def gpu_trace(stage):
@@ -57,6 +62,9 @@ if args.mode == 'build-review':
     build(out)
 if args.mode == 'hand-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    if cuff_variant == 'distance-weighted':
+        from refine_v630_left_cuff_weights import build as build_cuff
+        build_cuff(out)
     from build_v545_fretting_hand import build
     build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension, axial_trial=args.axial_trial)
 if args.mode == 'groom-build':

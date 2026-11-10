@@ -15,6 +15,11 @@ on:
         description: Isolated connected wrist extension with hand-build
         type: boolean
         default: false
+      cuff_variant:
+        description: Isolated left cuff weight trial with wrist-extension hand build
+        type: choice
+        options: [baseline, distance-weighted]
+        default: baseline
       facial_hair:
         description: Include the reversible beard-length trial with blink-build
         type: boolean
@@ -57,6 +62,7 @@ jobs:
       OPENBLAS_NUM_THREADS: '2'
       MODE: ${{ inputs.mode }}
       AXIAL_TRIAL: ${{ inputs.axial_trial }}
+      CUFF_VARIANT: ${{ inputs.cuff_variant }}
       WRIST_EXTENSION: ${{ inputs.wrist_extension }}
       FACIAL_HAIR: ${{ inputs.facial_hair }}
       DELIT_FACE: ${{ inputs.delit_face }}
