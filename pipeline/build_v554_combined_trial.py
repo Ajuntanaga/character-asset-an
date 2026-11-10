@@ -1,7 +1,14 @@
 """Combine reference corrections while preserving the existing hand poses."""
 import json
+import resource
+import time
 from pathlib import Path
 import bpy
+
+
+def stage(name):
+    print(json.dumps({"combined_stage": name, "time": time.time(),
+                      "peak_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}), flush=True)
 
 
 def build(output, delit_face=False):
@@ -13,9 +20,13 @@ def build(output, delit_face=False):
     from refine_v550_maple_density import build as build_guitar
 
     from build_v557_reference_locks import reduce_skin_microrelief
+    stage('SKIN_START')
     report = {'revision': 'V610', 'skin_microrelief': reduce_skin_microrelief()}
+    stage('GROOM_START')
     report['groom'] = build_groom(out, save=False, clean_scalp=True)
+    stage('GROOM_DONE_EYES_START')
     report['eyes'] = build_eyes(root, out)
+    stage('EYES_DONE_FACE_START')
     from refine_v558_eye_surface import build as build_eye_surface
     report['eye_surface'] = build_eye_surface(out)
     # Preserve the independent wet margins as blink-alignment targets while
@@ -46,6 +57,7 @@ def build(output, delit_face=False):
         from refine_v575_mouth_surround import build as build_mouth_surround
         report['mouth_surround'] = build_mouth_surround(out)
 
+    stage('FACE_DONE_WARDROBE_START')
     original = bpy.data.materials['V379_DARK_COTTON_JACKET']
     jacket = original.copy()
     jacket.name = 'V561_MATTE_CHARCOAL_CHECK_JACKET'
@@ -120,13 +132,16 @@ def build(output, delit_face=False):
     report['placket_patch'] = build_placket_patch()
     from refine_v600_pocket_hardware import build as build_hardware
     report['pocket_hardware'] = build_hardware(clear_surface=True, include_placket=True)
+    stage('WARDROBE_DONE')
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     assert len(rig.animation_data.drivers) == 1957
     report['main_drivers'] = 1957
     report['hands'] = 'V593_THUMB_CONTROLS_V591_CUFF_CONTACT_UNRESOLVED'
     report['status'] = 'COMBINED_TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW'
     path = out / 'Character_An_combined_reference_TRIAL_v554.blend'
+    stage('SAVE_START')
     bpy.ops.wm.save_as_mainfile(filepath=str(path), compress=True)
+    stage('SAVE_DONE')
     report['output'] = path.name
     (out / 'combined-trial-report.json').write_text(json.dumps(report, indent=2))
     return report

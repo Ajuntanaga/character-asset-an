@@ -123,7 +123,7 @@ try:
                str(work / 'pipeline/github_scene_job.py'), '--',
                '--mode', 'combined-build', '--review-scope', 'appearance',
                '--device', 'CUDA', '--output', str(output)]
-    environment = dict(os.environ, OMP_NUM_THREADS='2', OPENBLAS_NUM_THREADS='2')
+    environment = dict(os.environ, OMP_NUM_THREADS='2', OPENBLAS_NUM_THREADS='2', PYTHONUNBUFFERED='1')
     status['status'] = 'RENDERING'
     checkpoint('BLENDER_STARTING')
     with (output / 'blender.log').open('w') as log:
@@ -143,7 +143,7 @@ try:
                             raise subprocess.CalledProcessError(code, command)
                         break
                     remaining()
-                    if time.monotonic() - heartbeat >= 30:
+                    if time.monotonic() - heartbeat >= 5:
                         checkpoint('BLENDER_RUNNING', blender_pid=process.pid)
                         heartbeat = time.monotonic()
                     if not chunk:
