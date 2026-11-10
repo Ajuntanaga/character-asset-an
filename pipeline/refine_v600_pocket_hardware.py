@@ -2,7 +2,7 @@
 import math
 
 
-def build(clear_surface=True):
+def build(clear_surface=True, include_placket=False):
     import bpy
     from mathutils import Vector
     from mathutils.bvhtree import BVHTree
@@ -19,7 +19,10 @@ def build(clear_surface=True):
     tree=BVHTree.FromPolygons(posed,triangles,all_triangles=True)
     rest_tree=BVHTree.FromPolygons([v.co for v in body.data.vertices], [tuple(p.vertices) for p in body.data.polygons]) if clear_surface else None
     vertices=[];faces=[];weights=[];report=[]
-    for px,py in [(149,265),(507,302)]:
+    locations = [(149,265),(507,302)]
+    if include_placket:
+        locations += [(254,256),(249,392),(240,530)]
+    for px,py in locations:
         x=(px-320)*.4956/640;z=1.29+(320-py)*.4956/640
         hit,normal,index,_=tree.ray_cast(Vector((x,-1,z)),Vector((0,1,0)),1.2)
         assert hit is not None and hit.y<0
@@ -28,10 +31,15 @@ def build(clear_surface=True):
         surrounding=[]
         for dx,dz in [(.012,0),(-.012,0),(0,.012),(0,-.012)]:
             q,_,face,_=tree.ray_cast(Vector((x+dx,-1,z+dz)),Vector((0,1,0)),1.2)
-            assert q is not None
+            if q is None or abs(q.y-hit.y) > .012:
+                surrounding.append(None)
+                continue
             ids=triangles[face]
             surrounding.append(barycentric_transform(q,*[posed[i] for i in ids],*[body.data.vertices[i].co for i in ids]))
-        normal=(surrounding[0]-surrounding[1]).cross(surrounding[2]-surrounding[3]).normalized()
+        if all(q is not None for q in surrounding):
+            normal=(surrounding[0]-surrounding[1]).cross(surrounding[2]-surrounding[3]).normalized()
+        else:
+            normal=(rest[1]-rest[0]).cross(rest[2]-rest[0]).normalized()
         if normal.y>0:normal=-normal
         u=normal.cross(Vector((0,0,1))).normalized();v=normal.cross(u).normalized()
         clearance_lift=0.
@@ -67,7 +75,7 @@ def build(clear_surface=True):
         pole=len(vertices);vertices.append(center+normal*.00095);weights.append(skin)
         last=base+(len(profile)-1)*segments
         for j in range(segments):faces.append((last+j,last+(j+1)%segments,pole))
-        report.append({'center_rest':list(center),'source_pixel':[px,py],'diameter_mm':16.0,'clearance_lift_mm':clearance_lift*1000})
+        report.append({'center_rest':list(center),'source_pixel':[px,py],'kind':'pocket' if len(report)<2 else 'placket','diameter_mm':16.0,'clearance_lift_mm':clearance_lift*1000})
     data=bpy.data.meshes.new('V600_POCKET_SNAP_COVERS');data.from_pydata(vertices,[],faces);data.update()
     ob=bpy.data.objects.new('V600_POCKET_SNAP_COVERS',data);bpy.context.scene.collection.objects.link(ob)
     for group in body.vertex_groups:ob.vertex_groups.new(name=group.name)
