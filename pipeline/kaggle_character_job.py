@@ -111,6 +111,26 @@ try:
         assert digest(candidates[0]) == SCENE_MANIFEST['current-v544.blend']['sha256']
         shutil.copyfile(candidates[0], scene)
         print('Verified durable dataset scene:', scene.name, flush=True)
+    # Render an existing Actions build without regenerating its expensive groom.
+    if built := globals().get('BUILT_SCENE_DELTA'):
+        candidates = list(Path('/kaggle/input').rglob(built['name']))
+        assert len(candidates) == 1, 'Expected exactly one built-scene delta'
+        assert digest(scene) == built['base_sha256']
+        assert digest(candidates[0]) == built['sha256']
+        checkpoint('RESTORING_BUILT_SCENE')
+        dictionary = zstandard.ZstdCompressionDict(scene.read_bytes(),
+                                                   dict_type=zstandard.DICT_TYPE_RAWCONTENT)
+        decoder = zstandard.ZstdDecompressor(dict_data=dictionary, max_window_size=1024 ** 3)
+        restored = work / 'built-scene.blend'
+        with candidates[0].open('rb') as source, restored.open('wb') as target:
+            with decoder.stream_reader(source) as reader:
+                while block := reader.read(1024 * 1024):
+                    remaining()
+                    target.write(block)
+        del decoder, dictionary
+        assert digest(restored) == built['output_sha256']
+        scene = restored
+        checkpoint('BUILT_SCENE_VERIFIED')
     tar_path = work / 'blender.tar.xz'
     url = 'https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz'
     download(url, tar_path, '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168')
@@ -121,7 +141,8 @@ try:
     command = [str(executable), '--background', '--disable-autoexec', str(scene),
                '--threads', '2', '--python-exit-code', '1', '--python',
                str(work / 'pipeline/github_scene_job.py'), '--',
-               '--mode', 'combined-build', '--review-scope', 'appearance',
+               '--mode', 'review' if globals().get('BUILT_SCENE_DELTA') else 'combined-build',
+               '--review-scope', 'full' if globals().get('BUILT_SCENE_DELTA') else 'appearance',
                '--device', 'CUDA', '--output', str(output)]
     environment = dict(os.environ, OMP_NUM_THREADS='2', OPENBLAS_NUM_THREADS='2', PYTHONUNBUFFERED='1')
     status['status'] = 'RENDERING'
