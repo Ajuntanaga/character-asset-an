@@ -10,6 +10,7 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 import zipfile
 
 
@@ -86,18 +87,27 @@ for version, name in [('528', 'current-v528.blend'),
     release = json.loads(subprocess.check_output([
         'gh', 'api', f'repos/Ajuntanaga/character-asset-an/releases/tags/checkpoint-v{version}']))
     asset = next(asset for asset in release['assets'] if asset['name'] == name)
-    request = urllib.request.Request(asset['url'] + f'?fresh={time.time_ns()}', headers={
-        'Authorization': 'Bearer ' + token, 'Accept': 'application/octet-stream',
-        'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Character-An-private-render'})
-    try:
-        response = opener.open(request, timeout=30)
-        response.close()
-        raise RuntimeError('Expected a temporary release-asset redirect')
-    except urllib.error.HTTPError as error:
-        if error.code != 302:
-            raise RuntimeError(f'Asset redirect failed: HTTP {error.code}') from None
-        url = error.headers['Location']
-        assert url.startswith('https://release-assets.githubusercontent.com/')
+    for attempt in range(6):
+        request = urllib.request.Request(asset['url'] + f'?fresh={time.time_ns()}', headers={
+            'Cache-Control': 'no-cache', 'Authorization': 'Bearer ' + token, 'Accept': 'application/octet-stream',
+            'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Character-An-private-render'})
+        try:
+            response = opener.open(request, timeout=30)
+            response.close()
+            raise RuntimeError('Expected a temporary release-asset redirect')
+        except urllib.error.HTTPError as error:
+            if error.code != 302:
+                raise RuntimeError(f'Asset redirect failed: HTTP {error.code}') from None
+            url = error.headers['Location']
+            assert url.startswith('https://release-assets.githubusercontent.com/')
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
+        payload = query.get('jwt', [''])[0].split('.')
+        assert len(payload) == 3, 'Missing release expiry token'
+        expiry = json.loads(base64.urlsafe_b64decode(payload[1] + '==='))['exp']
+        if expiry - time.time() >= 180:
+            break
+    else:
+        raise RuntimeError(f'{name}: could not obtain a release URL valid for 3 minutes')
     downloads.append(dict(manifest[name], name=name, url=url))
 del token
 program = (f'REVISION = {revision!r}\nINPUTS_SHA256 = {archive_hash!r}\n'
