@@ -139,7 +139,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         ] + context_shots
         if args.wrist_extension:
             wrist = rig.matrix_world @ rig.pose.bones['DEF-Hand.L'].head
-            shots += [(f'wrist-{angle}', wrist + offset @ Vector((.1, .16, -.35)), wrist, .23) for angle in (0, -15, 15)]
+            shots += [(f'wrist-{angle}', wrist + offset @ Vector((0, 0, .6)), wrist, .23) for angle in (0, -15, 15)]
     if args.mode == 'groom-build':
         shots = [
             ('groom-front', (0, -2, 1.72), (0, 0, 1.70), .38),
