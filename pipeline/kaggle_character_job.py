@@ -91,7 +91,8 @@ try:
     command = [str(executable), '--background', '--disable-autoexec', str(scene),
                '--threads', '2', '--python-exit-code', '1', '--python',
                str(work / 'pipeline/github_scene_job.py'), '--',
-               '--mode', 'combined-build', '--device', 'CUDA', '--output', str(output)]
+               '--mode', 'combined-build', '--review-scope', 'appearance',
+               '--device', 'CUDA', '--output', str(output)]
     environment = dict(os.environ, OMP_NUM_THREADS='2', OPENBLAS_NUM_THREADS='2')
     status['status'] = 'RENDERING'
     with (output / 'blender.log').open('w') as log:
