@@ -117,8 +117,31 @@ try:
     status['status'] = 'RENDERING'
     checkpoint('BLENDER_STARTING')
     with (output / 'blender.log').open('w') as log:
-        subprocess.run(command, cwd=work, env=environment, stdout=log,
-                       stderr=subprocess.STDOUT, check=True, timeout=remaining())
+        process = subprocess.Popen(command, cwd=work, env=environment, stdout=log,
+                                   stderr=subprocess.STDOUT)
+        try:
+            # Mirror output into Kaggle's retained kernel log, including on cancellation.
+            with (output / 'blender.log').open() as reader:
+                heartbeat = time.monotonic()
+                while True:
+                    chunk = reader.read(65536)
+                    if chunk:
+                        print(chunk, end='', flush=True)
+                    code = process.poll()
+                    if code is not None and not chunk:
+                        if code:
+                            raise subprocess.CalledProcessError(code, command)
+                        break
+                    remaining()
+                    if time.monotonic() - heartbeat >= 30:
+                        checkpoint('BLENDER_RUNNING', blender_pid=process.pid)
+                        heartbeat = time.monotonic()
+                    if not chunk:
+                        time.sleep(1)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=10)
     status['status'] = 'SUCCEEDED_REQUIRES_VISUAL_REVIEW'
 except Exception as error:
     status['status'] = 'FAILED'
