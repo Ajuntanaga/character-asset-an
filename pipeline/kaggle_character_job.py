@@ -23,6 +23,12 @@ status = {'status': 'STARTING', 'budget_seconds': budget_seconds,
           'revision': REVISION, 'maximum_selected_gpus': 1}
 
 
+def checkpoint(stage, **details):
+    status.update(stage=stage, elapsed_seconds=round(time.monotonic() - started, 2), **details)
+    (output / 'kaggle-progress.json').write_text(json.dumps(status, indent=2))
+    print(json.dumps(status), flush=True)
+
+
 def remaining():
     left = budget_seconds - (time.monotonic() - started)
     if left <= 0:
@@ -36,14 +42,21 @@ def digest(path):
 
 
 def download(url, target, expected_hash):
-    with urllib.request.urlopen(url, timeout=min(90, remaining())) as response, target.open('wb') as stream:
+    checkpoint('DOWNLOADING', download_file=target.name, downloaded_bytes=0)
+    reported = time.monotonic()
+    with urllib.request.urlopen(url, timeout=min(30, remaining())) as response, target.open('wb') as stream:
         while block := response.read(1024 * 1024):
             remaining()
             stream.write(block)
+            if time.monotonic() - reported >= 15:
+                checkpoint('DOWNLOADING', downloaded_bytes=stream.tell())
+                reported = time.monotonic()
     assert digest(target) == expected_hash, target.name
+    checkpoint('DOWNLOAD_VERIFIED', downloaded_bytes=target.stat().st_size)
 
 
 try:
+    checkpoint('GPU_STARTUP')
     gpu = subprocess.check_output(
         ['nvidia-smi', '--query-gpu=name,memory.total,driver_version',
          '--format=csv,noheader'], text=True, timeout=min(30, remaining()))
@@ -91,6 +104,7 @@ try:
     tar_path = work / 'blender.tar.xz'
     url = 'https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz'
     download(url, tar_path, '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168')
+    checkpoint('EXTRACTING_BLENDER')
     with tarfile.open(tar_path) as archive:
         archive.extractall(work, filter='data')
     executable = work / 'blender-5.2.2-linux-x64/blender'
@@ -101,6 +115,7 @@ try:
                '--device', 'CUDA', '--output', str(output)]
     environment = dict(os.environ, OMP_NUM_THREADS='2', OPENBLAS_NUM_THREADS='2')
     status['status'] = 'RENDERING'
+    checkpoint('BLENDER_STARTING')
     with (output / 'blender.log').open('w') as log:
         subprocess.run(command, cwd=work, env=environment, stdout=log,
                        stderr=subprocess.STDOUT, check=True, timeout=remaining())
