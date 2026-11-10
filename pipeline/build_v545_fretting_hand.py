@@ -110,7 +110,7 @@ def minimize(residual, initial, low, high, iterations=40):
     return x, history
 
 
-def build(out, thumb_support='fixed'):
+def build(out, thumb_support='fixed', relaxed_contact_dips=False):
     assert thumb_support in ('fixed', 'sliding_rear')
     assert Path(bpy.data.filepath).name == 'current-v544.blend'
     scene = bpy.context.scene
@@ -359,6 +359,12 @@ def build(out, thumb_support='fixed'):
         seed = json.loads((Path(__file__).resolve().parents[1] / 'github_assets/fretting-seed-v599.json').read_text())
         initial = np.asarray(seed['values'], dtype=float)
         assert initial.shape == prior.shape and np.all(np.isfinite(initial))
+    if relaxed_contact_dips:
+        # Isolate the forced curl constraint on the two unresolved contact digits.
+        low[[8, 16]] = 0.
+        seed = json.loads((Path(__file__).resolve().parents[1] / 'github_assets/fretting-seed-v602.json').read_text())
+        initial = np.asarray(seed['values'], dtype=float)
+        assert initial.shape == prior.shape and np.all(np.isfinite(initial))
     values, coarse_history = minimize(residual, initial, low, high, 90)
     print(f'Coarse fit loss: {coarse_history[-1]}; refining evaluated skin', flush=True)
     values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 24)
@@ -440,7 +446,8 @@ def build(out, thumb_support='fixed'):
     fit_status = ('TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW' if contact_ok and orientation_ok
                   else 'REJECTED_CONTACT_OR_ORIENTATION_FIT')
     report = {'status': fit_status, 'main_drivers': 1957,
-              'revision': 'V599' if thumb_support == 'sliding_rear' else 'V545',
+              'revision': 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
+              'relaxed_index_ring_dip_minimum': relaxed_contact_dips,
               'thumb_support_mode': thumb_support,
               'thumb_support_x_bounds_m': list(support_x),
               'thumb_support_y_bounds_m': [-.020, .020],

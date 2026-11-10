@@ -2,7 +2,7 @@
 import math
 
 
-def build():
+def build(clear_surface=True):
     import bpy
     from mathutils import Vector
     from mathutils.bvhtree import BVHTree
@@ -17,6 +17,7 @@ def build():
         posed=[v.co.copy() for v in mesh.vertices]
     finally:ev.to_mesh_clear()
     tree=BVHTree.FromPolygons(posed,triangles,all_triangles=True)
+    rest_tree=BVHTree.FromPolygons([v.co for v in body.data.vertices], [tuple(p.vertices) for p in body.data.polygons]) if clear_surface else None
     vertices=[];faces=[];weights=[];report=[]
     for px,py in [(149,265),(507,302)]:
         x=(px-320)*.4956/640;z=1.29+(320-py)*.4956/640
@@ -33,6 +34,19 @@ def build():
         normal=(surrounding[0]-surrounding[1]).cross(surrounding[2]-surrounding[3]).normalized()
         if normal.y>0:normal=-normal
         u=normal.cross(Vector((0,0,1))).normalized();v=normal.cross(u).normalized()
+        clearance_lift=0.
+        if rest_tree is not None:
+            heights=[]
+            for radius in (0., .004, .008):
+                for j in range(24):
+                    angle=math.tau*j/24
+                    radial=radius*(u*math.cos(angle)+v*math.sin(angle))
+                    q,_,_,_=rest_tree.ray_cast(center+radial+normal*.025,-normal,.05)
+                    if q is not None:heights.append((q-center-radial).dot(normal))
+            assert heights
+            clearance_lift=max(0.,max(heights)+.0003)
+            assert clearance_lift<.012, clearance_lift
+            center+=normal*clearance_lift
         bary=barycentric_transform(hit,*posed_tri,Vector((1,0,0)),Vector((0,1,0)),Vector((0,0,1)))
         skin={}
         for vertex,factor in zip(tri,bary):
@@ -53,9 +67,9 @@ def build():
         pole=len(vertices);vertices.append(center+normal*.00095);weights.append(skin)
         last=base+(len(profile)-1)*segments
         for j in range(segments):faces.append((last+j,last+(j+1)%segments,pole))
-        report.append({'center_rest':list(center),'source_pixel':[px,py],'diameter_mm':16.0})
+        report.append({'center_rest':list(center),'source_pixel':[px,py],'diameter_mm':16.0,'clearance_lift_mm':clearance_lift*1000})
     data=bpy.data.meshes.new('V600_POCKET_SNAP_COVERS');data.from_pydata(vertices,[],faces);data.update()
-    ob=bpy.data.objects.new(data.name,data);bpy.context.scene.collection.objects.link(ob)
+    ob=bpy.data.objects.new('V600_POCKET_SNAP_COVERS',data);bpy.context.scene.collection.objects.link(ob)
     for group in body.vertex_groups:ob.vertex_groups.new(name=group.name)
     for i,skin in enumerate(weights):
         for group,weight in skin.items():ob.vertex_groups[group].add([i],weight,'REPLACE')
