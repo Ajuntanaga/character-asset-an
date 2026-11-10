@@ -110,7 +110,8 @@ def minimize(residual, initial, low, high, iterations=40):
     return x, history
 
 
-def build(out):
+def build(out, thumb_support='fixed'):
+    assert thumb_support in ('fixed', 'sliding_rear')
     assert Path(bpy.data.filepath).name == 'current-v544.blend'
     scene = bpy.context.scene
     main = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
@@ -215,6 +216,19 @@ def build(out):
     assert thumb_target is not None, 'Rear neck target missing'
     targets['Thumb'] = thumb_target - normal * .0003
     target_meta['Thumb'] = {'role': 'rear-neck support', 'world': list(targets['Thumb'])}
+    # The reference fixes the thumb's support surface, not its tangent position.
+    # Preserve all finger/string assignments while allowing natural rear-neck sliding.
+    support_x = (min((guitar_inv @ p).x for d, p in targets.items() if d != 'Thumb') - .04,
+                 max((guitar_inv @ p).x for d, p in targets.items() if d != 'Thumb') + .04)
+    def thumb_goal(point):
+        if thumb_support == 'fixed':
+            return targets['Thumb'], normal
+        local = guitar_inv @ point
+        x = max(support_x[0], min(support_x[1], local.x))
+        y = max(-.020, min(.020, local.y))
+        hit, outward, _, _ = neck_tree.ray_cast(guitar @ Vector((x, y, -.09)), normal, .15)
+        assert hit is not None and outward.dot(normal) < -.5, 'Rear support surface missing'
+        return hit + outward * .0003, -outward
     # Palm surface and wrist interior must clear the actual neck, not just
     # satisfy fingertip targets. These vertices are rigidly weighted to Hand.
     palm_group = hand.vertex_groups['DEF-Hand.R'].index
@@ -290,8 +304,8 @@ def build(out):
         points, world, pose = contacts(values, evaluated)
         r = []
         for digit, (point, n, nail_direction) in points.items():
-            r.extend(point - targets[digit])
-            desired = normal if digit == 'Thumb' else -normal
+            target, desired = thumb_goal(point) if digit == 'Thumb' else (targets[digit], -normal)
+            r.extend(point - target)
             r.extend((n - desired) * .002)
             # Orientation is an explicit acceptance condition below. The
             # high-weight cone penalties guide the fit without demanding a
@@ -340,7 +354,12 @@ def build(out):
     print('Fitting native left hand: analytic joints', flush=True)
     # Earlier axial-roll seeds all converged to the same hooked pose. Solve
     # once with the revised pad frame and extended thumb joint limits.
-    values, coarse_history = minimize(residual, prior, low, high, 90)
+    initial = prior
+    if thumb_support == 'sliding_rear':
+        seed = json.loads((Path(__file__).resolve().parents[1] / 'github_assets/fretting-seed-v599.json').read_text())
+        initial = np.asarray(seed['values'], dtype=float)
+        assert initial.shape == prior.shape and np.all(np.isfinite(initial))
+    values, coarse_history = minimize(residual, initial, low, high, 90)
     print(f'Coarse fit loss: {coarse_history[-1]}; refining evaluated skin', flush=True)
     values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 24)
     print(f'Surface fit loss: {surface_history[-1]}; attaching to main arm', flush=True)
@@ -398,10 +417,12 @@ def build(out):
         bone = rig.pose.bones[f'DEF-Finger_{digit}3.R']
         matrix = rig.matrix_world @ bone.matrix
         point, n, polygon, anchor_distance = sample_pad(final_trees, digit, matrix, pads[digit])
-        desired = normal if digit == 'Thumb' else -normal
+        target, desired = thumb_goal(point) if digit == 'Thumb' else (targets[digit], -normal)
+        if digit == 'Thumb':
+            target_meta['Thumb'].update(world=list(target), support_mode=thumb_support)
         nail_direction = (matrix.to_3x3() @ nail_directions[digit]).normalized()
-        final[digit] = {'pad_world': list(point), 'target_world': list(targets[digit]),
-                        'distance_m': (point - targets[digit]).length, 'normal': list(n),
+        final[digit] = {'pad_world': list(point), 'target_world': list(target),
+                        'distance_m': (point - target).length, 'normal': list(n),
                         'pad_alignment': n.dot(desired),
                         'nail_alignment': nail_direction.dot(-desired),
                         'surface_region': f'DEF-Finger_{digit}3.R',
@@ -419,6 +440,10 @@ def build(out):
     fit_status = ('TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW' if contact_ok and orientation_ok
                   else 'REJECTED_CONTACT_OR_ORIENTATION_FIT')
     report = {'status': fit_status, 'main_drivers': 1957,
+              'revision': 'V599' if thumb_support == 'sliding_rear' else 'V545',
+              'thumb_support_mode': thumb_support,
+              'thumb_support_x_bounds_m': list(support_x),
+              'thumb_support_y_bounds_m': [-.020, .020],
               'native_drivers': len(rig.animation_data.drivers), 'targets': target_meta,
               'palm_neck_clearance_m': palm_clearance,
               'wrist_neck_clearance_m': wrist_clearance,
