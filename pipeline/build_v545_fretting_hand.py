@@ -110,7 +110,7 @@ def minimize(residual, initial, low, high, iterations=40):
     return x, history
 
 
-def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=False, wrist_extension=False, axial_trial=False):
+def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=False, wrist_extension=False, axial_trial=False, hover_orientation_trial=False):
     assert thumb_support in ('fixed', 'sliding_rear')
     assert Path(bpy.data.filepath).name == 'current-v544.blend'
     scene = bpy.context.scene
@@ -310,12 +310,17 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         for digit, (point, n, nail_direction) in points.items():
             target, desired = thumb_goal(point) if digit == 'Thumb' else (targets[digit], -normal)
             r.extend(point - target)
-            r.extend((n - desired) * .002)
+            # V637 isolates whether contact-style orientation on the hovering
+            # middle finger traps the neighboring contact digits. Keep its XYZ
+            # target and every final acceptance check unchanged.
+            orientation_weight = (0. if hover_orientation_trial and
+                                  target_meta[digit].get('contact') is False else 1.)
+            r.extend((n - desired) * .002 * orientation_weight)
             # Orientation is an explicit acceptance condition below. The
             # high-weight cone penalties guide the fit without demanding a
             # perfectly flat pad/nail on the rounded fingertip.
-            r.append(max(0., PAD_MIN_DOT - n.dot(desired)) * cone_weight)
-            r.append(max(0., NAIL_MIN_DOT - nail_direction.dot(-desired)) * cone_weight)
+            r.append(max(0., PAD_MIN_DOT - n.dot(desired)) * cone_weight * orientation_weight)
+            r.append(max(0., NAIL_MIN_DOT - nail_direction.dot(-desired)) * cone_weight * orientation_weight)
         # Keep non-thumb knuckles and shafts on the front/edge of the fretboard.
         for digit in DIGITS[:4]:
             for j in (1, 2, 3):
@@ -527,7 +532,8 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
               'inter_digit_ok': inter_digit_ok,
               'collision_refinement_loss': collision_history,
               'collision_refinement_stages': collision_stages,
-              'revision': 'V631' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
+              'hover_orientation_trial': hover_orientation_trial,
+              'revision': 'V637' if hover_orientation_trial else 'V631' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
               'relaxed_index_ring_dip_minimum': relaxed_contact_dips,
               'index_ring_axial_degrees': {digit: math.degrees(values[i]) for digit, i in axial_indices.items()},
               'index_ring_spread_limit_degrees': 35 if spread_trial else 25,
