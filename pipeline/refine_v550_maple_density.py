@@ -51,8 +51,9 @@ def build(output, save=True):
     links.new(contrast.outputs['Color'], nodes['V387_GrayStain'].inputs[1])
     nodes['V387_GrayStain'].inputs[2].default_value = (.47, .52, .45, 1)
     # The mask mixes dark edge at zero into figured maple at one.
-    # A smaller exponent keeps maple visible closer to the perimeter.
-    burst_exponent = .45 if variant == 'restrained' else 3.5
+    # Restore the reference's broad charcoal fade while retaining the subdued
+    # V634 flame contrast; .45 made nearly the whole top pale.
+    burst_exponent = 1.8 if variant == 'restrained' else 3.5
     nodes['V380_BurstFalloff'].inputs[1].default_value = burst_exponent
     if variant == 'restrained':
         shader = next(node for node in nodes if node.type == 'BSDF_PRINCIPLED')
