@@ -304,7 +304,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
             result[digit] = (point, n, nail_direction)
         return result, world, pose
 
-    def residual(values, evaluated=False, cone_weight=.08, avoid_digits=False):
+    def residual(values, evaluated=False, cone_weight=.08, avoid_digits=False, separation_scale=1.):
         points, world, pose = contacts(values, evaluated)
         r = []
         for digit, (point, n, nail_direction) in points.items():
@@ -353,7 +353,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         if avoid_digits:
             assert evaluated
             from hand_surface_clearance import repulsion
-            r.extend(repulsion(hand))
+            r.extend(value * separation_scale for value in repulsion(hand))
         return np.array(r)
 
     contacts(prior, True)
@@ -403,12 +403,22 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
             lambda v: residual(v, True, cone_weight=.24), values, low, high, 24)
         print(f'Orientation refinement loss: {orientation_history[-1]}', flush=True)
     collision_history = []
+    collision_stages = []
     if axial_trial:
-        # V624 has measured Index/Middle and Middle/Ring skin crossings.
-        # Preserve target mapping and joint bounds while separating skin.
-        values, collision_history = minimize(
-            lambda v: residual(v, True, cone_weight=.24, avoid_digits=True),
-            values, low, high, 24)
+        # V627 stalls with 140/198 crossing face pairs despite valid distances.
+        # Increase separation priority in bounded stages, preserving every
+        # target, joint bound and final acceptance check. Stage losses use
+        # different weights and must not be compared as a single objective.
+        from hand_surface_clearance import measure
+        for scale in (1., 2., 4.):
+            values, history = minimize(
+                lambda v: residual(v, True, cone_weight=.24, avoid_digits=True,
+                                   separation_scale=scale),
+                values, low, high, 8)
+            contacts(values, True)
+            collision_stages.append({'residual_scale': scale, 'loss': history,
+                                     'surface': measure(hand)})
+            collision_history.extend(history)
         print(f'Inter-digit refinement loss: {collision_history[-1]}', flush=True)
     print('Attaching to main arm', flush=True)
     points, desired_world, pose = contacts(values, True)
@@ -516,7 +526,8 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
               'inter_digit_surface': inter_digit_surface,
               'inter_digit_ok': inter_digit_ok,
               'collision_refinement_loss': collision_history,
-              'revision': 'V627' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
+              'collision_refinement_stages': collision_stages,
+              'revision': 'V631' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
               'relaxed_index_ring_dip_minimum': relaxed_contact_dips,
               'index_ring_axial_degrees': {digit: math.degrees(values[i]) for digit, i in axial_indices.items()},
               'index_ring_spread_limit_degrees': 35 if spread_trial else 25,
