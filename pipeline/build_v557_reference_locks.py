@@ -79,7 +79,10 @@ def _anchor(block, bvh):
 
 
 def generate(roots, bvh):
-    separated = os.environ.get('GROOM_VARIANT', 'baseline') == 'separated'
+    variant = os.environ.get('GROOM_VARIANT', 'baseline')
+    separated = variant in ('separated', 'staggered')
+    staggered = variant == 'staggered'
+    tip_rng = np.random.default_rng(625)
     rng, nprng = random.Random(557), np.random.default_rng(557)
     # Keep the established root, radius and undercoat random streams intact.
     subclump_rng = random.Random(582)
@@ -187,6 +190,9 @@ def generate(roots, bvh):
         _anchor(block, bvh)
         radius = nprng.uniform(.000034, .000048, children)[:, None] * (1. - .85 * t**2)[None, :]
         radius[:, -1] = .000003
+        if staggered:
+            from groom_fiber_lengths import stagger_tips
+            block, radius, _ = stagger_tips(block, radius, tip_rng)
         points.append(block.astype(np.float32))
         radii.append(radius.astype(np.float32))
         uvs.append(np.tile(np.asarray(weights) @ np.asarray(face['uv']), (children, 1)))
@@ -227,7 +233,9 @@ def generate(roots, bvh):
     points, radii, uvs = np.concatenate(points), np.concatenate(radii), np.concatenate(uvs).astype(np.float32)
     assert np.isfinite(points).all() and np.isfinite(radii).all()
     assert 100 < len(macro_roots) < len(dense_roots)
-    report = {'geometry_model': 'V608_separated_curl_subclumps' if separated else 'V584_suspended_partial_curl_trajectories',
+    report = {'geometry_model': 'V625_staggered_fiber_tips' if staggered else 'V608_separated_curl_subclumps' if separated else 'V584_suspended_partial_curl_trajectories',
+              'primary_fiber_length_fraction': [.68, 1.] if staggered else [1., 1.],
+              'full_length_fiber_probability': .12 if staggered else 1.,
               'guides': len(macro_roots), 'undercoat_guides': len(dense_roots),
               'primary_strands': macro_strands, 'undercoat_strands': len(dense_roots) * base_children,
               'top_root_spacing_m': .0095, 'side_root_spacing_m': .0075,

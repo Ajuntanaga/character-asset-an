@@ -26,7 +26,7 @@ on:
       groom_variant:
         description: Optional separated curl subclump trial
         type: choice
-        options: [baseline, separated]
+        options: [baseline, separated, staggered]
         default: baseline
       eye_aperture_variant:
         description: Isolated upper-lid coverage trial with portrait and blink review
