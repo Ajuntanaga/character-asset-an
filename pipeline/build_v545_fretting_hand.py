@@ -304,7 +304,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
             result[digit] = (point, n, nail_direction)
         return result, world, pose
 
-    def residual(values, evaluated=False):
+    def residual(values, evaluated=False, cone_weight=.08):
         points, world, pose = contacts(values, evaluated)
         r = []
         for digit, (point, n, nail_direction) in points.items():
@@ -314,8 +314,8 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
             # Orientation is an explicit acceptance condition below. The
             # high-weight cone penalties guide the fit without demanding a
             # perfectly flat pad/nail on the rounded fingertip.
-            r.append(max(0., PAD_MIN_DOT - n.dot(desired)) * .08)
-            r.append(max(0., NAIL_MIN_DOT - nail_direction.dot(-desired)) * .08)
+            r.append(max(0., PAD_MIN_DOT - n.dot(desired)) * cone_weight)
+            r.append(max(0., NAIL_MIN_DOT - nail_direction.dot(-desired)) * cone_weight)
         # Keep non-thumb knuckles and shafts on the front/edge of the fretboard.
         for digit in DIGITS[:4]:
             for j in (1, 2, 3):
@@ -389,7 +389,16 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
     values, coarse_history = minimize(residual, initial, low, high, 90)
     print(f'Coarse fit loss: {coarse_history[-1]}; refining evaluated skin', flush=True)
     values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 24)
-    print(f'Surface fit loss: {surface_history[-1]}; attaching to main arm', flush=True)
+    print(f'Surface fit loss: {surface_history[-1]}', flush=True)
+    orientation_history = []
+    if axial_trial:
+        # V620 reaches the strings but trades pad-angle deficits for distance.
+        # Refine that pose with stronger cone penalties; retain every joint,
+        # collision, contact and orientation acceptance limit unchanged.
+        values, orientation_history = minimize(
+            lambda v: residual(v, True, cone_weight=.24), values, low, high, 24)
+        print(f'Orientation refinement loss: {orientation_history[-1]}', flush=True)
+    print('Attaching to main arm', flush=True)
     points, desired_world, pose = contacts(values, True)
     desired_wrist = desired_world @ wrist_source
     # Move the real arm control to the solved wrist, allowing its reach constraints
@@ -486,7 +495,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
                   else 'REJECTED_CONTACT_OR_ORIENTATION_FIT')
     report = {'status': fit_status, 'main_drivers': 1957,
               'wrist_extension': wrist_report,
-              'revision': 'V620' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
+              'revision': 'V624' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
               'relaxed_index_ring_dip_minimum': relaxed_contact_dips,
               'index_ring_axial_degrees': {digit: math.degrees(values[i]) for digit, i in axial_indices.items()},
               'index_ring_spread_limit_degrees': 35 if spread_trial else 25,
@@ -503,6 +512,8 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
               'thumb_axial_roll_degrees': math.degrees(values[26]),
               'thumb_distal_flexion_degrees': np.degrees(values[24:26]).tolist(),
               'orientation_limits': {'pad_min_dot': PAD_MIN_DOT, 'nail_min_dot': NAIL_MIN_DOT},
+              'orientation_refinement_loss': orientation_history,
+              'orientation_refinement_cone_weight': .24 if axial_trial else None,
               'pad_sampling': 'nearest own distal skin to persistent pad; weight > 0.95; radius 4mm',
               'contact_ok': contact_ok, 'orientation_ok': orientation_ok,
               'nail_polygons': sum(p.material_index == 1 for p in hand.data.polygons)}
