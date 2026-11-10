@@ -493,8 +493,11 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
                   min(palm_clearance, wrist_clearance) >= -.0005)
     fit_status = ('TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW' if contact_ok and orientation_ok
                   else 'REJECTED_CONTACT_OR_ORIENTATION_FIT')
+    from hand_surface_clearance import measure
+    inter_digit_surface = measure(hand)
     report = {'status': fit_status, 'main_drivers': 1957,
               'wrist_extension': wrist_report,
+              'inter_digit_surface': inter_digit_surface,
               'revision': 'V624' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
               'relaxed_index_ring_dip_minimum': relaxed_contact_dips,
               'index_ring_axial_degrees': {digit: math.degrees(values[i]) for digit, i in axial_indices.items()},
