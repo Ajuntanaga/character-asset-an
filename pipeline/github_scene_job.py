@@ -16,7 +16,7 @@ parser.add_argument('--wrist-extension', action='store_true')
 parser.add_argument('--axial-trial', action='store_true')
 parser.add_argument('--delit-face', action='store_true')
 parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
-parser.add_argument('--review-scope', choices=('full', 'mouth', 'appearance', 'portrait', 'hands', 'wardrobe'), default='full')
+parser.add_argument('--review-scope', choices=('full', 'mouth', 'appearance', 'portrait', 'hands', 'wardrobe', 'hair-layers'), default='full')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 if args.axial_trial and args.mode != 'hand-build':
     parser.error('--axial-trial requires --mode hand-build')
@@ -178,6 +178,15 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             shots = [shot for shot in shots if shot[0] in ('face-front', 'face-oblique')]
         elif args.review_scope == 'portrait':
             shots = [shot for shot in shots if shot[0].startswith('face-')]
+        elif args.review_scope == 'hair-layers':
+            # Identical cameras and lighting distinguish scanned cap geometry
+            # from the generated curl bundles; never save the isolated state.
+            shots = [
+                ('hair-full-front', (0, -2, 1.72), (0, 0, 1.70), .38),
+                ('hair-underlay-front', (0, -2, 1.72), (0, 0, 1.70), .38),
+                ('hair-full-oblique', (.8, -1.6, 1.86), (0, 0, 1.70), .38),
+                ('hair-underlay-oblique', (.8, -1.6, 1.86), (0, 0, 1.70), .38),
+            ]
         elif args.review_scope == 'wardrobe':
             shots = [
                 ('wardrobe-stitch-before', (0,-2,1.29), (0,0,1.29), .4956),
@@ -201,6 +210,19 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         photo_gain = None
         if args.mode == 'combined-build' and label.startswith('face-'):
             scene.cycles.samples = 64
+        if label.startswith('hair-'):
+            scene.cycles.samples = 64
+        if label.startswith('hair-underlay-'):
+            for obj in scene.objects:
+                if obj.name.endswith('_CURL_GROOM') and not obj.hide_render:
+                    hidden.append(obj)
+                    obj.hide_render = True
+            if not hidden:
+                raise RuntimeError('Hair isolation found no visible curl groom')
+            report.setdefault('hair_layer_checks', []).append({
+                'shot': label, 'hidden_grooms': [obj.name for obj in hidden],
+                'retained_underlay': 'V371_DARK_HAIR_UNDERLAY',
+            })
         if label == 'face-source-before':
             photo_gain = bpy.data.materials['V563_DIRECT_FRONT_PHOTO_SKIN'].node_tree.nodes['V563_FrontPhotoGain'].inputs[1]
             saved_photo_gain = photo_gain.default_value
@@ -276,7 +298,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             obj.hide_render = False
         report['preview']['completed_shots'].append(label)
         (out / 'scene-report.json').write_text(json.dumps(report, indent=2))
-    if args.review_scope not in ('mouth', 'hands', 'wardrobe') and args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
+    if args.review_scope not in ('mouth', 'hands', 'wardrobe', 'hair-layers') and args.mode in ('review', 'build-review', 'blink-build', 'combined-build'):
         head = rig.pose.bones['Head']
         keys = bpy.data.objects['V416_BODY_CLEAN_JOIN'].data.shape_keys.key_blocks
         original = {side: head['Blink.' + side] for side in ('L', 'R')}

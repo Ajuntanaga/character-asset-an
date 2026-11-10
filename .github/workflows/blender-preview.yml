@@ -34,9 +34,9 @@ on:
         options: [baseline, narrow-upper, rounded-lower]
         default: baseline
       review_scope:
-        description: Full review, portrait with blinks, appearance, mouth, wardrobe, or hands
+        description: Full review, portrait with blinks, appearance, mouth, wardrobe, hands, or hair layer isolation
         type: choice
-        options: [full, mouth, appearance, portrait, hands, wardrobe]
+        options: [full, mouth, appearance, portrait, hands, wardrobe, hair-layers]
         default: full
 permissions:
   contents: read
