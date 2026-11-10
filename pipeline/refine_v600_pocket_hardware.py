@@ -13,19 +13,23 @@ def build(clear_surface=True, include_placket=False):
     try:
         assert len(mesh.vertices)==len(body.data.vertices)
         mesh.calc_loop_triangles()
-        triangles=[tuple(t.vertices) for t in mesh.loop_triangles if mesh.polygons[t.polygon_index].material_index==6]
+        cloth_triangles=[tuple(t.vertices) for t in mesh.loop_triangles if mesh.polygons[t.polygon_index].material_index==6]
+        all_triangles=[tuple(t.vertices) for t in mesh.loop_triangles]
         posed=[v.co.copy() for v in mesh.vertices]
     finally:ev.to_mesh_clear()
-    tree=BVHTree.FromPolygons(posed,triangles,all_triangles=True)
+    cloth_tree=BVHTree.FromPolygons(posed,cloth_triangles,all_triangles=True)
+    full_tree=BVHTree.FromPolygons(posed,all_triangles,all_triangles=True) if include_placket else None
     rest_tree=BVHTree.FromPolygons([v.co for v in body.data.vertices], [tuple(p.vertices) for p in body.data.polygons]) if clear_surface else None
     vertices=[];faces=[];weights=[];report=[]
     locations = [(149,265),(507,302)]
     if include_placket:
         locations += [(254,256),(249,392),(240,530)]
-    for px,py in locations:
+    for location_index,(px,py) in enumerate(locations):
+        # Front buttons have their own material; cloth-only rays miss them.
+        tree,triangles = (cloth_tree,cloth_triangles) if location_index<2 else (full_tree,all_triangles)
         x=(px-320)*.4956/640;z=1.29+(320-py)*.4956/640
         hit,normal,index,_=tree.ray_cast(Vector((x,-1,z)),Vector((0,1,0)),1.2)
-        assert hit is not None and hit.y<0
+        assert hit is not None and hit.y<0, ('Hardware projection missed', px, py)
         tri=triangles[index];posed_tri=[posed[i] for i in tri];rest=[body.data.vertices[i].co for i in tri]
         center=barycentric_transform(hit,*posed_tri,*rest)
         surrounding=[]
