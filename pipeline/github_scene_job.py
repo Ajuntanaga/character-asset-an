@@ -239,6 +239,11 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
                     hidden.append(obj); obj.hide_render = True
         wrist_control = None
         if label.startswith('wrist-'):
+            # Isolate the cuff and wrist surface; the guitar obscures this view.
+            # Normal grip views above retain the instrument for contact review.
+            for obj in bpy.data.objects['V206_GUITAR_ROOT'].children_recursive:
+                if not obj.hide_render:
+                    hidden.append(obj); obj.hide_render = True
             wrist_control = rig.pose.bones['IK-Hand.L']
             saved_wrist = wrist_control.matrix_basis.copy()
             angle = int(label[len('wrist-'):])
