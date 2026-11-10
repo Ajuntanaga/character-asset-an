@@ -1,0 +1,8 @@
+{
+  "status": "TEXTURE_CANDIDATE_REQUIRES_GUITAR_RENDER",
+  "tool": "built-in image_gen",
+  "reference": "references/props/strandberg/strandberg_full_product.jpg",
+  "prompt": "Seamless square neutral silver-gray figured maple diffuse albedo; 40-45 fine irregular horizontal flame bands, subdued vertical grain, smooth maple; no hardware, text, burst, baked lighting or perspective. Match material character of product reference only.",
+  "source_output": "exec-3599d036-892d-4f5c-bb9a-d9eeb79c5004.png",
+  "trial": "MAPLE_VARIANT=fine-flame; original baseline texture preserved; tint, contrast, geometry and hardware unchanged"
+}
