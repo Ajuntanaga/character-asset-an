@@ -80,8 +80,10 @@ def _anchor(block, bvh):
 
 def generate(roots, bvh):
     variant = os.environ.get('GROOM_VARIANT', 'baseline')
-    separated = variant in ('separated', 'staggered')
-    staggered = variant == 'staggered'
+    compact = variant == 'compact'
+    separated = variant in ('separated', 'staggered', 'compact')
+    staggered = variant in ('staggered', 'compact')
+    flow_rng = random.Random(633)
     tip_rng = np.random.default_rng(625)
     rng, nprng = random.Random(557), np.random.default_rng(557)
     # Keep the established root, radius and undercoat random streams intact.
@@ -117,6 +119,12 @@ def generate(roots, bvh):
         children = round((140 + 80 * top) * (1. - nape) + 28 * nape)
         length = rng.uniform(.0085, .014) * (.70 + .30 * top) * (1. - .15 * side)
         length = length * (1. - nape) + rng.uniform(.003, .006) * nape
+        if compact:
+            # Break long parallel ridges without changing fiber radii, root
+            # density, tilt, or the established random streams.
+            length *= flow_rng.uniform(.60, .85)
+            yaw = flow_rng.uniform(-.70, .70) * (1. - .65 * nape)
+            tangent = tangent * math.cos(yaw) + across * math.sin(yaw)
         # V571's broad curl loops read as tiled ribbons. Reduce only their
         # radial excursion; retain guide spacing, fiber density and width.
         amplitude = rng.uniform(.0032, .0045) * (.65 + .35 * top) * (1. - .18 * side) * (1. - .75 * nape)
@@ -233,7 +241,7 @@ def generate(roots, bvh):
     points, radii, uvs = np.concatenate(points), np.concatenate(radii), np.concatenate(uvs).astype(np.float32)
     assert np.isfinite(points).all() and np.isfinite(radii).all()
     assert 100 < len(macro_roots) < len(dense_roots)
-    report = {'geometry_model': 'V625_staggered_fiber_tips' if staggered else 'V608_separated_curl_subclumps' if separated else 'V584_suspended_partial_curl_trajectories',
+    report = {'geometry_model': 'V633_compact_varied_flow' if compact else 'V625_staggered_fiber_tips' if staggered else 'V608_separated_curl_subclumps' if separated else 'V584_suspended_partial_curl_trajectories',
               'primary_fiber_length_fraction': [.68, 1.] if staggered else [1., 1.],
               'full_length_fiber_probability': .12 if staggered else 1.,
               'guides': len(macro_roots), 'undercoat_guides': len(dense_roots),
@@ -241,7 +249,10 @@ def generate(roots, bvh):
               'top_root_spacing_m': .0095, 'side_root_spacing_m': .0075,
               'posterior_root_spacing_m': .0045, 'posterior_guides': sum(
                   root.z < 1.655 and root.y > -.022 for root, _, _ in macro_roots),
-              'top_lock_axial_length_m': [.0085, .014], 'partial_turns': [.60, .85],
+              'top_lock_axial_length_m': [.0051, .0119] if compact else [.0085, .014],
+              'axial_length_multiplier': [.60, .85] if compact else [1., 1.],
+              'additional_guide_yaw_radians': [-.70, .70] if compact else [0., 0.],
+              'partial_turns': [.60, .85],
               'top_lock_amplitude_m': [.0032, .0045],
               'axis_tilt_from_scalp_normal_degrees': [68, 78],
               'top_bundle_radius_m': [.00115, .00175],
