@@ -82,6 +82,12 @@ try:
             del decoder, dictionary
         print('Verified scene input:', asset['name'], flush=True)
     scene = work / 'current-v544.blend'
+    if globals().get('SCENE_DATASET', False):
+        candidates = list(Path('/kaggle/input').rglob('current-v544.blend'))
+        assert len(candidates) == 1, 'Expected exactly one private dataset scene'
+        assert digest(candidates[0]) == SCENE_MANIFEST['current-v544.blend']['sha256']
+        shutil.copyfile(candidates[0], scene)
+        print('Verified durable dataset scene:', scene.name, flush=True)
     tar_path = work / 'blender.tar.xz'
     url = 'https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz'
     download(url, tar_path, '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168')

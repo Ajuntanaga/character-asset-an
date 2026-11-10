@@ -5,6 +5,7 @@ import base64
 import gzip
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import time
@@ -17,8 +18,10 @@ import zipfile
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--revision', default='V583')
+parser.add_argument('--scene-dataset', action='store_true', help='Stage the verified scene in the private dataset; avoid expiring release URLs')
 args = parser.parse_args()
 revision = args.revision.upper()
+dataset_id = 'anthovargas/character-an-v544-durable-inputs' if args.scene_dataset else 'anthovargas/character-an-v544-render-inputs'
 assert revision.startswith('V') and revision[1:].isdigit(), revision
 staging = root / 'kaggle_payload' / revision.lower()
 dataset = staging / 'input'
@@ -26,7 +29,7 @@ kernel = staging / 'kernel'
 dataset.mkdir(parents=True, exist_ok=True)
 kernel.mkdir(parents=True, exist_ok=True)
 staging.chmod(0o700)
-assert not (dataset / 'current-v544.blend').exists(), 'Do not upload the full scene locally'
+assert args.scene_dataset or not (dataset / 'current-v544.blend').exists(), 'Use --scene-dataset for durable scene inputs'
 assets = [
     'assets/generated/gray_maple_v553/gray_curly_maple_albedo.png',
     'assets/generated/gray_maple_v553/SOURCE.json',
@@ -77,40 +80,50 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 # Only expiring, single-asset URLs enter the ignored private kernel. The
 # GitHub credential remains in this process and never enters the bundle.
-token = subprocess.check_output(['gh', 'auth', 'token'], text=True).strip()
-opener = urllib.request.build_opener(NoRedirect)
 manifest = json.loads((root / 'github_assets/scene-manifest.json').read_text())
 downloads = []
-for version, name in [('528', 'current-v528.blend'),
-                      ('543', 'current-v543.delta.zst'),
-                      ('544', 'current-v544.delta.zst')]:
-    release = json.loads(subprocess.check_output([
-        'gh', 'api', f'repos/Ajuntanaga/character-asset-an/releases/tags/checkpoint-v{version}']))
-    asset = next(asset for asset in release['assets'] if asset['name'] == name)
-    for attempt in range(6):
-        request = urllib.request.Request(asset['url'] + f'?fresh={time.time_ns()}', headers={
-            'Cache-Control': 'no-cache', 'Authorization': 'Bearer ' + token, 'Accept': 'application/octet-stream',
-            'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Character-An-private-render'})
-        try:
-            response = opener.open(request, timeout=30)
-            response.close()
-            raise RuntimeError('Expected a temporary release-asset redirect')
-        except urllib.error.HTTPError as error:
-            if error.code != 302:
-                raise RuntimeError(f'Asset redirect failed: HTTP {error.code}') from None
-            url = error.headers['Location']
-            assert url.startswith('https://release-assets.githubusercontent.com/')
-        query = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
-        payload = query.get('jwt', [''])[0].split('.')
-        assert len(payload) == 3, 'Missing release expiry token'
-        expiry = json.loads(base64.urlsafe_b64decode(payload[1] + '==='))['exp']
-        if expiry - time.time() >= 180:
-            break
+if args.scene_dataset:
+    source = root / manifest['current-v544.blend']['source']
+    with source.open('rb') as stream:
+        assert hashlib.file_digest(stream, 'sha256').hexdigest() == manifest['current-v544.blend']['sha256']
+    staged_scene = dataset / 'current-v544.blend'
+    if not staged_scene.exists():
+        os.link(source, staged_scene)
     else:
-        raise RuntimeError(f'{name}: could not obtain a release URL valid for 3 minutes')
-    downloads.append(dict(manifest[name], name=name, url=url))
-del token
-program = (f'REVISION = {revision!r}\nINPUTS_SHA256 = {archive_hash!r}\n'
+        assert os.path.samefile(source, staged_scene), 'Unexpected staged scene; preserve and inspect it'
+else:
+    token = subprocess.check_output(['gh', 'auth', 'token'], text=True).strip()
+    opener = urllib.request.build_opener(NoRedirect)
+    for version, name in [('528', 'current-v528.blend'),
+                          ('543', 'current-v543.delta.zst'),
+                          ('544', 'current-v544.delta.zst')]:
+        release = json.loads(subprocess.check_output([
+            'gh', 'api', f'repos/Ajuntanaga/character-asset-an/releases/tags/checkpoint-v{version}']))
+        asset = next(asset for asset in release['assets'] if asset['name'] == name)
+        for attempt in range(6):
+            request = urllib.request.Request(asset['url'] + f'?fresh={time.time_ns()}', headers={
+                'Cache-Control': 'no-cache', 'Authorization': 'Bearer ' + token, 'Accept': 'application/octet-stream',
+                'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Character-An-private-render'})
+            try:
+                response = opener.open(request, timeout=30)
+                response.close()
+                raise RuntimeError('Expected a temporary release-asset redirect')
+            except urllib.error.HTTPError as error:
+                if error.code != 302:
+                    raise RuntimeError(f'Asset redirect failed: HTTP {error.code}') from None
+                url = error.headers['Location']
+                assert url.startswith('https://release-assets.githubusercontent.com/')
+            query = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
+            payload = query.get('jwt', [''])[0].split('.')
+            assert len(payload) == 3, 'Missing release expiry token'
+            expiry = json.loads(base64.urlsafe_b64decode(payload[1] + '==='))['exp']
+            if expiry - time.time() >= 180:
+                break
+        else:
+            raise RuntimeError(f'{name}: could not obtain a release URL valid for 3 minutes')
+        downloads.append(dict(manifest[name], name=name, url=url))
+    del token
+program = (f'SCENE_DATASET = {args.scene_dataset!r}\nREVISION = {revision!r}\nINPUTS_SHA256 = {archive_hash!r}\n'
            f'INPUTS_MANIFEST_SHA256 = {inputs_manifest_hash!r}\nSOURCES_B64 = {encoded!r}\n'
            f'SCENE_DOWNLOADS = {downloads!r}\nSCENE_MANIFEST = {manifest!r}\n' +
            (root / 'pipeline/kaggle_character_job.py').read_text())
@@ -118,7 +131,7 @@ ast.parse(program)
 (kernel / 'character_job.py').write_text(program)
 (kernel / 'character_job.py').chmod(0o600)
 (dataset / 'dataset-metadata.json').write_text(json.dumps({
-    'id': 'anthovargas/character-an-v544-render-inputs',
+    'id': dataset_id,
     'title': 'Character An V544 Render Inputs',
     'licenses': [{'name': 'other'}],
     'description': 'Private working inputs for one bounded character render. Copyright remains with the original authors. No redistribution license is granted; not a public asset release.',
@@ -129,9 +142,9 @@ ast.parse(program)
     'code_file': 'character_job.py', 'language': 'python', 'kernel_type': 'script',
     'is_private': True, 'enable_gpu': True, 'enable_internet': True,
     'machine_shape': 'NvidiaTeslaT4',
-    'dataset_sources': ['anthovargas/character-an-v544-render-inputs'],
+    'dataset_sources': [dataset_id],
 }, indent=2))
 print(json.dumps({'dataset': str(dataset), 'kernel': str(kernel),
-                  'upload_bytes': archive.stat().st_size + len(program.encode()),
+                  'upload_bytes': archive.stat().st_size + len(program.encode()) + (manifest['current-v544.blend']['bytes'] if args.scene_dataset else 0),
                   'new_local_bytes': archive.stat().st_size + len(program.encode()),
                   'script_count': len(sources), 'archive_sha256': archive_hash}, indent=2))
