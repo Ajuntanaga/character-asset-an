@@ -11,10 +11,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build', 'combined-build'), default='check')
 parser.add_argument('--output', default='results')
 parser.add_argument('--facial-hair', action='store_true')
+parser.add_argument('--wrist-extension', action='store_true')
 parser.add_argument('--delit-face', action='store_true')
 parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
 parser.add_argument('--review-scope', choices=('full', 'mouth', 'appearance', 'hands', 'wardrobe'), default='full')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
+if args.wrist_extension and args.mode != 'hand-build':
+    parser.error('--wrist-extension requires --mode hand-build')
 if args.facial_hair and args.mode != 'blink-build':
     parser.error('--facial-hair requires --mode blink-build')
 if args.delit_face and args.mode != 'combined-build':
@@ -43,7 +46,7 @@ if args.mode == 'build-review':
 if args.mode == 'hand-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v545_fretting_hand import build
-    build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True)
+    build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension)
 if args.mode == 'groom-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v546_coherent_groom import build
@@ -122,6 +125,9 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             ('fretting-oblique', center + offset @ Vector((.12, .20, .4)), center, .27),
             ('fretting-rear', center + offset @ Vector((-.02, .14, -.4)), center, .27),
         ] + context_shots
+        if args.wrist_extension:
+            wrist = rig.matrix_world @ rig.pose.bones['DEF-Hand.L'].head
+            shots += [(f'wrist-{angle}', wrist + offset @ Vector((.1, .16, -.35)), wrist, .23) for angle in (0, -15, 15)]
     if args.mode == 'groom-build':
         shots = [
             ('groom-front', (0, -2, 1.72), (0, 0, 1.70), .38),
@@ -219,6 +225,15 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             for obj in scene.objects:
                 if obj.type in {'MESH', 'CURVE', 'CURVES'} and not obj.hide_render and obj not in guitar_parts:
                     hidden.append(obj); obj.hide_render = True
+        wrist_control = None
+        if label.startswith('wrist-'):
+            wrist_control = rig.pose.bones['IK-Hand.L']
+            saved_wrist = wrist_control.matrix_basis.copy()
+            angle = int(label[len('wrist-'):])
+            wrist_control.matrix_basis = saved_wrist @ Matrix.Rotation(math.radians(angle), 4, 'X')
+            rig.update_tag(); bpy.context.view_layer.update()
+            scene.cycles.samples = 16
+            scene.render.resolution_x = scene.render.resolution_y = 512
         camera.location = position
         camera.rotation_euler = (Vector(target) - camera.location).to_track_quat('-Z', 'Y').to_euler()
         if label == 'guitar-front':
@@ -226,6 +241,9 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         camera.data.ortho_scale = scale
         scene.render.filepath = str(out / f'{label}-preview.png')
         bpy.ops.render.render(write_still=True)
+        if wrist_control is not None:
+            wrist_control.matrix_basis = saved_wrist
+            rig.update_tag(); bpy.context.view_layer.update()
         if photo_gain is not None:
             photo_gain.default_value = saved_photo_gain
             bpy.context.view_layer.update()

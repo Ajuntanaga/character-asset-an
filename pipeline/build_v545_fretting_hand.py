@@ -110,7 +110,7 @@ def minimize(residual, initial, low, high, iterations=40):
     return x, history
 
 
-def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=False):
+def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=False, wrist_extension=False):
     assert thumb_support in ('fixed', 'sliding_rear')
     assert Path(bpy.data.filepath).name == 'current-v544.blend'
     scene = bpy.context.scene
@@ -421,6 +421,10 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
                     variable.targets[0].id = main
                     variable.targets[0].data_path = f'pose.bones["{control_bone.name}"].rotation_euler[{axis_index}]'
                 driver.expression = expression
+    wrist_report = None
+    if wrist_extension:
+        from build_v618_wrist_extension import extend_wrist
+        wrist_report = extend_wrist(hand, rig, main, 'L')
     old.hide_render = True; old.hide_set(True)
     for modifier, level in subdivisions:
         modifier.levels = level
@@ -455,6 +459,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
     fit_status = ('TRIAL_REQUIRES_VISUAL_AND_DEFORMATION_REVIEW' if contact_ok and orientation_ok
                   else 'REJECTED_CONTACT_OR_ORIENTATION_FIT')
     report = {'status': fit_status, 'main_drivers': 1957,
+              'wrist_extension': wrist_report,
               'revision': 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
               'relaxed_index_ring_dip_minimum': relaxed_contact_dips,
               'index_ring_spread_limit_degrees': 35 if spread_trial else 25,

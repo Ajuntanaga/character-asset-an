@@ -7,6 +7,10 @@ on:
         type: choice
         options: [check, preview, review, build-review, hand-build, groom-build, blink-build, guitar-build, combined-build]
         default: check
+      wrist_extension:
+        description: Isolated connected wrist extension with hand-build
+        type: boolean
+        default: false
       facial_hair:
         description: Include the reversible beard-length trial with blink-build
         type: boolean
@@ -43,6 +47,7 @@ jobs:
       OMP_NUM_THREADS: '2'
       OPENBLAS_NUM_THREADS: '2'
       MODE: ${{ inputs.mode }}
+      WRIST_EXTENSION: ${{ inputs.wrist_extension }}
       FACIAL_HAIR: ${{ inputs.facial_hair }}
       DELIT_FACE: ${{ inputs.delit_face }}
       REVIEW_SCOPE: ${{ inputs.review_scope }}
@@ -111,6 +116,7 @@ jobs:
       - name: Check scene and optionally render
         run: |
           extra=()
+          if [ "$WRIST_EXTENSION" = true ]; then extra+=(--wrist-extension); fi
           if [ "$FACIAL_HAIR" = true ]; then extra+=(--facial-hair); fi
           if [ "$DELIT_FACE" = true ]; then extra+=(--delit-face); fi
           extra+=(--review-scope "${REVIEW_SCOPE:-full}")
