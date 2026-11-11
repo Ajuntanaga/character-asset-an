@@ -66,7 +66,7 @@ if args.mode == 'hand-build':
         from refine_v630_left_cuff_weights import build as build_cuff
         build_cuff(out)
     from build_v545_fretting_hand import build
-    build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension, axial_trial=args.axial_trial, hover_orientation_trial=args.axial_trial)
+    build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension, axial_trial=args.axial_trial, hover_orientation_trial=args.axial_trial, middle_axial_trial=args.axial_trial)
 if args.mode == 'groom-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v546_coherent_groom import build

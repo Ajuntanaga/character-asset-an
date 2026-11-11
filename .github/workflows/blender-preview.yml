@@ -8,7 +8,7 @@ on:
         options: [check, preview, review, build-review, hand-build, groom-build, blink-build, guitar-build, combined-build]
         default: check
       axial_trial:
-        description: V637 axial fit with noncontact middle orientation ablation
+        description: V642 axial fit including middle MCP roll and V637 hover treatment
         type: boolean
         default: false
       wrist_extension:

@@ -110,8 +110,9 @@ def minimize(residual, initial, low, high, iterations=40):
     return x, history
 
 
-def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=False, wrist_extension=False, axial_trial=False, hover_orientation_trial=False):
+def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=False, wrist_extension=False, axial_trial=False, hover_orientation_trial=False, middle_axial_trial=False):
     assert thumb_support in ('fixed', 'sliding_rear')
+    assert not middle_axial_trial or axial_trial, 'Middle axial trial requires index/ring axial controls'
     assert Path(bpy.data.filepath).name == 'current-v544.blend'
     scene = bpy.context.scene
     main = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
@@ -256,6 +257,8 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
                  np.radians([95, 105, 80, 25] * 4 + [60, 75, 20, 15, 90])]
 
     axial_indices = {'Index': 27, 'Ring': 28} if axial_trial else {}
+    if middle_axial_trial:
+        axial_indices['Middle'] = 29
 
     def matrices(values):
         linear = Euler(tuple(values[3:6]), 'XYZ').to_matrix() @ initial_linear
@@ -354,7 +357,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         r.extend((values[[22, 23, 26]] - prior[[22, 23, 26]]) * .0004)
         r.extend((values[24:26] - prior[24:26]) * .003)
         if len(values) > 27:
-            r.extend(values[27:29] * .0005)
+            r.extend(values[27:] * .0005)
         if avoid_digits:
             assert evaluated
             from hand_surface_clearance import repulsion
@@ -395,6 +398,13 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         initial = np.r_[initial, 0., 0.]
         low = np.r_[low, np.radians([-25., -25.])]
         high = np.r_[high, np.radians([25., 25.])]
+    if middle_axial_trial:
+        # V637 still collides on both sides of Middle. Isolate its missing
+        # MCP axial degree of freedom with the same limits as Index and Ring.
+        prior = np.r_[prior, 0.]
+        initial = np.r_[initial, 0.]
+        low = np.r_[low, math.radians(-25.)]
+        high = np.r_[high, math.radians(25.)]
     values, coarse_history = minimize(residual, initial, low, high, 90)
     print(f'Coarse fit loss: {coarse_history[-1]}; refining evaluated skin', flush=True)
     values, surface_history = minimize(lambda v: residual(v, True), values, low, high, 24)
@@ -533,9 +543,11 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
               'collision_refinement_loss': collision_history,
               'collision_refinement_stages': collision_stages,
               'hover_orientation_trial': hover_orientation_trial,
-              'revision': 'V637' if hover_orientation_trial else 'V631' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
+              'middle_axial_trial': middle_axial_trial,
+              'revision': 'V642' if middle_axial_trial else 'V637' if hover_orientation_trial else 'V631' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
               'relaxed_index_ring_dip_minimum': relaxed_contact_dips,
-              'index_ring_axial_degrees': {digit: math.degrees(values[i]) for digit, i in axial_indices.items()},
+              'index_ring_axial_degrees': {digit: math.degrees(values[i]) for digit, i in axial_indices.items() if digit in ('Index', 'Ring')},
+              'digit_axial_degrees': {digit: math.degrees(values[i]) for digit, i in axial_indices.items()},
               'index_ring_spread_limit_degrees': 35 if spread_trial else 25,
               'thumb_support_mode': thumb_support,
               'thumb_support_x_bounds_m': list(support_x),
