@@ -79,7 +79,13 @@ def build():
         hide(bpy.data.objects[name])
 
     for index in range(1, 9):
-        x, y, _ = bpy.data.objects[f'V206_SADDLE_S{index}'].location
+        saddle = bpy.data.objects[f'V206_SADDLE_S{index}']
+        # Reference saddles are black; only the small adjuster sockets are steel.
+        # Copy mesh data so shared source materials and string endpoints stay intact.
+        saddle.data = saddle.data.copy()
+        saddle.data.materials.clear()
+        saddle.data.materials.append(black)
+        x, y, _ = saddle.location
         outer = capsule(.043, .0048, (x + .0135, y))
         inner = capsule(.029, .0029, (x + .009, y))
         n = len(outer)
