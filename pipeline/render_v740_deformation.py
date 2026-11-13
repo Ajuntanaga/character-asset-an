@@ -17,6 +17,8 @@ cases = [
     ('jaw', {'JawOpen': .55}),
     ('blink', {'Blink.L': 1., 'Blink.R': 1.}),
     ('brow_raise', {'BrowInnerUp': .7, 'BrowOuterUp.L': .6, 'BrowOuterUp.R': .6}),
+    ('smile', {'Smile.L': .8, 'Smile.R': .8}),
+    ('pucker', {'MouthPucker': .8}),
 ]
 records = []
 try:
