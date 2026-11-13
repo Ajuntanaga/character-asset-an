@@ -155,6 +155,52 @@ def compare_modifier_stages():
             'restored': all(m.show_viewport == flag for m, flag in zip(modifiers, flags))}
 
 
+def mouth_corner_cage():
+    """Expose the control cage around the measured subdivision hotspot.
+
+    Evaluated vertex IDs are deliberately not treated as source cage IDs.
+    Include a two-edge neighborhood so creases, boundary edges, and opposing
+    smile deltas can be inspected before choosing a local topology repair.
+    """
+    mesh = head.data
+    keys = mesh.shape_keys.key_blocks
+    rest = np.array([v.co[:] for v in keys['Basis'].data])
+    hotspot = np.array([-.0276012731, -.1072360352, 1.5710072517])
+    seeds = set(np.flatnonzero(np.linalg.norm(rest - hotspot, axis=1) < .004).tolist())
+    assert seeds, 'No cage vertices near measured mouth hotspot'
+    selected = set(seeds)
+    for _ in range(2):
+        expanded = set(selected)
+        for edge in mesh.edges:
+            if selected.intersection(edge.vertices):
+                expanded.update(edge.vertices)
+        selected = expanded
+    incident = [face for face in mesh.polygons if selected.intersection(face.vertices)]
+    edge_faces = {}
+    for face in mesh.polygons:
+        for edge in face.edge_keys:
+            edge_faces.setdefault(tuple(sorted(edge)), []).append(face.index)
+    edge_crease = mesh.attributes.get('crease_edge')
+    vertex_crease = mesh.attributes.get('crease_vert')
+    left = keys['mouthSmileLeft']
+    right = keys['mouthSmileRight']
+    return {
+        'hotspot_local': hotspot.tolist(), 'seed_radius_m': .004,
+        'seed_vertices': sorted(seeds),
+        'vertices': [{'id': i, 'rest': rest[i].tolist(),
+                      'left_delta': (np.array(left.data[i].co) - rest[i]).tolist(),
+                      'right_delta': (np.array(right.data[i].co) - rest[i]).tolist(),
+                      'crease': float(vertex_crease.data[i].value) if vertex_crease else 0.}
+                     for i in sorted(selected)],
+        'edges': [{'vertices': list(edge.vertices),
+                   'faces': edge_faces.get(tuple(sorted(edge.vertices)), []),
+                   'crease': float(edge_crease.data[edge.index].value) if edge_crease else 0.}
+                  for edge in mesh.edges if selected.intersection(edge.vertices)],
+        'faces': [{'id': face.index, 'vertices': list(face.vertices),
+                   'material': face.material_index} for face in incident],
+        'scope': 'Source cage connectivity and stored key deltas; no geometry modified.'}
+
+
 records = []
 try:
     basis, triangles, polygon_ids, topology = surface(0.)
@@ -205,4 +251,5 @@ out.mkdir(exist_ok=True)
     'samples': records,
     'lower_face_fit_comparison': compare_lower_face_fit(),
     'modifier_comparison': compare_modifier_stages(),
+    'mouth_corner_cage': mouth_corner_cage(),
 }, indent=2))
