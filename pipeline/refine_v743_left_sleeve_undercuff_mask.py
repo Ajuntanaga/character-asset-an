@@ -39,6 +39,7 @@ def build(cuff, overlap=.006, radial_limit=.16):
         # sufficient to explain the visible posed seam.
         nearby = Counter()
         radial_bins = {}
+        nearby_vertices = {}
         for i in jacket:
             offset = evaluated.matrix_world @ mesh.vertices[i].co - centers[0]
             axial = offset.dot(axis)
@@ -49,6 +50,12 @@ def build(cuff, overlap=.006, radial_limit=.16):
                           'selected' if i in candidates else
                           'shared_material' if i in other else 'weight_filter')
                 nearby[reason] += 1
+                nearby_vertices[str(i)] = {
+                    'position': list(evaluated.matrix_world @ mesh.vertices[i].co),
+                    'selection': reason, 'axial_m': axial, 'radial_m': radial,
+                    'weights': {body.vertex_groups[g.group].name: g.weight
+                                for g in body.data.vertices[i].groups if g.weight > 0},
+                }
                 bucket = str(round(axial / .005) * 5)
                 row = radial_bins.setdefault(bucket, {'count': 0,
                     'radial_min_mm': float('inf'), 'radial_max_mm': 0.,
@@ -116,6 +123,10 @@ def build(cuff, overlap=.006, radial_limit=.16):
         }
         boundary = {
             'space': 'world_m',
+            'nearby_jacket_vertices': nearby_vertices,
+            'nearby_jacket_faces': [list(face.vertices) for face in mesh.polygons
+                                    if face.material_index == 6 and
+                                    all(str(i) in nearby_vertices for i in face.vertices)],
             'stage': 'armature_only_before_mask_shell_and_subdivision',
             'edges': boundary_edges,
             'vertices': {str(i): list(evaluated.matrix_world @ mesh.vertices[i].co)
