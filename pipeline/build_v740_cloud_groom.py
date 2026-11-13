@@ -353,15 +353,15 @@ for p, n, root_uv in guides:
             continue
         q, normal, child_uv = hit
         q += normal*.00016
-        # V25: rotate the shallow bundle with the curl to retain its width
-        # around the winding. Guide paths and strand count stay unchanged.
+        # V26: round the bundle cross-section; V25 renders as flat ribbons.
+        # Guide paths and strand count stay unchanged.
         packed_scale = rng.uniform(2./3., 1.)
-        packed = radial*packed_scale*(.00035*math.cos(angle)*curl_binormal
-                                     +.0028*math.sin(angle)*curl_radial)
+        packed = radial*packed_scale*(.0014*math.cos(angle)*curl_binormal
+                                     +.0014*math.sin(angle)*curl_radial)
         # A broad lock gathers toward its tip instead of keeping a pipe-shaped section.
         clump_width = bundle*(1-.70*smooth((t-.35)/.65))
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
-        # Limit phase and radius variation so the flattened bundle remains
+        # Limit phase and radius variation so the rounded bundle remains
         # coherent. Root spread, staggered tips, and guide spacing are unchanged.
         child_theta = theta + rng.uniform(-.10, .10)*emerge
         child_radius = radius*rng.uniform(.99, 1.01)
@@ -442,7 +442,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'rotating_curl_bundle_v25',
+          'revision': 'round_curl_bundle_v26',
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
@@ -469,7 +469,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'curl_tip_clump_fraction': .30,
           'child_phase_offset_radians': [-.10, .10],
           'child_radius_scale': [.99, 1.01],
-          'child_bundle_half_axes_mm': [.35, 2.8],
+          'child_bundle_half_axes_mm': [1.4, 1.4],
           'child_bundle_frame': 'curl_binormal_radial',
           'child_bundle_scale': [2./3., 1.],
           'child_length_fraction': [.55, 1.0],
