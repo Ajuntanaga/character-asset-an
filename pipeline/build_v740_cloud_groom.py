@@ -351,15 +351,16 @@ for _ in range(375000):
     length = rng.uniform(.010, .016)
     lateral = unit(np.cross(n, direction))
     bend = rng.uniform(-.0025, .0025)
-    path = (p+n*(.00015+.004*np.sin(math.pi*t*.85))[:, None]
-            +direction*length*t[:, None]
+    # Follow scalp curvature instead of letting tangent-plane paths rise away
+    # from the head. This filling layer must stay below the visible curl locks.
+    lift = .0003+.0015*np.sin(math.pi*t)
+    path = (p+direction*length*t[:, None]
             +lateral*bend*np.sin(math.pi*t)[:, None])
+    path[0] = p+n*.00016
     for j in range(1, len(t)):
         hit, normal, _, _ = scalp.find_nearest(Vector(path[j]))
         if hit is not None:
-            signed = (Vector(path[j])-hit).dot(normal)
-            if signed < .0003:
-                path[j] += np.array(normal)*(.0003-signed)
+            path[j] = np.array(hit)+np.array(normal)*lift[j]
     strands.append(path)
     radii.append(rng.uniform(.000035, .000050)*np.maximum(.06, 1-t*t))
     uvs.append(root_uv)
@@ -372,7 +373,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'partial_cranium_restoration_v9',
+          'revision': 'surface_following_undercoat_v10',
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
           'photo_coverage_repair': photo_repair,
@@ -385,6 +386,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'lower_neck_blended_vertices': int(np.count_nonzero(lower_neck)),
           'skin_transition_vertices': int(((weights > 0) & (weights < 1)).sum()),
           'undercoat_length_mm': [10, 16], 'undercoat_target': 120000,
+          'undercoat_surface_following': True, 'undercoat_max_lift_mm': 1.8,
+          'undercoat_tip_lift_mm': .3,
           'undercoat_radius_microns': [35, 50],
           'children_per_guide': 96, 'hair_roughness': .52,
           'curl_turns': [1.10, 1.65], 'curl_normal_flattening': .80,
