@@ -16,9 +16,9 @@ on:
         type: boolean
         default: false
       cuff_variant:
-        description: Isolated left cuff weight trial with wrist-extension hand build
+        description: Isolated left cuff trial with hand build
         type: choice
-        options: [baseline, distance-weighted]
+        options: [baseline, distance-weighted, wrist-fitted]
         default: baseline
       facial_hair:
         description: Include the reversible beard-length trial with blink-build

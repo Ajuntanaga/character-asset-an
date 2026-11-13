@@ -30,9 +30,11 @@ if args.review_scope != 'full' and args.mode != 'combined-build' and not (
         args.mode == 'hand-build' and args.review_scope == 'hands'):
     parser.error('--review-scope requires combined-build, or hand-build with hands')
 cuff_variant = os.environ.get('CUFF_VARIANT', 'baseline') or 'baseline'
-if cuff_variant not in ('baseline', 'distance-weighted'):
+if cuff_variant not in ('baseline', 'distance-weighted', 'wrist-fitted'):
     parser.error('Unknown CUFF_VARIANT')
-if cuff_variant != 'baseline' and not (args.mode == 'hand-build' and args.wrist_extension):
+if cuff_variant != 'baseline' and args.mode != 'hand-build':
+    parser.error('Cuff trial requires hand-build')
+if cuff_variant == 'distance-weighted' and not args.wrist_extension:
     parser.error('Cuff trial requires hand-build with wrist-extension')
 render_device = {'requested': args.device, 'selected': 'CPU'}
 if args.device == 'CUDA':
@@ -67,6 +69,14 @@ if args.mode == 'hand-build':
         build_cuff(out)
     from build_v545_fretting_hand import build
     build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension, axial_trial=args.axial_trial, hover_orientation_trial=args.axial_trial, middle_axial_trial=args.axial_trial)
+    if cuff_variant == 'wrist-fitted':
+        from build_v742_wrist_fitted_cuff import build as build_cuff
+        cuff, cuff_report = build_cuff()
+        source_cuff = bpy.data.objects['V357_CUFF_PATCH.L']
+        source_cuff.hide_render = True
+        source_cuff.hide_set(True)
+        (out / 'wrist-fitted-cuff-report.json').write_text(json.dumps(cuff_report, indent=2))
+        bpy.ops.wm.save_as_mainfile(filepath=str((out / 'Character_An_fretting_hand_TRIAL_v545.blend').resolve()))
 if args.mode == 'groom-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v546_coherent_groom import build
