@@ -340,6 +340,11 @@ for p, n, root_uv in guides:
                 guide[j] += np.array(normal)*shift
                 corrections += 1
                 max_correction = max(max_correction, shift)
+    # Keep bundle width radial to the curl instead of a fixed world-facing ribbon.
+    curl_radial = .80*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v
+    curl_radial /= np.linalg.norm(curl_radial, axis=1)[:, None]
+    curl_binormal = np.cross(axis, curl_radial)
+    curl_binormal /= np.linalg.norm(curl_binormal, axis=1)[:, None]
     for _ in range(96):
         angle, radial = rng.random()*math.tau, math.sqrt(rng.random())
         root_offset = radial*.0017*(math.cos(angle)*root_u+math.sin(angle)*root_v)
@@ -348,11 +353,11 @@ for p, n, root_uv in guides:
             continue
         q, normal, child_uv = hit
         q += normal*.00016
-        # V22 still reads as wire coils. Form a broad, shallow strand bundle
-        # across the curl rather than a round tube; keep the guide unchanged.
+        # V25: rotate the shallow bundle with the curl to retain its width
+        # around the winding. Guide paths and strand count stay unchanged.
         packed_scale = rng.uniform(2./3., 1.)
-        packed = radial*packed_scale*(.00035*math.cos(angle)*u
-                                     +.0028*math.sin(angle)*v)
+        packed = radial*packed_scale*(.00035*math.cos(angle)*curl_binormal
+                                     +.0028*math.sin(angle)*curl_radial)
         # A broad lock gathers toward its tip instead of keeping a pipe-shaped section.
         clump_width = bundle*(1-.70*smooth((t-.35)/.65))
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
@@ -437,7 +442,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'arched_crown_locks_v24',
+          'revision': 'rotating_curl_bundle_v25',
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
@@ -465,6 +470,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'child_phase_offset_radians': [-.10, .10],
           'child_radius_scale': [.99, 1.01],
           'child_bundle_half_axes_mm': [.35, 2.8],
+          'child_bundle_frame': 'curl_binormal_radial',
           'child_bundle_scale': [2./3., 1.],
           'child_length_fraction': [.55, 1.0],
           'curl_radius_scale_from_v15': 1.45,
