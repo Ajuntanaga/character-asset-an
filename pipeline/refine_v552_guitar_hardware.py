@@ -143,7 +143,11 @@ def build():
             vertices.append((*point, height))
     faces = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
     mesh('V552_Selector_Blade', vertices, faces, steel, bevel=.00012)
-    tip = [tuple(center + axis * (x + .004) + across * y) for x, y in capsule(.0065, .0016)]
+    # Product photo: round cap spans roughly 28% of the 32 mm slot length.
+    # Retain the existing blade attachment and height, replace only its outline.
+    tip_center = center + axis * .004
+    tip = [(tip_center.x + .0045 * math.cos(math.tau * k / 48),
+            tip_center.y + .0045 * math.sin(math.tau * k / 48)) for k in range(48)]
     extrude('V552_Selector_Tip', tip, .0155, .019, cover, bevel=.00035)
     for side in (-1, 1):
         at = center + side * .0215 * axis
