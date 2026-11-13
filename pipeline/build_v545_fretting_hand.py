@@ -439,7 +439,10 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         # target, joint bound and final acceptance check. Stage losses use
         # different weights and must not be compared as a single objective.
         from hand_surface_clearance import measure, collision_sample_indices
-        for scale in (1., 2., 4.):
+        # Refresh the active crossing regions once at the final weight.
+        # Run 43405864580 reduced Middle-Ring to 12 crossings, but the last
+        # solve still sampled regions selected before that pose was reached.
+        for scale in (1., 2., 4., 4.):
             contacts(values, True)
             # Keep residual membership fixed across finite differences and
             # line searches; refresh actual crossing regions between stages.
