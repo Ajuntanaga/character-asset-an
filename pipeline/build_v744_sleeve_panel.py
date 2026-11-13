@@ -144,6 +144,12 @@ def build(cuff, interface):
     shell.offset = -1
     return {'status': 'TRIAL_REQUIRES_WRIST_RENDER_REVIEW', 'object': panel.name,
             'rail_vertices': width, 'rows': len(rows), 'bind_max_error_m': error,
+            'mapping_world_m': {
+                'source_rail_vertex_ids': rail,
+                'source_rail': [list(points[i]) for i in rail],
+                'cuff_rim': [list(p) for p in rim],
+                'inset_inner_rail': [list(p) for p in target[-width:]],
+            },
             'open_strip': True, 'source_mesh_or_shape_keys_modified': False,
             'fit_iterations': fit_iterations,
             'binding': 'iterative_local_armature_inverse_with_preserve_volume'}
