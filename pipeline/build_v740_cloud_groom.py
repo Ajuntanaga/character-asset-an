@@ -362,10 +362,12 @@ for p, n, root_uv in guides:
         # bundle volume; individual fibers still taper and have staggered ends.
         clump_width = bundle*(1-.30*smooth((t-.35)/.65))
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
-        # Limit phase and radius variation so the rounded bundle remains
-        # coherent. Root spread, staggered tips, and guide spacing are unchanged.
+        # V29: distribute child radii across the curl interior. V28 leaves
+        # hollow wire-loop locks because every child follows the same radius.
+        # Square-root sampling distributes fibers across annular area; keep
+        # phase coherence, guide spacing, strand count and root spread fixed.
         child_theta = theta + rng.uniform(-.10, .10)*emerge
-        child_radius = radius*rng.uniform(.99, 1.01)
+        child_radius = radius*math.sqrt(rng.uniform(.16, 1.0))
         child_helix = child_radius*curl_envelope[:, None]*(
             .80*np.cos(child_theta)[:, None]*u+np.sin(child_theta)[:, None]*v)
         path += (child_helix-helix)*bundle[:, None]
@@ -444,7 +446,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'sustained_curl_fiber_coverage_v28',
+          'revision': 'nested_curl_radius_coverage_v29',
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
@@ -470,7 +472,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'curl_turns': [1.10, 1.65], 'curl_normal_flattening': .80,
           'curl_tip_clump_fraction': .70,
           'child_phase_offset_radians': [-.10, .10],
-          'child_radius_scale': [.99, 1.01],
+          'child_radius_scale': [.4, 1.0],
+          'child_radius_distribution': 'sqrt_uniform_annular_area',
           'child_bundle_half_axes_mm': [1.4, 1.4],
           'child_bundle_frame': 'curl_binormal_radial',
           'child_bundle_scale': [2./3., 1.],
