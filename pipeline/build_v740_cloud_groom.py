@@ -358,8 +358,9 @@ for p, n, root_uv in guides:
         packed_scale = rng.uniform(2./3., 1.)
         packed = radial*packed_scale*(.0014*math.cos(angle)*curl_binormal
                                      +.0014*math.sin(angle)*curl_radial)
-        # A broad lock gathers toward its tip instead of keeping a pipe-shaped section.
-        clump_width = bundle*(1-.70*smooth((t-.35)/.65))
+        # V27: V26 isolated curls remain a thin open lattice. Preserve distal
+        # bundle volume; individual fibers still taper and have staggered ends.
+        clump_width = bundle*(1-.30*smooth((t-.35)/.65))
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
         # Limit phase and radius variation so the rounded bundle remains
         # coherent. Root spread, staggered tips, and guide spacing are unchanged.
@@ -442,7 +443,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'round_curl_bundle_v26',
+          'revision': 'fuller_distal_curl_bundle_v27',
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
@@ -466,7 +467,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'crown_axial_length_mm': [17., 22.],
           'crown_axis_normal_component': .80,
           'curl_turns': [1.10, 1.65], 'curl_normal_flattening': .80,
-          'curl_tip_clump_fraction': .30,
+          'curl_tip_clump_fraction': .70,
           'child_phase_offset_radians': [-.10, .10],
           'child_radius_scale': [.99, 1.01],
           'child_bundle_half_axes_mm': [1.4, 1.4],
