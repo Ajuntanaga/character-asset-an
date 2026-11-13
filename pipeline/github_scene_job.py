@@ -73,6 +73,24 @@ if args.mode == 'hand-build':
     if args.reuse_hand:
         assert 'V545_NATIVE_HAND.L' in bpy.data.objects
         assert (out / 'hand-fit-report.json').is_file()
+        # Older pinned checkpoints predate the joint export. Read the loaded
+        # evaluated pose without rerunning or accepting the rejected fit.
+        bpy.context.view_layer.update()
+        hand_rig = bpy.data.objects['V545_NATIVE_RIG.L'].evaluated_get(
+            bpy.context.evaluated_depsgraph_get())
+        instrument_inverse = bpy.data.objects['V206_GUITAR_ROOT'].matrix_world.inverted()
+        to_instrument = instrument_inverse @ hand_rig.matrix_world
+        fit_path = out / 'hand-fit-report.json'
+        reused_fit = json.loads(fit_path.read_text())
+        reused_fit['joints_guitar_local_m'] = {
+            digit: [list(to_instrument @ hand_rig.pose.bones[f'DEF-Finger_{digit}{j}.R'].head)
+                    for j in (1, 2, 3)] +
+                   [list(to_instrument @ hand_rig.pose.bones[f'DEF-Finger_{digit}3.R'].tail)]
+            for digit in ('Index', 'Middle', 'Ring', 'Pinky', 'Thumb')}
+        reused_fit['wrist_guitar_local_m'] = list(
+            to_instrument @ hand_rig.pose.bones['DEF-Hand.R'].head)
+        reused_fit['joint_export_source'] = 'evaluated_reused_checkpoint'
+        fit_path.write_text(json.dumps(reused_fit, indent=2))
     else:
         from build_v545_fretting_hand import build
         build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension, axial_trial=args.axial_trial, hover_orientation_trial=args.axial_trial, middle_axial_trial=args.axial_trial)
