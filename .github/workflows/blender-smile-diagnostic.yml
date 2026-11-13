@@ -23,6 +23,12 @@ jobs:
           test "$(gh run view 43418752707 --repo "$GITHUB_REPOSITORY" --json conclusion --jq .conclusion)" = success
           gh run download 43418752707 --repo "$GITHUB_REPOSITORY" --name native-groom-checkpoint --dir checkpoint
           test -s checkpoint/V740_cloud_groom_trial.blend
+      - name: Download pinned skin atlas for eye comparison
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download checkpoint-v739 --repo "$GITHUB_REPOSITORY" --pattern Character_An_photoreal_head_basecolor_v326.png
+          echo 'aa09646354554ea5c634dcbaa1083367894addc067784de6174c76e4dc1691fd  Character_An_photoreal_head_basecolor_v326.png' | sha256sum -c -
       - name: Install pinned Blender
         run: |
           curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
@@ -31,9 +37,15 @@ jobs:
       - name: Compare fitted and reconstructed donor smile
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/diagnose_v740_smile.py
+      - name: Separate skin texture from eye geometry
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_eye_texture.py
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: smile-fit-diagnostic
-          path: results/smile_surface_diagnostic.json
+          path: |
+            results/smile_surface_diagnostic.json
+            results/renders/v740_eye_texture_*.png
           if-no-files-found: error
           retention-days: 7
