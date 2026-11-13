@@ -318,21 +318,20 @@ for p, n, root_uv in guides:
     # Resolved curl review (43470719530): long crown travel and the added
     # arch create upright hollow loops instead of the reference ringlets.
     # Shorten crown pitch; preserve side curls, roots and random placement.
-    length = rng.uniform(.005, .010)+top*.004
-    turns = rng.uniform(1.10, 1.65)
+    # Resolved trial 43475854967 still has open loops. Compress crown
+    # travel to 3-6 mm and add half a turn for overlapping ringlets.
+    length = rng.uniform(.005, .010)*(1-.40*top)
+    turns = rng.uniform(1.10, 1.65)+.50*top
     phase = rng.uniform(-math.pi, math.pi)
     theta = phase+math.tau*turns*(t+.10*np.sin(math.pi*t))
     curl_envelope = emerge*(1-.15*t)
     helix = radius*curl_envelope[:, None]*(
         .80*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
     sweep = tangent*(.002*top*np.sin(math.pi*t))[:, None]
-    # Keep a modest crown lift without stretching the ringlet into an arch.
-    # The former 12 mm lift exceeded the curl radius by more than twice.
-    crown_arch = n*(.003*top*np.sin(math.pi*t)**2)[:, None]
     # v16 clips the lower half of the .80-radius helix onto the scalp.
     # Lift the centerline beyond its normal excursion to retain rounded locks.
     guide = (p+n*(.00016+(radius*.95+.0006)*emerge[:, None])
-             +axis*length*t[:, None]+sweep+helix+crown_arch)
+             +axis*length*t[:, None]+sweep+helix)
     for j in range(1, len(t)):
         hit, normal, _, _ = scalp.find_nearest(Vector(guide[j]))
         if hit is not None:
@@ -448,7 +447,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'nested_curl_radius_coverage_v29',
+          'revision': 'compact_crown_pitch_trial_v30',
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
@@ -469,9 +468,11 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'undercoat_tip_lift_mm': .3,
           'undercoat_radius_microns': [35, 50],
           'children_per_guide': 96, 'guide_spacing_mm': 5.6, 'hair_roughness': .52,
-          'crown_axial_length_mm': [17., 22.],
+          'crown_axial_length_mm': [3., 6.],
+          'crown_extra_arch_mm': 0.,
           'crown_axis_normal_component': .80,
-          'curl_turns': [1.10, 1.65], 'curl_normal_flattening': .80,
+          'side_curl_turns': [1.10, 1.65], 'crown_curl_turns': [1.60, 2.15],
+          'curl_normal_flattening': .80,
           'curl_tip_clump_fraction': .70,
           'child_phase_offset_radians': [-.10, .10],
           'child_radius_scale': [.4, 1.0],
