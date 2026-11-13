@@ -5,11 +5,14 @@ from pathlib import Path
 import bpy
 
 
-def build(output, texture_dir=None):
+def build(output, texture_dir=None, hand_name='V528_NATIVE_HAND.R'):
     root = Path(__file__).resolve().parents[1]
     textures = Path(texture_dir) if texture_dir else root / 'github_assets/antonia-hand'
-    hand = bpy.data.objects['V528_NATIVE_HAND.R']
-    assert len(hand.data.vertices) == 3311
+    hand = bpy.data.objects[hand_name]
+    if hand_name == 'V528_NATIVE_HAND.R':
+        assert len(hand.data.vertices) == 3311
+    assert hand.type == 'MESH'
+    assert all(p.material_index in (0, 1) for p in hand.data.polygons)
     assert len(hand.data.materials) == 2
     assert hand.data.uv_layers.get('UVMap') is not None
     assert len(bpy.data.objects['V357_CLOUDRIG_CONTROLS'].animation_data.drivers) == 1957

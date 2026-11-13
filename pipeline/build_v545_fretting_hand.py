@@ -165,6 +165,10 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
     for polygon, index in zip(hand.data.polygons, indices):
         polygon.material_index = 1 if index in (5, 6) else 0
     assert any(p.material_index == 1 for p in hand.data.polygons), 'Donor nails lost'
+    # The original hand shader needs rest attributes absent from this donor.
+    # Use the donor's existing UVs and photographic maps, preserving nail slots.
+    from refine_v585_native_hand_surface import build as build_hand_surface
+    build_hand_surface(out, hand_name=hand.name)
     subdivisions = [(m, m.levels) for m in hand.modifiers if m.type == 'SUBSURF']
     for modifier, _ in subdivisions:
         modifier.levels = 1
