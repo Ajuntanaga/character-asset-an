@@ -5,6 +5,9 @@ on:
       render_eye_comparison:
         type: boolean
         default: false
+      render_eye_fit:
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -28,7 +31,7 @@ jobs:
           gh run download 43418752707 --repo "$GITHUB_REPOSITORY" --name native-groom-checkpoint --dir checkpoint
           test -s checkpoint/V740_cloud_groom_trial.blend
       - name: Download pinned skin atlas for eye comparison
-        if: inputs.render_eye_comparison
+        if: inputs.render_eye_comparison || inputs.render_eye_fit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -46,6 +49,10 @@ jobs:
         if: inputs.render_eye_comparison
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_eye_texture.py
+      - name: Compare eye fit allowance at rest and blink
+        if: inputs.render_eye_fit
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_eye_fit.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -53,5 +60,7 @@ jobs:
           path: |
             results/smile_surface_diagnostic.json
             results/renders/v740_eye_texture_*.png
+            results/renders/v740_eye_fit_*.png
+            results/eye_fit_comparison.json
           if-no-files-found: error
           retention-days: 7
