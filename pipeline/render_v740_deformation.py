@@ -4,6 +4,8 @@ import json
 import runpy
 import bpy
 
+runpy.run_path(str(Path(__file__).with_name('diagnose_v740_smile.py')))
+
 rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
 control = rig.pose.bones['Head']
 properties = ['JawOpen', 'Blink.L', 'Blink.R', 'BrowInnerUp',
