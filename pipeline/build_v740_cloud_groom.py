@@ -11,6 +11,8 @@ import numpy as np
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
+from native_cranium_mapping import restore_upper_head
+
 ROOT = Path(__file__).resolve().parent
 OUT = Path('results')
 OUT.mkdir(exist_ok=True)
@@ -33,6 +35,13 @@ head.add_rest_position_attribute = True
 for mod in head.modifiers:
     if mod.type == 'SUBSURF':
         mod.uv_smooth = 'NONE'
+# Apply the same monotone field to Basis and all native expression keys.
+# Groom roots are rebuilt below on the corrected surface, preserving native UVs.
+for key in head.data.shape_keys.key_blocks:
+    coords = np.empty((len(head.data.vertices), 3), dtype=np.float32)
+    key.data.foreach_get('co', coords.ravel())
+    coords[:, 2] = restore_upper_head(coords[:, 2])
+    key.data.foreach_set('co', coords.ravel())
 co = np.empty((len(head.data.vertices), 3), dtype=np.float32)
 head.data.shape_keys.key_blocks['Basis'].data.foreach_get('co', co.ravel())
 head.data.vertices.foreach_set('co', co.ravel())
@@ -171,14 +180,21 @@ def smooth(t):
     t = np.clip(t, 0, 1)
     return t*t*(3-2*t)
 
+part_height = float(restore_upper_head(1.687))
+top_start = float(restore_upper_head(1.678))
+top_span = float(restore_upper_head(1.728)) - top_start
+
 def in_part(p):
-    return p[2] > 1.687 and -.080 < p[1] < .050 and abs(p[0]-(.041+.13*(p[1]+.065))) < .0016
+    return p[2] > part_height and -.080 < p[1] < .050 and abs(p[0]-(.041+.13*(p[1]+.065))) < .0016
+
+hairline_levels = np.linspace(1.590, 1.710, 4097)
+restored_hairline_levels = restore_upper_head(hairline_levels)
 
 def allowed(p):
     front = 1.703-.060*smooth((abs(p[0])-.052)/.041)
     transition = smooth((p[1]+.050)/.080)
     limit = front*(1-transition)+1.595*transition
-    return p[2] > limit and not in_part(p)
+    return p[2] > float(np.interp(limit, hairline_levels, restored_hairline_levels)) and not in_part(p)
 
 def sample():
     index = min(len(triangles)-1, int(np.searchsorted(cumulative, rng.random()*cumulative[-1])))
@@ -264,9 +280,9 @@ emerge, bundle = smooth(t/.20), smooth(t/.30)
 strands, radii, uvs = [], [], []
 corrections, max_correction = 0, 0.
 for p, n, root_uv in guides:
-    top = float(smooth((p[2]-1.678)/.050))
+    top = float(smooth((p[2]-top_start)/top_span))
     # The front fringe curls outward and forward; sides sweep back from the part.
-    forward = -.48 if p[1] < -.040 and p[2] > 1.687 else .75
+    forward = -.48 if p[1] < -.040 and p[2] > part_height else .75
     # Direct both banks away from the diagonal part; inward flow can fill the gap.
     part_x = .041+.13*(p[1]+.065)
     flow = np.array([.75*np.sign(p[0]-part_x)*top, forward, -.58*(1-top)])
@@ -357,7 +373,9 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'raised_part_directed_curls_v8',
+          'revision': 'partial_cranium_restoration_v9',
+          'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
+                              'trial_reduction_m': .035, 'all_shape_keys': True},
           'photo_coverage_repair': photo_repair,
           'skin_surface_ior': float(shader.inputs['IOR'].default_value),
           'source_skin_surface_ior': source_skin_ior,
