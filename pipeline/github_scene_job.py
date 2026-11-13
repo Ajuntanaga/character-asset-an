@@ -193,6 +193,9 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             if cuff_variant in ('wrist-fitted', 'sleeve-masked', 'forearm-directed', 'sleeve-panel'):
                 shots += [(f'wrist-15-{layer}', wrist + offset @ Vector((0, 0, .6)), wrist, .23)
                           for layer in ('without-cuff', 'without-body')]
+            if cuff_variant == 'sleeve-panel':
+                shots += [(f'wrist-15-{layer}', wrist + offset @ Vector((0, 0, .6)), wrist, .23)
+                          for layer in ('without-panel', 'panel-only')]
     if args.mode == 'hand-build' and args.review_scope == 'hands':
         # Cuff/fretting trials do not need unchanged full-body or picking views.
         shots = [s for s in shots if s[0].startswith(('fretting-', 'wrist-'))]
@@ -341,15 +344,19 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             wrist_control = rig.pose.bones['IK-Hand.L']
             saved_wrist = wrist_control.matrix_basis.copy()
             angle_label = label[len('wrist-'):]
-            for suffix, object_name in (
-                    ('-without-cuff', 'V742_WRIST_FITTED_CUFF.L'),
-                    ('-without-body', 'V416_BODY_CLEAN_JOIN')):
+            for suffix, object_names in (
+                    ('-without-cuff', ('V742_WRIST_FITTED_CUFF.L',)),
+                    ('-without-body', ('V416_BODY_CLEAN_JOIN',)),
+                    ('-without-panel', ('V744_LEFT_SLEEVE_UNDERCUFF_PANEL',)),
+                    ('-panel-only', ('V416_BODY_CLEAN_JOIN', 'V742_WRIST_FITTED_CUFF.L'))):
                 if angle_label.endswith(suffix):
                     angle_label = angle_label.removesuffix(suffix)
-                    obj = bpy.data.objects[object_name]
-                    if not obj.hide_render:
-                        hidden.append(obj)
-                        obj.hide_render = True
+                    for object_name in object_names:
+                        obj = bpy.data.objects[object_name]
+                        if not obj.hide_render:
+                            hidden.append(obj)
+                            obj.hide_render = True
+                    break
             angle = int(angle_label)
             wrist_control.matrix_basis = saved_wrist @ Matrix.Rotation(math.radians(angle), 4, 'X')
             rig.update_tag(); bpy.context.view_layer.update()
