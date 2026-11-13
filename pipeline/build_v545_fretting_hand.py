@@ -307,7 +307,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
             result[digit] = (point, n, nail_direction)
         return result, world, pose
 
-    def residual(values, evaluated=False, cone_weight=.08, avoid_digits=False, separation_scale=1.):
+    def residual(values, evaluated=False, cone_weight=.08, avoid_digits=False, separation_scale=1., collision_samples=None):
         points, world, pose = contacts(values, evaluated)
         r = []
         for digit, (point, n, nail_direction) in points.items():
@@ -361,7 +361,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         if avoid_digits:
             assert evaluated
             from hand_surface_clearance import repulsion
-            r.extend(value * separation_scale for value in repulsion(hand))
+            r.extend(value * separation_scale for value in repulsion(hand, sample_indices=collision_samples))
         return np.array(r)
 
     contacts(prior, True)
@@ -429,14 +429,19 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         # Increase separation priority in bounded stages, preserving every
         # target, joint bound and final acceptance check. Stage losses use
         # different weights and must not be compared as a single objective.
-        from hand_surface_clearance import measure
+        from hand_surface_clearance import measure, collision_sample_indices
         for scale in (1., 2., 4.):
+            contacts(values, True)
+            # Keep residual membership fixed across finite differences and
+            # line searches; refresh actual crossing regions between stages.
+            collision_samples = collision_sample_indices(hand)
             values, history = minimize(
                 lambda v: residual(v, True, cone_weight=.24, avoid_digits=True,
-                                   separation_scale=scale),
+                                   separation_scale=scale, collision_samples=collision_samples),
                 values, low, high, 8)
             contacts(values, True)
             collision_stages.append({'residual_scale': scale, 'loss': history,
+                                     'sample_counts': {d: len(ids) for d, ids in collision_samples.items()},
                                      'surface': measure(hand)})
             collision_history.extend(history)
         print(f'Inter-digit refinement loss: {collision_history[-1]}', flush=True)

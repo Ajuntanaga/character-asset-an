@@ -58,7 +58,23 @@ def measure(hand):
                       for a, b in zip(digits, digits[1:])}}
 
 
-def repulsion(hand, margin=.0006, samples_per_digit=128):
+def collision_sample_indices(hand, samples_per_digit=128):
+    """Freeze uniform and crossing-face vertices for one refinement stage."""
+    surfaces = skin_surfaces(hand)
+    trees = {d: BVHTree.FromPolygons(*surface) for d, surface in surfaces.items()}
+    digits = ('Index', 'Middle', 'Ring', 'Pinky')
+    indices = {}
+    for digit, (vertices, _) in surfaces.items():
+        count = min(samples_per_digit, len(vertices))
+        indices[digit] = {k * len(vertices) // count for k in range(count)}
+    for a, b in zip(digits, digits[1:]):
+        for face_a, face_b in trees[a].overlap(trees[b]):
+            indices[a].update(surfaces[a][1][face_a])
+            indices[b].update(surfaces[b][1][face_b])
+    return {d: sorted(ids) for d, ids in indices.items()}
+
+
+def repulsion(hand, margin=.0006, samples_per_digit=128, sample_indices=None):
     """Local normal-distance penalty; open skin patches are not solid volumes.
 
     This guides optimization only. Full-resolution triangle crossings and visual
@@ -72,9 +88,11 @@ def repulsion(hand, margin=.0006, samples_per_digit=128):
         for source, target in ((a, b), (b, a)):
             vertices = surfaces[source][0]
             count = min(samples_per_digit, len(vertices))
-            weight = (8. / count) ** .5
-            for k in range(count):
-                point = vertices[k * len(vertices) // count]
+            ids = (sample_indices[source] if sample_indices is not None else
+                   [k * len(vertices) // count for k in range(count)])
+            weight = (8. / len(ids)) ** .5
+            for index in ids:
+                point = vertices[index]
                 near, normal, _, distance = trees[target].find_nearest(point)
                 # Remote open-patch backsides must not attract distant fingers.
                 signed = (point - near).dot(normal)
