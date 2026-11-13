@@ -77,8 +77,16 @@ def minimize(residual, initial, low, high, iterations=40):
         columns = []
         for j in range(len(x)):
             step = .0001 if j < 3 else .002
-            v = x.copy(); v[j] += step
-            columns.append((residual(v) - r) / step)
+            # Use an inward difference at a joint limit. Sampling outside
+            # anatomical bounds can estimate descent on an inadmissible pose.
+            forward = min(step, high[j] - x[j])
+            backward = min(step, x[j] - low[j])
+            signed_step = forward if forward >= backward else -backward
+            if abs(signed_step) < 1e-12:
+                columns.append(np.zeros_like(r))
+                continue
+            v = x.copy(); v[j] += signed_step
+            columns.append((residual(v) - r) / signed_step)
         jac = np.array(columns).T
         # Solve the bounded quadratic step itself: clipping an unconstrained
         # solution can eliminate descent when several joints hit their limits.
