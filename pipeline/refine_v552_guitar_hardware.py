@@ -190,6 +190,40 @@ def build():
 
     for name in ('NECK', 'BRIDGE'):
         pickup = bpy.data.objects[f'V206_PICKUP_{name}']
+        # Preserve mounting positions, replacing flat caps with recessed cross heads.
+        for index in (1, 2):
+            source = bpy.data.objects[f'V206_{name}_MOUNT_SCREW_{index}']
+            coords = [v.co for v in source.data.vertices]
+            cx = (min(v.x for v in coords) + max(v.x for v in coords)) / 2
+            cy = (min(v.y for v in coords) + max(v.y for v in coords)) / 2
+            radius = (max(v.x for v in coords) - min(v.x for v in coords)) / 2
+            bottom, top = min(v.z for v in coords), max(v.z for v in coords)
+            depth = min(.00045, (top - bottom) * .7)
+            vertices = []
+            count = 48
+            for ring in range(4):
+                for k in range(count):
+                    angle = math.tau * k / count
+                    c, s = math.cos(angle), math.sin(angle)
+                    if ring < 2:
+                        r = radius
+                    else:
+                        # Radial intersection with the union of two rectangular slots.
+                        ac, ass = max(abs(c), 1e-9), max(abs(s), 1e-9)
+                        r = max(min(radius * .55 / ac, radius * .14 / ass),
+                                min(radius * .14 / ac, radius * .55 / ass))
+                    z = (bottom, top, top, top - depth)[ring]
+                    vertices.append((cx + r * c, cy + r * s, z))
+            faces = [tuple(reversed(range(count)))]
+            faces += [(r * count + k, r * count + (k + 1) % count,
+                       (r + 1) * count + (k + 1) % count, (r + 1) * count + k)
+                      for r in range(3) for k in range(count)]
+            faces.append(tuple(range(3 * count, 4 * count)))
+            replacement = mesh(f'V751_Pickup_Screw_{name}_{index}', vertices,
+                               faces, black, source.parent, bevel=.00004)
+            replacement.matrix_parent_inverse = source.matrix_parent_inverse.copy()
+            replacement.matrix_basis = source.matrix_basis.copy()
+            hide(source)
         # Rounded rectangular face panel, retaining the original pickup body.
         outline = []
         radius = .002
