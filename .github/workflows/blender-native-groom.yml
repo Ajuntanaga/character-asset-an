@@ -68,14 +68,31 @@ jobs:
       - name: Render scalp shape and coverage
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_cloud_groom.py
-      - name: Render isolated hair layers
-        if: ${{ inputs.undercoat }}
-        run: |
-          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_undercoat.py
+      - name: Publish scalp previews immediately
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-groom-scalp-preview
+          path: |
+            results/*.json
+            results/renders/*.png
+          retention-days: 7
       - name: Render native photo skin
         if: ${{ inputs.textured }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_textured.py
+      - name: Publish textured previews immediately
+        if: ${{ inputs.textured }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-groom-textured-preview
+          path: |
+            results/*.json
+            results/renders/*.png
+          retention-days: 7
+      - name: Render isolated hair layers
+        if: ${{ inputs.undercoat }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_undercoat.py
       - name: Render cleaned atlas comparison
         if: ${{ inputs.clean_albedo }}
         run: |
