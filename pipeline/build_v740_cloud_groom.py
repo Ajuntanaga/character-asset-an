@@ -287,7 +287,8 @@ for p, n, root_uv in guides:
     part_x = .041+.13*(p[1]+.065)
     flow = np.array([.75*np.sign(p[0]-part_x)*top, forward, -.58*(1-top)])
     tangent = unit(flow-n*np.dot(flow, n))
-    axis = unit(tangent*.90+n*(.22+.40*top))
+    # Isolated v13 curls show raised crown tips; keep lock travel nearer the scalp.
+    axis = unit(tangent*.90+n*(.12+.12*top))
     u = unit(n-axis*np.dot(n, axis))
     v = unit(np.cross(axis, u))
     root_u, root_v = tangent, unit(np.cross(n, tangent))
@@ -388,7 +389,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'half_radius_curls_v13',
+          'revision': 'low_lift_curls_v14',
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
           'photo_coverage_repair': photo_repair,
