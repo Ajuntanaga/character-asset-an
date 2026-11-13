@@ -372,9 +372,10 @@ for p, n, root_uv in guides:
         irregularity = rng.uniform(.00006, .00014)*np.sin(
             math.tau*rng.uniform(3., 5.)*t+rng.uniform(-math.pi, math.pi))
         path += u*(irregularity*np.sin(math.pi*t))[:, None]
-        # Stagger strand tips through the lock instead of ending every child
-        # after the same complete loop. Interpolation preserves each root.
-        end_fraction = float(length_rng.uniform(.55, 1.0))
+        # V28: keep fibers through at least 85% of the lock. V27 loses
+        # distal coverage as children terminate from 55% onward. Retain
+        # staggered tips and the same fiber count; interpolation preserves roots.
+        end_fraction = float(length_rng.uniform(.85, 1.0))
         path = np.column_stack([np.interp(t*end_fraction, t, path[:, axis_index])
                                 for axis_index in range(3)])
         width = rng.uniform(.000030, .000043)
@@ -443,7 +444,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'fuller_distal_curl_bundle_v27',
+          'revision': 'sustained_curl_fiber_coverage_v28',
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
@@ -473,7 +474,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'child_bundle_half_axes_mm': [1.4, 1.4],
           'child_bundle_frame': 'curl_binormal_radial',
           'child_bundle_scale': [2./3., 1.],
-          'child_length_fraction': [.55, 1.0],
+          'child_length_fraction': [.85, 1.0],
           'curl_radius_scale_from_v15': 1.45,
           'side_curl_radius_addition_mm': 1.5,
           'side_curl_radius_mm': [3.53, 4.40],
