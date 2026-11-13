@@ -323,10 +323,14 @@ for p, n, root_uv in guides:
     helix = radius*curl_envelope[:, None]*(
         .80*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
     sweep = tangent*(.002*top*np.sin(math.pi*t))[:, None]
+    # V23 isolated curls remain a shallow open lattice. Raise the middle of
+    # crown locks, with zero displacement at root/tip, rather than extending
+    # their pointed ends. Side curls and the underlying coverage stay fixed.
+    crown_arch = n*(.012*top*np.sin(math.pi*t)**2)[:, None]
     # v16 clips the lower half of the .80-radius helix onto the scalp.
     # Lift the centerline beyond its normal excursion to retain rounded locks.
     guide = (p+n*(.00016+(radius*.95+.0006)*emerge[:, None])
-             +axis*length*t[:, None]+sweep+helix)
+             +axis*length*t[:, None]+sweep+helix+crown_arch)
     for j in range(1, len(t)):
         hit, normal, _, _ = scalp.find_nearest(Vector(guide[j]))
         if hit is not None:
@@ -433,7 +437,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'flattened_curl_bundles_v23',
+          'revision': 'arched_crown_locks_v24',
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
