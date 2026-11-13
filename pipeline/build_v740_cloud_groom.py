@@ -327,7 +327,7 @@ for p, n, root_uv in guides:
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
         # Children share a lock direction, but not an identical helical centerline.
         # Identical phase made the isolated render read as solid wire loops.
-        child_theta = theta + rng.uniform(-.45, .45)*emerge
+        child_theta = theta + rng.uniform(-1.2, 1.2)*emerge
         child_radius = radius*rng.uniform(.85, 1.15)
         child_helix = child_radius*curl_envelope[:, None]*(
             .80*np.cos(child_theta)[:, None]*u+np.sin(child_theta)[:, None]*v)
@@ -389,7 +389,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'low_lift_curls_v14',
+          'revision': 'dispersed_curl_phase_v15',
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
           'photo_coverage_repair': photo_repair,
@@ -408,10 +408,10 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'children_per_guide': 96, 'hair_roughness': .52,
           'curl_turns': [1.10, 1.65], 'curl_normal_flattening': .80,
           'curl_tip_clump_fraction': .30,
-          'child_phase_offset_radians': [-.45, .45],
+          'child_phase_offset_radians': [-1.2, 1.2],
           'child_radius_scale': [.85, 1.15],
           'child_length_fraction': [.55, 1.0],
-          'crown_curl_radius_mm': [6.3, 7.5], 'part_flow': 'outward',
+          'crown_curl_radius_mm': [3.15, 3.75], 'part_flow': 'outward',
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
 print(json.dumps(report))
