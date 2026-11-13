@@ -4,7 +4,7 @@ from collections import Counter
 from mathutils import Vector
 
 
-def build(cuff, overlap=.006):
+def build(cuff, overlap=.006, radial_limit=.16):
     body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
     name = 'V743_KEEP_OUTSIDE_UNDERCUFF'
     assert body.vertex_groups.get(name) is None
@@ -44,7 +44,7 @@ def build(cuff, overlap=.006):
             axial = offset.dot(axis)
             radial = (offset - axial * axis).length
             if -.22 < axial < .12 and radial < .16:
-                inside = -.12 < axial < limit and radial < .09
+                inside = -.12 < axial < limit and radial < radial_limit
                 reason = ('outside_mask_volume' if not inside else
                           'selected' if i in candidates else
                           'shared_material' if i in other else 'weight_filter')
@@ -65,7 +65,7 @@ def build(cuff, overlap=.006):
             offset = evaluated.matrix_world @ mesh.vertices[i].co - centers[0]
             axial = offset.dot(axis)
             radial = (offset - axial * axis).length
-            if -.12 < axial < limit and radial < .09:
+            if -.12 < axial < limit and radial < radial_limit:
                 removed.append(i)
     finally:
         if evaluated is not None:
@@ -74,6 +74,8 @@ def build(cuff, overlap=.006):
             modifier.show_viewport = visible
         bpy.context.view_layer.update()
     assert 0 < len(removed) < len(candidates), (len(removed), len(candidates))
+    # The prior 90mm cut left displaced jacket panels around the fingers.
+    # Widen only the existing weighted jacket region; keep proximal overlap.
     removed_set = set(removed)
     keep = body.vertex_groups.new(name=name)
     keep.add([v.index for v in body.data.vertices if v.index not in removed_set], 1., 'REPLACE')
@@ -87,7 +89,8 @@ def build(cuff, overlap=.006):
             'removed_vertices': len(removed), 'candidate_vertices': len(candidates),
             'nearby_jacket_selection': dict(nearby),
             'nearby_jacket_axial_bins_mm': radial_bins,
-            'overlap_m': overlap, 'selection_axis': list(axis),
+            'overlap_m': overlap, 'radial_limit_m': radial_limit,
+            'selection_axis': list(axis),
             'shape_keys': [k.name for k in body.data.shape_keys.key_blocks],
             'source_topology_and_key_coordinates_modified': False,
             'modifier': modifier.name}
