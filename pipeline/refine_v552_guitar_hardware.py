@@ -184,11 +184,32 @@ def build():
         data.materials.append(lettering)
         created.append(obj.name)
 
+    # Reference markers have pale centers bounded by a narrow dark rim.
+    # Keep the existing markers and their fret placement; add only a face cap.
+    inlay_center = material('V552_Inlay_Center', (.48, .53, .47), .42, 0)
+    inlay_names = []
+    for marker in list(guitar.children_recursive):
+        if not marker.name.startswith('V206_INLAY_') or marker.type != 'MESH':
+            continue
+        coords = [v.co for v in marker.data.vertices]
+        cx = (min(v.x for v in coords) + max(v.x for v in coords)) / 2
+        cy = (min(v.y for v in coords) + max(v.y for v in coords)) / 2
+        radius = .72 * min(max(v.x for v in coords) - min(v.x for v in coords),
+                           max(v.y for v in coords) - min(v.y for v in coords)) / 2
+        z = max(v.z for v in coords) + .000015
+        vertices = [(cx + radius * math.cos(2 * math.pi * i / 48),
+                     cy + radius * math.sin(2 * math.pi * i / 48), z)
+                    for i in range(48)]
+        cap = mesh(marker.name.replace('V206_', 'V552_Center_'), vertices,
+                   [tuple(range(48))], inlay_center, parent=marker)
+        inlay_names.append(cap.name)
+
     bpy.context.view_layer.update()
     for name, original in saddles.items():
         assert max(abs(a - b) for row_a, row_b in zip(original, bpy.data.objects[name].matrix_world)
                    for a, b in zip(row_a, row_b)) < 1e-9, name
     assert len(rig.animation_data.drivers) == 1957
     return {'created': created, 'hidden_originals': hidden,
+            'ring_inlay_centers': inlay_names,
             'saddle_transforms_unchanged': True, 'main_drivers': 1957,
             'reference': 'references/props/strandberg/strandberg_full_product.jpg'}
