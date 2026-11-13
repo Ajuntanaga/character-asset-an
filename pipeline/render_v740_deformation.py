@@ -19,6 +19,8 @@ cases = [
     ('brow_raise', {'BrowInnerUp': .7, 'BrowOuterUp.L': .6, 'BrowOuterUp.R': .6}),
     ('smile', {'Smile.L': .8, 'Smile.R': .8}),
     ('pucker', {'MouthPucker': .8}),
+    ('turn_left', {}),
+    ('turn_right_jaw', {'JawOpen': .35}),
 ]
 records = []
 try:
@@ -32,6 +34,7 @@ try:
             views.append('three_quarter')
         runpy.run_path(str(renderer), init_globals={
             'POSE': pose, 'TAG': tag, 'VIEWS': views, 'SAMPLES': 24,
+            'HEAD_TURN_DEGREES': {'turn_left': 25., 'turn_right_jaw': -25.}.get(label, 0.),
         })
         records.append({'expression': expression, 'image': tag + '_front.png',
                         'images': [tag + '_' + view + '.png' for view in views]})
@@ -45,5 +48,5 @@ Path('results/deformation_render_report.json').write_text(json.dumps({
     'cases': records,
     'restored_controls': original,
     'scope': 'Expression images for visual review; no automatic deformation acceptance. '
-             'Head turns, body motion and textured skin remain untested.',
+             'Includes static FK head turns; continuous motion, body motion and textured skin remain untested.',
 }, indent=2))

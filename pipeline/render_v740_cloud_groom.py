@@ -1,6 +1,7 @@
 """Cloud groom review; neutral by default, optionally using the staged photo atlas."""
 from pathlib import Path
 import json
+import math
 import bpy
 from mathutils import Matrix, Vector
 
@@ -41,6 +42,10 @@ else:
         polygon.material_index = 0
 rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
 head_ctrl = rig.pose.bones['Head']
+head_fk = rig.pose.bones['FK-Head']
+head_basis = head_fk.matrix_basis.copy()
+head_turn = float(globals().get('HEAD_TURN_DEGREES', 0.))
+head_turn_evaluated = 0.
 source_scene = bpy.context.scene
 production = bpy.data.filepath
 assert not bpy.app.is_job_running('RENDER')
@@ -69,11 +74,18 @@ try:
         obj.hide_viewport = False
         scene.collection.objects.link(obj)
         obj.hide_set(False, view_layer=scene.view_layers[0])
+    # Head is constrained to FK-Head; its local Y axis runs up the neck.
+    before_head = head_ctrl.matrix.to_quaternion()
+    if head_turn:
+        head_fk.matrix_basis = head_basis @ Matrix.Rotation(math.radians(head_turn), 4, 'Y')
     for prop, value in globals().get('POSE', {}).items():
         saved_props[prop] = head_ctrl[prop]
         head_ctrl[prop] = value
     rig.update_tag(refresh={'OBJECT'})
     bpy.context.view_layer.update()
+    if head_turn:
+        head_turn_evaluated = math.degrees(before_head.rotation_difference(head_ctrl.matrix.to_quaternion()).angle)
+        assert head_turn_evaluated > abs(head_turn)*.8, 'FK head turn did not reach evaluated head'
     camera = add('V740_PREVIEW_CAMERA', bpy.data.cameras.new('V740_PREVIEW_CAMERA'))
     camera.data.type = 'ORTHO'
     camera.data.ortho_scale = .35
@@ -127,6 +139,7 @@ try:
         bpy.ops.render.render(write_still=True, scene=scene.name)
         results.append(scene.render.filepath)
 finally:
+    head_fk.matrix_basis = head_basis
     for prop, value in saved_props.items():
         head_ctrl[prop] = value
     rig.update_tag(refresh={'OBJECT'})
@@ -144,6 +157,8 @@ finally:
         bpy.data.worlds.remove(world)
     bpy.context.view_layer.update()
 report = {'review_scope': ('native photo skin and groom appearance; animation not evaluated' if texture_path else 'scalp, brow and beard shape and coverage; skin and animation not evaluated'), 'renders': results, 'cameras': camera_records, 'excluded_objects': sorted(excluded), 'restored_properties': saved_props,
+          'head_turn_degrees': head_turn, 'evaluated_head_turn_degrees': head_turn_evaluated,
+          'head_basis_restored': all(abs(head_fk.matrix_basis[i][j]-head_basis[i][j]) < 1e-6 for i in range(4) for j in range(4)),
           'rig_drivers': len(rig.animation_data.drivers),
           'production_unchanged': bpy.data.filepath == production and bpy.context.scene == source_scene}
 (OUT.parent/(globals().get('TAG','v740_neutral')+'_render_report.json')).write_text(json.dumps(report, indent=2))
