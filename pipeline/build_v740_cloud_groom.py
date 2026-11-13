@@ -292,7 +292,7 @@ for p, n, root_uv in guides:
     v = unit(np.cross(axis, u))
     root_u, root_v = tangent, unit(np.cross(n, tangent))
     # Keep axial travel short so locks form rounded curls rather than pointed tufts.
-    radius = rng.uniform(.0028, .0040)+top*.0035
+    radius = rng.uniform(.0014, .0020)+top*.00175
     length = rng.uniform(.005, .010)+top*.003
     turns = rng.uniform(1.10, 1.65)
     phase = rng.uniform(-math.pi, math.pi)
@@ -388,7 +388,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'staggered_curl_tips_v12',
+          'revision': 'half_radius_curls_v13',
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
           'photo_coverage_repair': photo_repair,
