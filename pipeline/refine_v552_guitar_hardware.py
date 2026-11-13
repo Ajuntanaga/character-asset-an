@@ -134,6 +134,29 @@ def build():
                   (r + 1) * 24 + (i + 1) % 24, (r + 1) * 24 + i)
                  for r in range(3) for i in range(24)] + [tuple(range(72, 96))]
         mesh(f'V552_Adjuster_S{index}', vertices, faces, steel, bevel=.00006)
+        # Larger forward socket fastener visible in the product photograph.
+        # Keep its head inside the 5.8 mm slot and below the string plane.
+        # A real hexagonal recess retains readable detail in oblique views.
+        vertices = []
+        for radius, height, hexagonal in ((.0023, .027, False),
+                                          (.0023, .0292, False),
+                                          (.00115, .0292, True),
+                                          (.00115, .0278, True)):
+            for k in range(24):
+                angle = math.tau * k / 24
+                if hexagonal:
+                    corner, fraction = divmod(k, 4)
+                    a, b = math.tau * corner / 6, math.tau * (corner + 1) / 6
+                    u = fraction / 4
+                    dx = radius * ((1 - u) * math.cos(a) + u * math.cos(b))
+                    dy = radius * ((1 - u) * math.sin(a) + u * math.sin(b))
+                else:
+                    dx, dy = radius * math.cos(angle), radius * math.sin(angle)
+                vertices.append((x + .0055 + dx, y + dy, height))
+        faces = [(r * 24 + i, r * 24 + (i + 1) % 24,
+                  (r + 1) * 24 + (i + 1) % 24, (r + 1) * 24 + i)
+                 for r in range(3) for i in range(24)] + [tuple(range(72, 96))]
+        mesh(f'V750_Forward_Fastener_S{index}', vertices, faces, steel, bevel=.00006)
 
     # The photographed selector is a narrow slot and inclined blade, not a post.
     axis = Vector((.91, .41)); axis.normalize()
