@@ -295,6 +295,7 @@ strands, radii, uvs = [], [], []
 corrections, max_correction = 0, 0.
 # Separate stream keeps guide placement and previous variation comparable.
 length_rng = np.random.default_rng(74012)
+shape_rng = np.random.default_rng(74031)
 for p, n, root_uv in guides:
     top = float(smooth((p[2]-top_start)/top_span))
     # The front fringe curls outward and forward; sides sweep back from the part.
@@ -305,7 +306,12 @@ for p, n, root_uv in guides:
     tangent = unit(flow-n*np.dot(flow, n))
     # V17 reads as flat linked rings. The reference crown has raised,
     # overlapping locks; lift crown axes while retaining side/back flow.
-    axis = unit(tangent*.90+n*(.12+1.08*top))
+    # V31: resolved V30 locks read as repeated flat concentric discs.
+    # Vary the lock plane with a separate stream, preserving root sampling.
+    lateral = unit(np.cross(n, tangent))
+    tilt = shape_rng.uniform(-.45, .45)
+    lift = shape_rng.uniform(.55, 1.05)
+    axis = unit(tangent*.90+lateral*tilt+n*(.12+lift*top))
     u = unit(n-axis*np.dot(n, axis))
     v = unit(np.cross(axis, u))
     root_u, root_v = tangent, unit(np.cross(n, tangent))
@@ -324,7 +330,11 @@ for p, n, root_uv in guides:
     turns = rng.uniform(1.10, 1.65)+.50*top
     phase = rng.uniform(-math.pi, math.pi)
     theta = phase+math.tau*turns*(t+.10*np.sin(math.pi*t))
-    curl_envelope = emerge*(1-.15*t)
+    # A smooth varying radius breaks concentric turns without adding
+    # high-frequency kinks. All children share their guide's deformation.
+    shape_phase = shape_rng.uniform(-math.pi, math.pi)
+    radius_variation = 1.+.22*np.sin(math.tau*1.25*t+shape_phase)*np.sin(math.pi*t)
+    curl_envelope = emerge*(1-.15*t)*radius_variation
     helix = radius*curl_envelope[:, None]*(
         .80*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
     sweep = tangent*(.002*top*np.sin(math.pi*t))[:, None]
@@ -470,7 +480,10 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'children_per_guide': 96, 'guide_spacing_mm': 5.6, 'hair_roughness': .52,
           'crown_axial_length_mm': [3., 6.],
           'crown_extra_arch_mm': 0.,
-          'crown_axis_normal_component': .80,
+          'axis_lateral_variation': [-.45, .45],
+          'crown_axis_normal_coefficient': [.67, 1.17],
+          'curl_radius_modulation_amplitude': .22,
+          'curl_radius_modulation_cycles': 1.25,
           'side_curl_turns': [1.10, 1.65], 'crown_curl_turns': [1.60, 2.15],
           'curl_normal_flattening': .80,
           'curl_tip_clump_fraction': .70,
