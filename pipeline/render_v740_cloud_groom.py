@@ -103,7 +103,8 @@ try:
     scene.view_settings.exposure = -1.3
     for view in globals().get('VIEWS', ['front', 'three_quarter']):
         camera.location = {'front': (0,-.9,1.640), 'profile': (-.9,-.015,1.640),
-                           'three_quarter': (-.65,-.665,1.640)}[view]
+                           'three_quarter': (-.65,-.665,1.640),
+                           'three_quarter_reference_side': (.65,-.665,1.640)}[view]
         aim(camera)
         scene.render.filepath = str(OUT/(globals().get('TAG','v740_neutral')+'_'+view+'.png'))
         bpy.ops.render.render(write_still=True, scene=scene.name)
