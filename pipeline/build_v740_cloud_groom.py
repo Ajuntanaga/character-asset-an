@@ -277,6 +277,8 @@ t = np.linspace(0, 1, 44)
 emerge, bundle = smooth(t/.20), smooth(t/.30)
 strands, radii, uvs = [], [], []
 corrections, max_correction = 0, 0.
+# Separate stream keeps guide placement and previous variation comparable.
+length_rng = np.random.default_rng(74012)
 for p, n, root_uv in guides:
     top = float(smooth((p[2]-top_start)/top_span))
     # The front fringe curls outward and forward; sides sweep back from the part.
@@ -332,6 +334,11 @@ for p, n, root_uv in guides:
         irregularity = rng.uniform(.00006, .00014)*np.sin(
             math.tau*rng.uniform(3., 5.)*t+rng.uniform(-math.pi, math.pi))
         path += u*(irregularity*np.sin(math.pi*t))[:, None]
+        # Stagger strand tips through the lock instead of ending every child
+        # after the same complete loop. Interpolation preserves each root.
+        end_fraction = float(length_rng.uniform(.55, 1.0))
+        path = np.column_stack([np.interp(t*end_fraction, t, path[:, axis_index])
+                                for axis_index in range(3)])
         width = rng.uniform(.000030, .000043)
         taper = np.maximum(.04, (1-t)/.15)*np.minimum(1., 1-.08*t)
         taper[t < .85] = 1-.08*t[t < .85]
@@ -381,7 +388,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'desynchronized_curl_children_v11',
+          'revision': 'staggered_curl_tips_v12',
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
           'photo_coverage_repair': photo_repair,
@@ -402,6 +409,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'curl_tip_clump_fraction': .30,
           'child_phase_offset_radians': [-.45, .45],
           'child_radius_scale': [.85, 1.15],
+          'child_length_fraction': [.55, 1.0],
           'crown_curl_radius_mm': [6.3, 7.5], 'part_flow': 'outward',
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
