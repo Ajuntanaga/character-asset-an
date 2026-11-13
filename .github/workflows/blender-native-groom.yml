@@ -22,6 +22,11 @@ on:
         description: Render isolated undercoat and curl comparisons
         type: boolean
         default: false
+      undercoat_feather_mm:
+        description: Undercoat hairline fade width in mm (0 disables trial)
+        type: choice
+        options: ['0', '4', '6']
+        default: '0'
 permissions:
   contents: read
 concurrency:
@@ -32,6 +37,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
+      UNDERCOAT_FEATHER_MM: ${{ inputs.undercoat_feather_mm || '0' }}
       OMP_NUM_THREADS: '2'
       OPENBLAS_NUM_THREADS: '2'
     steps:

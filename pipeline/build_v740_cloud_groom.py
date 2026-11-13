@@ -2,6 +2,7 @@
 import bpy
 import json
 import math
+import os
 import heapq
 import runpy
 from collections import defaultdict
@@ -199,11 +200,14 @@ part_rejections = {'curl': 0, 'undercoat': 0}
 hairline_levels = np.linspace(1.590, 1.710, 4097)
 restored_hairline_levels = restore_upper_head(hairline_levels)
 
-def allowed(p):
+def hairline_margin(p):
     front = 1.703-.060*smooth((abs(p[0])-.052)/.041)
     transition = smooth((p[1]+.050)/.080)
     limit = front*(1-transition)+1.595*transition
-    return p[2] > float(np.interp(limit, hairline_levels, restored_hairline_levels)) and not in_part(p)
+    return p[2] - float(np.interp(limit, hairline_levels, restored_hairline_levels))
+
+def allowed(p):
+    return hairline_margin(p) > 0 and not in_part(p)
 
 def sample():
     index = min(len(triangles)-1, int(np.searchsorted(cumulative, rng.random()*cumulative[-1])))
@@ -372,6 +376,12 @@ curl_count = len(strands)
 del strands, radii, uvs
 
 strands, radii, uvs = [], [], []
+# Opt-in until the isolated remote comparison is reviewed. Separate RNG keeps
+# the existing strand sampling sequence unchanged when the trial is disabled.
+undercoat_feather_mm = float(os.environ.get("UNDERCOAT_FEATHER_MM", "0"))
+assert 0 <= undercoat_feather_mm <= 10
+edge_rng = np.random.default_rng(74022)
+edge_rejections = 0
 t = np.linspace(0, 1, 16)
 for _ in range(375000):
     if len(strands) == 120000:
@@ -379,13 +389,18 @@ for _ in range(375000):
     p, n, root_uv = sample()
     if not allowed(p):
         continue
+    edge_weight = (float(smooth(hairline_margin(p)/(undercoat_feather_mm*.001)))
+                   if undercoat_feather_mm else 1.)
+    if edge_weight < 1 and edge_rng.random() >= edge_weight:
+        edge_rejections += 1
+        continue
     tangent = unit(np.cross(n, [1, .3, .1]))
     across = unit(np.cross(n, tangent))
     angle = rng.uniform(-math.pi, math.pi)
     direction = tangent*math.cos(angle)+across*math.sin(angle)
     # Overlapping curved fibers fill the space below the curl bundles.
     # Keep the same surface-bound roots; this is hair, not a dark scalp mask.
-    length = rng.uniform(.010, .016)
+    length = rng.uniform(.010, .016)*(.25+.75*edge_weight)
     lateral = unit(np.cross(n, direction))
     bend = rng.uniform(-.0025, .0025)
     # Follow scalp curvature instead of letting tangent-plane paths rise away
@@ -426,6 +441,9 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
                                     'strength': .25, 'coordinates': 'rest_point_attribute'},
           'lower_neck_blended_vertices': int(np.count_nonzero(lower_neck)),
           'skin_transition_vertices': int(((weights > 0) & (weights < 1)).sum()),
+          'undercoat_hairline_feather_mm': undercoat_feather_mm,
+          'undercoat_edge_rejections': edge_rejections,
+          'undercoat_edge_length_scale': [.25, 1.],
           'undercoat_length_mm': [10, 16], 'undercoat_target': 120000,
           'undercoat_surface_following': True, 'undercoat_max_lift_mm': 1.8,
           'undercoat_tip_lift_mm': .3,
