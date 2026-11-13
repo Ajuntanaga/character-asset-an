@@ -29,7 +29,11 @@ jobs:
       - name: Build and preserve native groom
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec V739_native_face_trial.blend --threads 2 --python-exit-code 1 --python pipeline/build_v740_cloud_groom.py
+      - name: Bind brows and beard to native facial keys
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/build_v740_cloud_facial_fibers.py
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: native-groom-checkpoint
           path: results/V740_cloud_groom_trial.blend

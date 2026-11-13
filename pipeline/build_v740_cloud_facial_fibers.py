@@ -1,0 +1,159 @@
+"""Restore real brow/beard fibers, bound to this trial's facial shape keys."""
+import bpy
+import json
+import gzip
+import math
+import numpy as np
+from pathlib import Path
+from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
+from mathutils.geometry import barycentric_transform
+
+ROOT = Path(__file__).resolve().parent
+OUT = Path('results')
+OUT.mkdir(exist_ok=True)
+body = bpy.data.objects['V740_NATIVE_FACE']
+rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
+mesh = body.data
+keys = mesh.shape_keys.key_blocks
+basis = keys['Basis']
+assert len(rig.animation_data.drivers) == 1957
+assert not bpy.app.is_job_running('RENDER')
+assert all('V740_'+kind+'_FIBERS' not in bpy.data.objects for kind in ('BROW','BEARD'))
+coords = np.empty((len(mesh.vertices),3), dtype=np.float32)
+basis.data.foreach_get('co', coords.ravel())
+vectors = [Vector(p) for p in coords]
+mesh.calc_loop_triangles()
+rng = np.random.default_rng(740)
+report = {}
+
+for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
+    ('BROW','v740_brow_growth.json.gz',.44,1900,7,1.645,1.700),
+    ('BEARD','v740_beard_growth.json.gz',.43,6500,6,1.495,1.625),
+]:
+    triangles = [tuple(t.vertices) for t in mesh.loop_triangles
+                 if all(z_low < coords[i,2] < z_high and coords[i,1] < -.025 for i in t.vertices)]
+    bvh = BVHTree.FromPolygons(vectors,triangles,all_triangles=True)
+    records = json.loads(gzip.decompress((ROOT/sample_file).read_bytes()))
+    selected = []
+    for side in ('L','R'):
+        candidates = [r for r in records if r['side']==side and r['luma']<threshold]
+        probabilities = np.array([max(.01,(threshold-r['luma'])/threshold) for r in candidates])
+        indices = rng.choice(len(candidates),min(per_side,len(candidates)),replace=False,
+                             p=probabilities/probabilities.sum())
+        selected.extend(candidates[i] for i in indices)
+    points, faces, attachments, weights = [], [], [], []
+    counts = {'L':0,'R':0}
+    for record in selected:
+        # Historical sample indices predate topology cleanup. Use their X/Z
+        # growth region, then reproject every point onto this trial's Basis.
+        root = Vector(record['point'])
+        if kind == 'BROW':
+            t = min(1., max(0., (root.z-1.665)/.130))
+            root.z -= .055*t*t*(3-2*t)
+        sign = 1. if root.x > 0 else -1.
+        u = min(1.,max(0.,(abs(root.x)-.016)/.050))
+        if kind == 'BROW':
+            direction = Vector((sign*(.32+.68*u),0.,.95-1.30*u)).normalized()
+            length = rng.uniform(.0030,.0052)*(1.-.22*u)
+            radius = rng.uniform(.000025,.000040)
+        else:
+            mustache = root.z > 1.579
+            direction = Vector((sign*(.6 if mustache else .2),0.,-1.)).normalized()
+            length = rng.uniform(.0030,.0048) if mustache else rng.uniform(.0024,.0047)
+            radius = rng.uniform(.000030,.000050)
+        centers, normals, samples = [], [], []
+        for j in range(steps):
+            t = j/(steps-1.)
+            target = root+direction*(length*t)
+            hit,normal,index,_ = bvh.ray_cast(Vector((target.x,-.5,target.z)),Vector((0,1,0)))
+            if hit is None or normal.y > -.10:
+                break
+            ids = triangles[index]
+            bary = barycentric_transform(hit,*[vectors[i] for i in ids],
+                                         Vector((1,0,0)),Vector((0,1,0)),Vector((0,0,1)))
+            height = .000055+.00027*math.sin(math.pi*t)+.00007*t if kind=='BROW' else .00007+.00048*math.sin(math.pi*t)+.00035*t
+            centers.append(hit+normal*height)
+            normals.append(normal)
+            samples.append((ids,bary))
+        if len(centers) != steps:
+            continue
+        offset = len(points)
+        for j,(center,normal,(ids,bary)) in enumerate(zip(centers,normals,samples)):
+            t = j/(steps-1.)
+            tangent = (centers[min(j+1,steps-1)]-centers[max(0,j-1)]).normalized()
+            across = tangent.cross(normal).normalized()
+            perpendicular = across.cross(tangent).normalized()
+            width = max(.000003,radius*(1.-.93*t**1.3))
+            for k in range(3):
+                angle = k*math.tau/3
+                points.append(center+width*(math.cos(angle)*perpendicular+math.sin(angle)*across))
+                attachments.append(ids)
+                weights.append(bary[:])
+            if j:
+                for k in range(3):
+                    faces.append((offset+(j-1)*3+k,offset+(j-1)*3+(k+1)%3,
+                                  offset+j*3+(k+1)%3,offset+j*3+k))
+        counts[record['side']] += 1
+    assert min(counts.values()) > 0, f'No fibers on one side: {kind} {counts}'
+    assert np.isfinite(np.asarray(points)).all()
+    assert np.allclose(np.asarray(weights).sum(axis=1), 1, atol=1e-5)
+    name = 'V740_'+kind+'_FIBERS'
+    data = bpy.data.meshes.new(name)
+    data.from_pydata(points,[],faces)
+    data.update()
+    obj = bpy.data.objects.new(name,data)
+    bpy.context.scene.collection.objects.link(obj)
+    obj.hide_set(True)
+    obj.hide_render = True
+    obj.shape_key_add(name='Basis')
+    pts = np.asarray(points,dtype=np.float32)
+    attach = np.asarray(attachments,dtype=np.int32)
+    barys = np.asarray(weights,dtype=np.float32)
+    source_co = np.empty_like(coords)
+    for source in list(keys)[1:]:
+        source.data.foreach_get('co',source_co.ravel())
+        delta = ((source_co[attach]-coords[attach])*barys[:,:,None]).sum(axis=1)
+        key = obj.shape_key_add(name=source.name)
+        key.value = 0.
+        key.data.foreach_set('co',(pts+delta).ravel())
+        key.slider_min, key.slider_max = source.slider_min, source.slider_max
+        driver = key.driver_add('value').driver
+        driver.type = 'SCRIPTED'
+        var = driver.variables.new()
+        var.name,var.type = 'v','SINGLE_PROP'
+        var.targets[0].id_type = 'KEY'
+        var.targets[0].id = mesh.shape_keys
+        var.targets[0].data_path = source.path_from_id('value')
+        driver.expression = 'v'
+    mat = bpy.data.materials.new(name+'_MATERIAL')
+    mat.use_nodes = True
+    shader = mat.node_tree.nodes['Principled BSDF']
+    shader.inputs['Base Color'].default_value = (.006,.0035,.002,1.)
+    shader.inputs['Roughness'].default_value = .55 if kind=='BROW' else .65
+    shader.inputs['Specular IOR Level'].default_value = .20
+    data.materials.append(mat)
+    for polygon in data.polygons:
+        polygon.use_smooth = True
+    bone = rig.pose.bones['DEF-Head']
+    frame = rig.matrix_world @ bone.matrix @ Matrix.Translation((0,bone.bone.length,0))
+    obj.parent,obj.parent_type,obj.parent_bone = rig,'BONE','DEF-Head'
+    obj.matrix_parent_inverse = frame.inverted()
+    obj.matrix_basis = Matrix.Identity(4)
+    obj['surface_attachment'] = 'V740 native face barycentric shape-key deformation plus DEF-Head parent'
+    report[kind] = {'fiber_counts':counts,'vertices':len(points),'shape_keys':len(keys),
+                    'key_drivers':len(data.shape_keys.animation_data.drivers)}
+rig.update_tag(refresh={'OBJECT'})
+bpy.context.view_layer.update()
+assert len(rig.animation_data.drivers) == 1957
+(OUT/'facial_fibers_report.json').write_text(json.dumps(report,indent=2))
+print(json.dumps(report))
+
+scene = bpy.data.scenes['V739_NATIVE_FACE_INSPECTION']
+for name in ('V740_BROW_FIBERS', 'V740_BEARD_FIBERS'):
+    obj = bpy.data.objects[name]
+    if obj.name not in scene.objects:
+        scene.collection.objects.link(obj)
+    obj.hide_render = False
+    obj.hide_set(False)
+bpy.ops.wm.save_as_mainfile(filepath=str((OUT/'V740_cloud_groom_trial.blend').resolve()), compress=True)
