@@ -29,7 +29,7 @@ rng = np.random.default_rng(740)
 report = {}
 
 
-def native_beard_mask(records, tree, surface_triangles, threshold):
+def native_photo_mask(records, tree, surface_triangles, threshold):
     """Resample the current photo material; old samples only define growth sites."""
     image = bpy.data.images.load(str(Path('Character_An_photoreal_head_basecolor_v326.png').resolve()),
                                  check_existing=False)
@@ -106,7 +106,15 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     triangles = [tuple(t.vertices) for t in surface_triangles]
     bvh = BVHTree.FromPolygons(vectors,triangles,all_triangles=True)
     records = json.loads(gzip.decompress((ROOT/sample_file).read_bytes()))
-    mask_report = {'source': 'historical brow mask'}
+    if kind == 'BROW':
+        # Move historical growth sites into the final face field before both
+        # texture sampling and surface projection; apply compression only once.
+        records = [dict(r, point=[r['point'][0], r['point'][1],
+                   float(cranium['compress'](r['point'][2], cranium['TRIAL_REDUCTION']))])
+                   for r in records]
+        records, mask_report = native_photo_mask(records, bvh, surface_triangles, threshold)
+        mask_report['growth_sites_and_lip_nose_exclusions'] = (
+            'historical brow sites mapped into final native face; current photo eligibility')
     if kind == 'BEARD':
         # Add native-projected moustache sites without moving the established
         # lip/nose boundary or increasing cheek/jaw sampling density.
@@ -122,7 +130,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             records.append({'side': 'L' if x > 0 else 'R',
                             'point': [float(x), -.5, float(z)], 'luma': 1.0})
         extra_sites = len(records)-historical_count
-        records, mask_report = native_beard_mask(records, bvh, surface_triangles, threshold)
+        records, mask_report = native_photo_mask(records, bvh, surface_triangles, threshold)
         mask_report['supplemental_moustache_sites'] = extra_sites
         mask_report['growth_sites_and_lip_nose_exclusions'] = (
             'historical sites plus native-projected moustache samples; exclusions unchanged')
@@ -140,10 +148,6 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
         # Historical sample indices predate topology cleanup. Use their X/Z
         # growth region, then reproject every point onto this trial's Basis.
         root = Vector(record['point'])
-        if kind == 'BROW':
-            # Growth samples are pre-compression donor coordinates; use the
-            # same final field as the restored native face, not V739's old field.
-            root.z = float(cranium['compress'](root.z, cranium['TRIAL_REDUCTION']))
         sign = 1. if root.x > 0 else -1.
         u = min(1.,max(0.,(abs(root.x)-.016)/.050))
         if kind == 'BROW':
