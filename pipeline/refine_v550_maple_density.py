@@ -131,6 +131,25 @@ def build(output, save=True):
     material['V550_density_applied'] = True
     from refine_v552_guitar_hardware import build as build_hardware
     hardware = build_hardware()
+    # Capture the actual cloud input geometry: old construction scripts alone
+    # cannot distinguish a wavy trace from cap/bevel shading artifacts.
+    perimeter = {}
+    for obj in (edge_object, top):
+        perimeter[obj.name] = {
+            'vertices_local': [list(v.co) for v in obj.data.vertices],
+            'matrix_world': [list(row) for row in obj.matrix_world],
+            'polygon_count': len(obj.data.polygons),
+            'smooth_polygon_count': sum(p.use_smooth for p in obj.data.polygons),
+            'modifiers': [
+                {'name': mod.name, 'type': mod.type,
+                 'show_viewport': mod.show_viewport, 'show_render': mod.show_render,
+                 **{key: getattr(mod, key) for key in (
+                     'width', 'segments', 'limit_method', 'angle_limit',
+                     'use_clamp_overlap', 'harden_normals', 'keep_sharp')
+                    if hasattr(mod, key)}}
+                for mod in obj.modifiers],
+        }
+    (out / 'guitar-perimeter-geometry.json').write_text(json.dumps(perimeter))
     rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     assert len(rig.animation_data.drivers) == 1957
     path = out / 'Character_An_maple_density_TRIAL_v550.blend'
