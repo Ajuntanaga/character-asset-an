@@ -248,14 +248,18 @@ for p, n, root_uv in guides:
     u = unit(n-axis*np.dot(n, axis))
     v = unit(np.cross(axis, u))
     root_u, root_v = tangent, unit(np.cross(n, tangent))
-    # Smaller loop openings and fuller bundles follow the dense reference curls.
+    # Flatten and vary each curl along a swept lock; avoid uniform spring coils.
     radius = rng.uniform(.0028, .0040)+top*.0010
     length = rng.uniform(.012, .021)+top*.007
-    turns = rng.uniform(1.45, 2.10)
+    turns = rng.uniform(.75, 1.35)
     phase = rng.uniform(-math.pi, math.pi)
-    theta = phase+math.tau*turns*t
-    helix = radius*emerge[:, None]*(np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
-    guide = p+n*(.00016+(radius+.0006)*emerge[:, None])+axis*length*t[:, None]+helix
+    theta = phase+math.tau*turns*(t+.10*np.sin(math.pi*t))
+    curl_envelope = emerge*(1-.45*t)
+    helix = radius*curl_envelope[:, None]*(
+        .42*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
+    sweep = tangent*(.004*top*np.sin(math.pi*t))[:, None]
+    guide = (p+n*(.00016+(radius*.45+.0006)*emerge[:, None])
+             +axis*length*t[:, None]+sweep+helix)
     for j in range(1, len(t)):
         hit, normal, _, _ = scalp.find_nearest(Vector(guide[j]))
         if hit is not None:
@@ -274,7 +278,9 @@ for p, n, root_uv in guides:
         q, normal, child_uv = hit
         q += normal*.00016
         packed = radial*rng.uniform(.0010, .0015)*(math.cos(angle)*u+math.sin(angle)*v)
-        path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*bundle[:, None]
+        # A broad lock gathers toward its tip instead of keeping a pipe-shaped section.
+        clump_width = bundle*(1-.70*smooth((t-.35)/.65))
+        path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
         path += u*rng.uniform(-.00018, .00018)*np.sin(math.pi*t)[:, None]
         width = rng.uniform(.000030, .000043)
         taper = np.maximum(.04, (1-t)/.15)*np.minimum(1., 1-.08*t)
@@ -324,7 +330,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'observed_side_photo_repair_v5',
+          'revision': 'swept_irregular_curl_locks_v6',
           'photo_coverage_repair': photo_repair,
           'skin_transition_half_width_mm': feather*1000,
           'lower_neck_clean_fade_z': [neck_fade_bottom, neck_fade_top],
@@ -333,6 +339,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'undercoat_length_mm': [10, 16], 'undercoat_target': 120000,
           'undercoat_radius_microns': [35, 50],
           'children_per_guide': 96, 'hair_roughness': .52,
+          'curl_turns': [.75, 1.35], 'curl_normal_flattening': .42,
+          'curl_tip_clump_fraction': .30,
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
 print(json.dumps(report))
