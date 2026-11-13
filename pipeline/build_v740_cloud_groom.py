@@ -312,7 +312,9 @@ for p, n, root_uv in guides:
     # Keep axial travel short so locks form rounded curls rather than pointed tufts.
     # v15 isolated render leaves separated tiny locks. Increase curl extent
     # without adding strands or changing the shader; review silhouette remotely.
-    radius = 1.45*(rng.uniform(.0014, .0020)+top*.00175)
+    # V21 reference-side review: side locks remain tiny wire loops.
+    # Increase side radius by 1.5 mm, smoothly retaining the crown radius.
+    radius = 1.45*(rng.uniform(.0014, .0020)+top*.00175)+.0015*(1-top)
     length = rng.uniform(.005, .010)+top*.012
     turns = rng.uniform(1.10, 1.65)
     phase = rng.uniform(-math.pi, math.pi)
@@ -428,7 +430,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'coherent_curl_bundles_v21',
+          'revision': 'broader_side_curls_v22',
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
@@ -457,6 +459,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'child_radius_scale': [.95, 1.05],
           'child_length_fraction': [.55, 1.0],
           'curl_radius_scale_from_v15': 1.45,
+          'side_curl_radius_addition_mm': 1.5,
+          'side_curl_radius_mm': [3.53, 4.40],
           'curl_centerline_lift_radius_factor': .95,
           'crown_curl_radius_mm': [4.5675, 5.4375], 'part_flow': 'outward',
           'status': 'unreviewed_groom_trial'}
