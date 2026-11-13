@@ -90,7 +90,8 @@ weights = np.clip(.5+signed/(2*feather), 0, 1)
 weights = weights*weights*(3-2*weights)
 # The reference atlas contains clothing/background wedges on the lower neck.
 # Fade below the jaw in rest coordinates; the point attribute follows FACS.
-neck_fade_top, neck_fade_bottom = 1.515, 1.480
+# Complete the fade above the atlas edge visible in the bilateral review.
+neck_fade_top, neck_fade_bottom = 1.555, 1.520
 lower_neck = np.clip((neck_fade_top-co[:, 2])/(neck_fade_top-neck_fade_bottom), 0, 1)
 lower_neck = lower_neck*lower_neck*(3-2*lower_neck)
 weights = np.maximum(weights, lower_neck)
