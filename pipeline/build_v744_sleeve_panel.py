@@ -1,6 +1,8 @@
 """Reversible open sleeve panel; fit through the actual armature deformation."""
 import bpy
 from mathutils import Vector, Matrix
+from pathlib import Path
+import runpy
 
 
 def build(cuff, interface):
@@ -34,13 +36,10 @@ def build(cuff, interface):
     n = len(cuff.data.vertices) // 5
     rim = [cuff.matrix_world @ v.co for v in cuff.data.vertices[4*n:5*n]]
     center = sum(rim, Vector()) / n
-    def closest_rim(point):
-        candidates = []
-        for a, b in zip(rim, rim[1:] + rim[:1]):
-            edge = b-a
-            t = max(0., min(1., (point-a).dot(edge)/edge.length_squared))
-            candidates.append(a+edge*t)
-        return min(candidates, key=lambda p: (p-point).length_squared)
+    mapper = runpy.run_path(str(Path(__file__).with_name('sleeve_correspondence.py')))
+    mapped, correspondence = mapper['ordered_rim_points'](
+        [list(points[i]) for i in rail], [list(p) for p in rim])
+    inner_points = {i: Vector(p) for i, p in zip(rail, mapped)}
 
     target, vertex_weights = [], []
     # Open strip: never cap the unrelated original jacket openings.
@@ -49,7 +48,7 @@ def build(cuff, interface):
         blend = max(0., t)
         for i in rail:
             outer = points[i]
-            inner = closest_rim(outer)
+            inner = inner_points[i]
             inner = inner + (center - inner).normalized() * .0015
             direction = inner - outer
             p = (outer - direction.normalized() * .006 if t < 0
@@ -144,6 +143,7 @@ def build(cuff, interface):
     shell.offset = -1
     return {'status': 'TRIAL_REQUIRES_WRIST_RENDER_REVIEW', 'object': panel.name,
             'rail_vertices': width, 'rows': len(rows), 'bind_max_error_m': error,
+            'correspondence': correspondence,
             'mapping_world_m': {
                 'source_rail_vertex_ids': rail,
                 'source_rail': [list(points[i]) for i in rail],
