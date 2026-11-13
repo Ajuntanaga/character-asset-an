@@ -446,7 +446,9 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         # Retain earlier crossing regions: run 43415244468 cleared Middle-Ring
         # but reintroduced Index-Middle crossings after replacing its samples.
         collision_samples = {}
-        for scale in (1., 2., 4., 4.):
+        # Run 43419472026 ended with one crossing and a still-decreasing loss.
+        # Add one bounded refresh/refinement stage without relaxing acceptance.
+        for scale in (1., 2., 4., 4., 4.):
             contacts(values, True)
             # Keep residual membership fixed across finite differences and
             # line searches; refresh actual crossing regions between stages.
