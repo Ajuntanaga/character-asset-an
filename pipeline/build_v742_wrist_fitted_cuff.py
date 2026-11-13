@@ -72,6 +72,11 @@ def build(clearance=.002, length=.040):
     finally:
         bm.free()
     uv = data.uv_layers.new(name='UVMap')
+    # The inherited V441/V445 box-projected weave reads this attribute,
+    # not UVMap. Store metric coordinates so the weave follows the cuff.
+    rest = data.attributes.new('V441_CuffRest', 'FLOAT_VECTOR', 'POINT')
+    for vertex, value in zip(data.vertices, rest.data):
+        value.vector = vertex.co
     ring_parameters = (0., .08, .5, .92, 1.)
     for polygon in data.polygons:
         columns = [data.loops[i].vertex_index % count for i in polygon.loop_indices]
@@ -103,4 +108,5 @@ def build(clearance=.002, length=.040):
     return cuff, {'status': 'TRIAL_REQUIRES_RENDER_AND_MOTION_REVIEW',
                   'rim_samples': count, 'clearance_m': clearance,
                   'length_m': length, 'binding_error': error,
+                  'fabric_rest_attribute': 'V441_CuffRest',
                   'source_preserved': True, 'scale_inheritance': False}
