@@ -69,6 +69,15 @@ jobs:
         if: ${{ inputs.textured }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_textured.py
+      - name: Publish appearance previews before expression tests
+        if: ${{ inputs.expressions }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-groom-appearance
+          path: |
+            results/*.json
+            results/renders/*.png
+          retention-days: 7
       - name: Render expression comparisons
         if: ${{ inputs.expressions }}
         run: |
