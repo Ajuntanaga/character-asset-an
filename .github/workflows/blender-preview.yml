@@ -49,7 +49,7 @@ on:
         options: [full, mouth, appearance, portrait, hands, wardrobe, hair-layers]
         default: full
 permissions:
-  contents: read
+  contents: write
   actions: read
 concurrency:
   group: character-blender-processing
@@ -157,6 +157,8 @@ jobs:
           extra+=(--review-scope "${REVIEW_SCOPE:-full}")
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec "scenes/$SCENE" --threads 2 --python-exit-code 1 --python pipeline/github_scene_job.py -- --mode "$MODE" --output results "${extra[@]}"
       - uses: actions/upload-artifact@v4
+        id: artifact_1
+        continue-on-error: true
         if: always()
         with:
           name: previews-${{ inputs.mode }}-${{ github.run_number }}
@@ -244,6 +246,8 @@ jobs:
           pathlib.Path('results/build-manifest.json').write_text(json.dumps(manifest,indent=2))
           PY
       - uses: actions/upload-artifact@v4
+        id: artifact_2
+        continue-on-error: true
         if: always()
         with:
           name: blender-${{ inputs.mode }}-${{ github.run_number }}
@@ -252,3 +256,19 @@ jobs:
             results/*.zst
           if-no-files-found: warn
           retention-days: 7
+      - name: Preserve outputs when Actions artifact storage is unavailable
+        if: ${{ always() && !cancelled() && (steps.artifact_1.outcome == 'failure' || steps.artifact_2.outcome == 'failure') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import tarfile
+          files = [p for p in Path('results').rglob('*') if p.is_file() and p.suffix in ('.png', '.json', '.zst')]
+          assert files, 'No outputs available to preserve'
+          with tarfile.open('cloud-results.tar.gz', 'w:gz', compresslevel=1) as archive:
+              for path in sorted(files):
+                  archive.add(path, arcname=str(path))
+          PY
+          tag="cloud-results-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" cloud-results.tar.gz --target "$GITHUB_SHA" --draft --title "Cloud results ${GITHUB_RUN_ID}" --notes "Fallback archive after Actions artifact upload failure. Trial outputs, not an accepted production checkpoint."

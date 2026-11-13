@@ -28,7 +28,7 @@ on:
         options: ['0', '4', '6']
         default: '0'
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: character-blender-processing
   cancel-in-progress: false
@@ -66,6 +66,8 @@ jobs:
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/build_v740_cloud_facial_fibers.py
       - uses: actions/upload-artifact@v4
+        id: artifact_1
+        continue-on-error: true
         if: always()
         with:
           name: native-groom-checkpoint
@@ -76,6 +78,8 @@ jobs:
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_cloud_groom.py
       - name: Publish scalp previews immediately
         uses: actions/upload-artifact@v4
+        id: artifact_2
+        continue-on-error: true
         with:
           name: native-groom-scalp-preview
           path: |
@@ -89,6 +93,8 @@ jobs:
       - name: Publish textured previews immediately
         if: ${{ inputs.textured }}
         uses: actions/upload-artifact@v4
+        id: artifact_3
+        continue-on-error: true
         with:
           name: native-groom-textured-preview
           path: |
@@ -110,6 +116,8 @@ jobs:
       - name: Publish appearance previews before expression tests
         if: ${{ inputs.expressions }}
         uses: actions/upload-artifact@v4
+        id: artifact_4
+        continue-on-error: true
         with:
           name: native-groom-appearance
           path: |
@@ -121,6 +129,8 @@ jobs:
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_deformation.py
       - uses: actions/upload-artifact@v4
+        id: artifact_5
+        continue-on-error: true
         if: always()
         with:
           name: native-surface-groom
@@ -128,3 +138,19 @@ jobs:
             results/*.json
             results/renders/*.png
           retention-days: 7
+      - name: Preserve outputs when Actions artifact storage is unavailable
+        if: ${{ always() && !cancelled() && (steps.artifact_1.outcome == 'failure' || steps.artifact_2.outcome == 'failure' || steps.artifact_3.outcome == 'failure' || steps.artifact_4.outcome == 'failure' || steps.artifact_5.outcome == 'failure') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import tarfile
+          files = [p for p in Path('results').rglob('*') if p.is_file() and p.suffix in ('.png', '.json', '.zst', '.blend')]
+          assert files, 'No outputs available to preserve'
+          with tarfile.open('cloud-results.tar.gz', 'w:gz', compresslevel=1) as archive:
+              for path in sorted(files):
+                  archive.add(path, arcname=str(path))
+          PY
+          tag="cloud-results-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" cloud-results.tar.gz --target "$GITHUB_SHA" --draft --title "Cloud results ${GITHUB_RUN_ID}" --notes "Fallback archive after Actions artifact upload failure. Trial outputs, not an accepted production checkpoint."
