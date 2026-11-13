@@ -41,6 +41,66 @@ def normals(points, triangles):
     return cross / np.maximum(magnitude[:, None], 1e-20), magnitude
 
 
+def compare_lower_face_fit():
+    """Compare identical cage triangles before and after the landmark mapping.
+
+    Invert each stored key separately before blending. Inverting an already
+    blended expression would incorrectly commute a nonlinear fit with blending.
+    Upper-head edits and clamped endpoints are excluded from this comparison.
+    """
+    keys = head.data.shape_keys.key_blocks
+    names = ('Basis', 'mouthSmileLeft', 'mouthSmileRight')
+    fitted = [np.array([v.co[:] for v in keys[name].data], dtype=np.float64)
+              for name in names]
+    for name in names[1:]:
+        assert keys[name].relative_key == keys['Basis']
+    source_z = np.array([-1.72, -.85, -.30, .0515203, .33, .52, .80, .94, 1.3065])
+    target_z = np.array([1.435, 1.521, 1.571, 1.609121, 1.645, 1.670, 1.709, 1.732, 1.795])
+    donor = []
+    interior = np.ones(len(fitted[0]), dtype=bool)
+    for points in fitted:
+        interior &= (points[:, 2] > target_z[0] + 1e-6) & (points[:, 2] < 1.645)
+        restored = points.copy()
+        restored[:, 0] = (points[:, 0] - .0016) / .123
+        restored[:, 1] = (points[:, 1] - .00802) / .121
+        restored[:, 2] = np.interp(points[:, 2], target_z, source_z)
+        donor.append(restored * .123)
+    head.data.calc_loop_triangles()
+    triangles = np.array([t.vertices[:] for t in head.data.loop_triangles], dtype=np.int32)
+    centers = fitted[0][triangles].mean(axis=1)
+    region = (interior[triangles].all(axis=1) & (abs(centers[:, 0]) < .055)
+              & (centers[:, 1] < -.065) & (centers[:, 2] > 1.54)
+              & (centers[:, 2] < 1.61))
+    triangle_ids = np.flatnonzero(region)
+    triangles = triangles[region]
+    assert len(triangles), 'Empty mouth comparison region'
+    comparisons = {}
+    for label, coordinates in [('landmark_fitted', fitted), ('reconstructed_donor_uniform_scale', donor)]:
+        rest, left, right = coordinates
+        rest_normals, rest_area = normals(rest, triangles)
+        valid = rest_area > 1e-12
+        samples = []
+        for amount in (.2, .4, .6, .8, 1.):
+            posed = rest + amount * (left - rest) + amount * (right - rest)
+            normal, area = normals(posed, triangles)
+            ratio = area / np.maximum(rest_area, 1e-20)
+            dot = np.clip(np.sum(normal * rest_normals, axis=1), -1., 1.)
+            worst = np.flatnonzero(valid)
+            worst = worst[np.argsort(dot[worst])[:12]]
+            samples.append({'bilateral_smile': amount,
+                'triangles_rotated_over_90_degrees': int(np.sum(valid & (dot < 0))),
+                'triangles_below_one_fifth_rest_area': int(np.sum(valid & (ratio < .2))),
+                'worst_rotation_triangles': [{'cage_triangle': int(triangle_ids[i]),
+                    'cage_vertices': triangles[i].tolist(),
+                    'fitted_rest_center': centers[triangle_ids[i]].tolist(),
+                    'area_ratio': float(ratio[i]),
+                    'normal_rotation_degrees': float(np.degrees(np.arccos(dot[i])))} for i in worst]})
+        comparisons[label] = samples
+    return {'scope': 'Unsubdivided mouth cage only; inverse fit reconstructed from stored keys, '
+                     'not an independently loaded donor. Rotation is not a collision test.',
+            'triangle_count': len(triangles), 'comparisons': comparisons}
+
+
 records = []
 try:
     basis, triangles, polygon_ids, topology = surface(0.)
@@ -89,4 +149,5 @@ out.mkdir(exist_ok=True)
     'degenerate_rest_triangles_excluded': int(np.sum(~valid)),
     'controls_restored': all(control[name] == value for name, value in saved.items()),
     'samples': records,
+    'lower_face_fit_comparison': compare_lower_face_fit(),
 }, indent=2))
