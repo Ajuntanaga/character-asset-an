@@ -1,0 +1,37 @@
+name: Native surface groom reconstruction
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: character-blender-processing
+  cancel-in-progress: false
+jobs:
+  face:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download isolated native face
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download checkpoint-v739 --pattern V739_native_face_trial.blend
+          echo '63f795279e1c0ce770ba7238619c276a4ec0e2f2c5d3afca8a829981916dce21  V739_native_face_trial.blend' | sha256sum -c -
+      - name: Install pinned Blender
+        run: |
+          curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
+          echo '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168  /tmp/blender.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/blender.tar.xz -C /tmp
+      - name: Build and preserve native groom
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec V739_native_face_trial.blend --threads 2 --python-exit-code 1 --python pipeline/build_v740_cloud_groom.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-surface-groom
+          path: results/
+          retention-days: 7
