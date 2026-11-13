@@ -11,9 +11,8 @@ import numpy as np
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
-from native_cranium_mapping import restore_upper_head
-
 ROOT = Path(__file__).resolve().parent
+restore_upper_head = runpy.run_path(str(ROOT/'native_cranium_mapping.py'))['restore_upper_head']
 OUT = Path('results')
 OUT.mkdir(exist_ok=True)
 rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
