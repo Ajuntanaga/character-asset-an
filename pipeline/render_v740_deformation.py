@@ -17,6 +17,7 @@ cases = [
     ('jaw', {'JawOpen': .55}),
     ('blink', {'Blink.L': 1., 'Blink.R': 1.}),
     ('brow_raise', {'BrowInnerUp': .7, 'BrowOuterUp.L': .6, 'BrowOuterUp.R': .6}),
+    ('smile_half', {'Smile.L': .4, 'Smile.R': .4}),
     ('smile', {'Smile.L': .8, 'Smile.R': .8}),
     ('pucker', {'MouthPucker': .8}),
     ('turn_left', {}),
@@ -30,7 +31,7 @@ try:
         tag = 'v740_expression_' + label
         # Frontal silhouettes hide lip projection and oral clearance.
         views = ['front', 'profile'] if label in {'jaw', 'pucker'} else ['front']
-        if label == 'smile':
+        if label in {'smile_half', 'smile'}:
             views.append('three_quarter')
         runpy.run_path(str(renderer), init_globals={
             'POSE': pose, 'TAG': tag, 'VIEWS': views, 'SAMPLES': 24,
