@@ -217,8 +217,8 @@ def attachment(q):
     return np.array(p), np.array(normal), np.array([1-v-w, v, w])@uv[index]
 
 guides, grid = [], defaultdict(list)
-# V17 reads as overlapping corrugations; separate lock centers for comparison.
-spacing = .0090
+# Retain V17 coverage while correcting crown lock orientation and height.
+spacing = .0056
 for _ in range(24000):
     p, n, root_uv = sample()
     if not allowed(p):
@@ -288,8 +288,9 @@ for p, n, root_uv in guides:
     part_x = .041+.13*(p[1]+.065)
     flow = np.array([.75*np.sign(p[0]-part_x)*top, forward, -.58*(1-top)])
     tangent = unit(flow-n*np.dot(flow, n))
-    # Isolated v13 curls show raised crown tips; keep lock travel nearer the scalp.
-    axis = unit(tangent*.90+n*(.12+.12*top))
+    # V17 reads as flat linked rings. The reference crown has raised,
+    # overlapping locks; lift crown axes while retaining side/back flow.
+    axis = unit(tangent*.90+n*(.12+1.08*top))
     u = unit(n-axis*np.dot(n, axis))
     v = unit(np.cross(axis, u))
     root_u, root_v = tangent, unit(np.cross(n, tangent))
@@ -297,7 +298,7 @@ for p, n, root_uv in guides:
     # v15 isolated render leaves separated tiny locks. Increase curl extent
     # without adding strands or changing the shader; review silhouette remotely.
     radius = 1.45*(rng.uniform(.0014, .0020)+top*.00175)
-    length = rng.uniform(.005, .010)+top*.003
+    length = rng.uniform(.005, .010)+top*.012
     turns = rng.uniform(1.10, 1.65)
     phase = rng.uniform(-math.pi, math.pi)
     theta = phase+math.tau*turns*(t+.10*np.sin(math.pi*t))
@@ -394,7 +395,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'curl_lock_spacing_v18',
+          'revision': 'raised_crown_locks_v19',
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
           'photo_coverage_repair': photo_repair,
@@ -410,7 +411,9 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'undercoat_surface_following': True, 'undercoat_max_lift_mm': 1.8,
           'undercoat_tip_lift_mm': .3,
           'undercoat_radius_microns': [35, 50],
-          'children_per_guide': 96, 'guide_spacing_mm': 9.0, 'hair_roughness': .52,
+          'children_per_guide': 96, 'guide_spacing_mm': 5.6, 'hair_roughness': .52,
+          'crown_axial_length_mm': [17., 22.],
+          'crown_axis_normal_component': .80,
           'curl_turns': [1.10, 1.65], 'curl_normal_flattening': .80,
           'curl_tip_clump_fraction': .30,
           'child_phase_offset_radians': [-1.2, 1.2],
