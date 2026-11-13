@@ -26,10 +26,15 @@ try:
         pose = dict.fromkeys(properties, 0.)
         pose.update(expression)
         tag = 'v740_expression_' + label
+        # Frontal silhouettes hide lip projection and oral clearance.
+        views = ['front', 'profile'] if label in {'jaw', 'pucker'} else ['front']
+        if label == 'smile':
+            views.append('three_quarter')
         runpy.run_path(str(renderer), init_globals={
-            'POSE': pose, 'TAG': tag, 'VIEWS': ['front'], 'SAMPLES': 24,
+            'POSE': pose, 'TAG': tag, 'VIEWS': views, 'SAMPLES': 24,
         })
-        records.append({'expression': expression, 'image': tag + '_front.png'})
+        records.append({'expression': expression, 'image': tag + '_front.png',
+                        'images': [tag + '_' + view + '.png' for view in views]})
 finally:
     for prop, value in original.items():
         control[prop] = value
