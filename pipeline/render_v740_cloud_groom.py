@@ -158,6 +158,35 @@ finally:
     bpy.context.view_layer.update()
 # Record the actual inherited ocular setup alongside every preview. This is
 # read-only and avoids loading a second Blender locally to inspect the checkpoint.
+def describe_eye_tree(tree, ancestors=()):
+    if tree is None:
+        return {'nodes': [], 'links': []}
+    if tree.as_pointer() in ancestors:
+        return {'recursive_group': tree.name}
+    ancestors = (*ancestors, tree.as_pointer())
+    nodes = []
+    for node in tree.nodes:
+        inputs = {}
+        for socket in node.inputs:
+            if not hasattr(socket, 'default_value'):
+                continue
+            value = socket.default_value
+            if isinstance(value, (bool, int, float, str)):
+                inputs[socket.name] = value
+            elif hasattr(value, '__len__'):
+                inputs[socket.name] = list(value)
+        record = {'name': node.name, 'type': node.bl_idname, 'inputs': inputs,
+                  'image': node.image.name if node.type == 'TEX_IMAGE' and node.image else None}
+        if node.type == 'GROUP' and node.node_tree:
+            record['group_name'] = node.node_tree.name
+            record['group_tree'] = describe_eye_tree(node.node_tree, ancestors)
+        nodes.append(record)
+    return {'nodes': nodes, 'links': [
+        {'from_node': link.from_node.name, 'from_socket': link.from_socket.name,
+         'to_node': link.to_node.name, 'to_socket': link.to_socket.name}
+        for link in tree.links]}
+
+
 eye_setup = {}
 for name in ['V737_EYE.L', 'V737_EYE.R', 'V738_CORNEA.L', 'V738_CORNEA.R']:
     obj = bpy.data.objects[name]
@@ -166,27 +195,8 @@ for name in ['V737_EYE.L', 'V737_EYE.R', 'V738_CORNEA.L', 'V738_CORNEA.R']:
         if material is None:
             materials.append(None)
             continue
-        nodes = []
-        if material.use_nodes:
-            for node in material.node_tree.nodes:
-                inputs = {}
-                for socket in node.inputs:
-                    if not hasattr(socket, 'default_value'):
-                        continue
-                    value = socket.default_value
-                    if isinstance(value, (bool, int, float, str)):
-                        inputs[socket.name] = value
-                    elif hasattr(value, '__len__'):
-                        inputs[socket.name] = list(value)
-                nodes.append({'name': node.name, 'type': node.bl_idname,
-                              'inputs': inputs,
-                              'image': node.image.name if node.type == 'TEX_IMAGE' and node.image else None})
-        materials.append({'name': material.name, 'nodes': nodes,
-                          'links': [{'from_node': link.from_node.name,
-                                     'from_socket': link.from_socket.name,
-                                     'to_node': link.to_node.name,
-                                     'to_socket': link.to_socket.name}
-                                    for link in material.node_tree.links] if material.use_nodes else []})
+        materials.append({'name': material.name,
+                          **describe_eye_tree(material.node_tree if material.use_nodes else None)})
     eye_setup[name] = {'parent': obj.parent.name if obj.parent else None,
                        'dimensions': list(obj.dimensions),
                        'matrix_world': [list(row) for row in obj.matrix_world],
