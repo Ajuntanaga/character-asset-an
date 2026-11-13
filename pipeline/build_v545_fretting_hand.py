@@ -420,6 +420,11 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
     collision_history = []
     collision_stages = []
     if axial_trial:
+        # Optimize collisions on the same surface used for final acceptance.
+        # V642's level-1 proxy understated intersections after subdivision.
+        for modifier, level in subdivisions:
+            modifier.levels = level
+        bpy.context.view_layer.update()
         # V627 stalls with 140/198 crossing face pairs despite valid distances.
         # Increase separation priority in bounded stages, preserving every
         # target, joint bound and final acceptance check. Stage losses use
@@ -542,6 +547,8 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
               'inter_digit_ok': inter_digit_ok,
               'collision_refinement_loss': collision_history,
               'collision_refinement_stages': collision_stages,
+              'collision_refinement_subdivision_levels':
+                  [level for _, level in subdivisions] if axial_trial else None,
               'hover_orientation_trial': hover_orientation_trial,
               'middle_axial_trial': middle_axial_trial,
               'revision': 'V642' if middle_axial_trial else 'V637' if hover_orientation_trial else 'V631' if axial_trial else 'V612' if spread_trial else 'V602' if relaxed_contact_dips else ('V599' if thumb_support == 'sliding_rear' else 'V545'),
