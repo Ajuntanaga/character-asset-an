@@ -15,14 +15,15 @@ texture_path = globals().get('TEXTURE_PATH')
 if texture_path:
     texture_path = Path(texture_path).resolve()
     assert texture_path.is_file(), texture_path
+    # Load a fresh file image rather than reloading the checkpoint's packed image.
+    atlas = bpy.data.images.load(str(texture_path), check_existing=False)
+    assert atlas.size[0] > 0 and atlas.size[1] > 0, 'Photo atlas has no pixels'
     matched = 0
     for material in head.data.materials:
         if material and material.use_nodes:
             for node in material.node_tree.nodes:
                 if node.type == 'TEX_IMAGE' and node.image and Path(node.image.filepath).name == texture_path.name:
-                    node.image.filepath = str(texture_path)
-                    node.image.reload()
-                    assert node.image.has_data
+                    node.image = atlas
                     matched += 1
     assert matched, 'Expected native face basecolor image node missing'
 else:
