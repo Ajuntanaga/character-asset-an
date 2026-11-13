@@ -156,7 +156,42 @@ finally:
     if world:
         bpy.data.worlds.remove(world)
     bpy.context.view_layer.update()
-report = {'review_scope': ('native photo skin and groom appearance; animation not evaluated' if texture_path else 'scalp, brow and beard shape and coverage; skin and animation not evaluated'), 'renders': results, 'cameras': camera_records, 'excluded_objects': sorted(excluded), 'restored_properties': saved_props,
+# Record the actual inherited ocular setup alongside every preview. This is
+# read-only and avoids loading a second Blender locally to inspect the checkpoint.
+eye_setup = {}
+for name in ['V737_EYE.L', 'V737_EYE.R', 'V738_CORNEA.L', 'V738_CORNEA.R']:
+    obj = bpy.data.objects[name]
+    materials = []
+    for material in obj.data.materials:
+        if material is None:
+            materials.append(None)
+            continue
+        nodes = []
+        if material.use_nodes:
+            for node in material.node_tree.nodes:
+                inputs = {}
+                for socket in node.inputs:
+                    if not hasattr(socket, 'default_value'):
+                        continue
+                    value = socket.default_value
+                    if isinstance(value, (bool, int, float, str)):
+                        inputs[socket.name] = value
+                    elif hasattr(value, '__len__'):
+                        inputs[socket.name] = list(value)
+                nodes.append({'name': node.name, 'type': node.bl_idname,
+                              'inputs': inputs,
+                              'image': node.image.name if node.type == 'TEX_IMAGE' and node.image else None})
+        materials.append({'name': material.name, 'nodes': nodes,
+                          'links': [{'from_node': link.from_node.name,
+                                     'from_socket': link.from_socket.name,
+                                     'to_node': link.to_node.name,
+                                     'to_socket': link.to_socket.name}
+                                    for link in material.node_tree.links] if material.use_nodes else []})
+    eye_setup[name] = {'parent': obj.parent.name if obj.parent else None,
+                       'dimensions': list(obj.dimensions),
+                       'matrix_world': [list(row) for row in obj.matrix_world],
+                       'materials': materials}
+report = {'review_scope': ('native photo skin and groom appearance; animation not evaluated' if texture_path else 'scalp, brow and beard shape and coverage; skin and animation not evaluated'), 'renders': results, 'eye_setup': eye_setup, 'cameras': camera_records, 'excluded_objects': sorted(excluded), 'restored_properties': saved_props,
           'head_turn_degrees': head_turn, 'evaluated_head_turn_degrees': head_turn_evaluated,
           'head_basis_restored': all(abs(head_fk.matrix_basis[i][j]-head_basis[i][j]) < 1e-6 for i in range(4) for j in range(4)),
           'rig_drivers': len(rig.animation_data.drivers),
