@@ -1,6 +1,12 @@
 name: Native face normals comparison
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Diagnostic comparison
+        type: choice
+        options: [normals, lighting]
+        default: normals
 permissions:
   contents: read
 concurrency:
@@ -11,6 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
+      FACE_PROBE_MODE: ${{ inputs.mode }}
       OMP_NUM_THREADS: '2'
       OPENBLAS_NUM_THREADS: '2'
     steps:
