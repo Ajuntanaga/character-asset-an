@@ -571,7 +571,18 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
                          for p in inter_digit_surface['pairs'].values())
     if not inter_digit_ok:
         fit_status = 'REJECTED_INTER_DIGIT_INTERSECTION'
+    # Export evaluated joints in instrument coordinates so wrist placement can
+    # be compared with the pose reference without loading another heavy scene.
+    joint_positions = {}
+    for digit in DIGITS:
+        joint_positions[digit] = [
+            list(guitar_inv @ rig.matrix_world @ rig.pose.bones[f'DEF-Finger_{digit}{j}.R'].head)
+            for j in (1, 2, 3)]
+        joint_positions[digit].append(list(
+            guitar_inv @ rig.matrix_world @ rig.pose.bones[f'DEF-Finger_{digit}3.R'].tail))
     report = {'status': fit_status, 'main_drivers': 1957,
+              'joints_guitar_local_m': joint_positions,
+              'wrist_guitar_local_m': list(guitar_inv @ rig.matrix_world @ rig.pose.bones['DEF-Hand.R'].head),
               'wrist_extension': wrist_report,
               'inter_digit_surface': inter_digit_surface,
               'inter_digit_ok': inter_digit_ok,
