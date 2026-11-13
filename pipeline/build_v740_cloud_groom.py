@@ -2,6 +2,7 @@
 import bpy
 import json
 import math
+import heapq
 from collections import defaultdict
 from pathlib import Path
 
@@ -45,13 +46,55 @@ assert all(0 <= i < original_face_count for i in removed | scalp_faces | neck_fa
 kept = [i for i in range(original_face_count) if i not in removed]
 assert len(kept) == len(head.data.polygons)
 
-# Replace only unobserved scalp/rear-neck texture regions, leaving front skin.
+# Feather the clean scalp/nape into the photo material on the native mesh.
+# Point-domain weights follow all FACS keys; no camera-dependent mask or hard
+# polygon material boundary is introduced. Preserve the atlas in observed skin.
+clean_faces = set()
+assigned = {'scalp': 0, 'rear_neck': 0}
+for polygon, original in zip(head.data.polygons, kept):
+    region = 'scalp' if original in scalp_faces else 'rear_neck' if original in neck_faces and co[list(polygon.vertices), 1].mean() > 0 else None
+    if region:
+        clean_faces.add(polygon.index)
+        assigned[region] += 1
+incident = [set() for _ in co]
+for polygon in head.data.polygons:
+    for vertex in polygon.vertices:
+        incident[vertex].add(polygon.index in clean_faces)
+inside = np.array([True in flags for flags in incident])
+boundary = [i for i, flags in enumerate(incident) if len(flags) == 2]
+assert boundary, 'Clean skin transition has no boundary'
+adjacency = [[] for _ in co]
+for edge in head.data.edges:
+    a, b = edge.vertices
+    distance = float(np.linalg.norm(co[a]-co[b]))
+    adjacency[a].append((b, distance))
+    adjacency[b].append((a, distance))
+distances = np.full(len(co), np.inf)
+queue = [(0.0, i) for i in boundary]
+for i in boundary:
+    distances[i] = 0.0
+heapq.heapify(queue)
+feather = .008
+while queue:
+    distance, i = heapq.heappop(queue)
+    if distance != distances[i] or distance > feather:
+        continue
+    for j, length in adjacency[i]:
+        candidate = distance+length
+        if candidate < distances[j] and candidate <= feather:
+            distances[j] = candidate
+            heapq.heappush(queue, (candidate, j))
+signed = np.where(inside, distances, -distances)
+weights = np.clip(.5+signed/(2*feather), 0, 1)
+weights = weights*weights*(3-2*weights)
+attribute = head.data.attributes.new('V740_CleanSkinBlend', 'FLOAT', 'POINT')
+attribute.data.foreach_set('value', weights.astype(np.float32))
 skin = bpy.data.materials['V736_NATIVE_PHOTO_SKIN'].copy()
-skin.name = 'V740_CLEAN_SCALP_NAPE'
+skin.name = 'V740_FEATHERED_NATIVE_SKIN'
 nodes, links = skin.node_tree.nodes, skin.node_tree.links
 shader = next(n for n in nodes if n.type == 'BSDF_PRINCIPLED')
-for link in list(shader.inputs['Base Color'].links):
-    links.remove(link)
+assert shader.inputs['Base Color'].is_linked
+photo = shader.inputs['Base Color'].links[0].from_socket
 tex = nodes.new('ShaderNodeTexCoord')
 noise = nodes.new('ShaderNodeTexNoise')
 noise.inputs['Scale'].default_value = 25
@@ -61,15 +104,17 @@ ramp = nodes.new('ShaderNodeValToRGB')
 ramp.color_ramp.elements[0].color = (.22, .10, .047, 1)
 ramp.color_ramp.elements[1].color = (.30, .148, .078, 1)
 links.new(noise.outputs['Fac'], ramp.inputs['Fac'])
-links.new(ramp.outputs['Color'], shader.inputs['Base Color'])
+mask = nodes.new('ShaderNodeAttribute')
+mask.attribute_name = attribute.name
+mix = nodes.new('ShaderNodeMixRGB')
+links.new(mask.outputs['Fac'], mix.inputs[0])
+links.new(photo, mix.inputs[1])
+links.new(ramp.outputs['Color'], mix.inputs[2])
+links.new(mix.outputs['Color'], shader.inputs['Base Color'])
+head.data.materials.clear()
 head.data.materials.append(skin)
-clean_slot = len(head.data.materials)-1
-assigned = {'scalp': 0, 'rear_neck': 0}
-for polygon, original in zip(head.data.polygons, kept):
-    region = 'scalp' if original in scalp_faces else 'rear_neck' if original in neck_faces and co[list(polygon.vertices), 1].mean() > 0 else None
-    if region:
-        polygon.material_index = clean_slot
-        assigned[region] += 1
+for polygon in head.data.polygons:
+    polygon.material_index = 0
 
 head.data.calc_loop_triangles()
 scalp_triangles = [t for t in head.data.loop_triangles if kept[t.polygon_index] in scalp_faces]
@@ -269,7 +314,9 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'overlapping_undercoat_v3',
+          'revision': 'feathered_native_skin_v4',
+          'skin_transition_half_width_mm': feather*1000,
+          'skin_transition_vertices': int(((weights > 0) & (weights < 1)).sum()),
           'undercoat_length_mm': [10, 16], 'undercoat_target': 48000,
           'children_per_guide': 96, 'hair_roughness': .52,
           'status': 'unreviewed_groom_trial'}
