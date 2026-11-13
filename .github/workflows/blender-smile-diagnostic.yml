@@ -67,10 +67,10 @@ jobs:
       - name: Inspect native blink boundary and drivers
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/diagnose_v740_blink.py
-      - name: Compare eyelid atlas at rest and blink
+      - name: Compare localized eyelid patch at rest and blink
         if: inputs.render_eyelid_albedo
         run: |
-          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v745_eyelid_albedo.py
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v746_localized_eyelids.py
       - name: Isolate closed eyelid surface
         if: inputs.render_blink_surface
         run: |
@@ -100,6 +100,7 @@ jobs:
             results/smile_surface_diagnostic.json
             results/blink_boundary_diagnostic.json
             results/renders/v745_eyelid_*.png
+            results/renders/v745_eyelid_localized_mask.json
             results/v745_eyelid_*_render_report.json
             results/renders/v744_blink_surface_*.png
             results/skin_normal_comparison.json
