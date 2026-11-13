@@ -1,5 +1,6 @@
 """Reversible sleeve containment trial; requires wrist seam render review."""
 import bpy
+from collections import Counter
 from mathutils import Vector
 
 
@@ -33,6 +34,28 @@ def build(cuff, overlap=.006):
         evaluated = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
         mesh = evaluated.to_mesh()
         assert len(mesh.vertices) == len(body.data.vertices)
+        # Diagnose the current evaluated sleeve, including vertices omitted by
+        # the weight/material filters. Earlier rest-space sections are not
+        # sufficient to explain the visible posed seam.
+        nearby = Counter()
+        radial_bins = {}
+        for i in jacket:
+            offset = evaluated.matrix_world @ mesh.vertices[i].co - centers[0]
+            axial = offset.dot(axis)
+            radial = (offset - axial * axis).length
+            if -.12 < axial < limit and radial < .09:
+                reason = ('selected' if i in candidates else
+                          'shared_material' if i in other else 'weight_filter')
+                nearby[reason] += 1
+                bucket = str(round(axial / .005) * 5)
+                row = radial_bins.setdefault(bucket, {'count': 0,
+                    'radial_min_mm': float('inf'), 'radial_max_mm': 0.,
+                    'excluded_by_weight': 0, 'shared_material': 0})
+                row['count'] += 1
+                row['radial_min_mm'] = min(row['radial_min_mm'], radial * 1000)
+                row['radial_max_mm'] = max(row['radial_max_mm'], radial * 1000)
+                row['excluded_by_weight'] += reason == 'weight_filter'
+                row['shared_material'] += reason == 'shared_material'
         removed = []
         for i in candidates:
             offset = evaluated.matrix_world @ mesh.vertices[i].co - centers[0]
@@ -58,6 +81,8 @@ def build(cuff, overlap=.006):
     body.modifiers.move(len(body.modifiers) - 1, index)
     return {'status': 'TRIAL_REQUIRES_SEAM_AND_WRIST_MOTION_REVIEW',
             'removed_vertices': len(removed), 'candidate_vertices': len(candidates),
+            'nearby_jacket_selection': dict(nearby),
+            'nearby_jacket_axial_bins_mm': radial_bins,
             'overlap_m': overlap, 'selection_axis': list(axis),
             'shape_keys': [k.name for k in body.data.shape_keys.key_blocks],
             'source_topology_and_key_coordinates_modified': False,
