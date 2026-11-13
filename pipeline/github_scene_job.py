@@ -217,6 +217,12 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         guitar = bpy.data.objects['V206_GUITAR_ROOT']
         shots = [('guitar-front', guitar.matrix_world @ Vector((.625, 0, 1.)),
                   guitar.matrix_world @ Vector((.625, 0, 0)), .55), shots[0]]
+        # Resolve the narrow horn highlight at higher spatial density without
+        # denoising; the full-body preview cannot distinguish edge facets/noise.
+        horn = guitar.matrix_world @ Vector((.42, -.125, .005))
+        shots.append(('guitar-perimeter-detail',
+                      horn + guitar.matrix_world.to_quaternion() @ Vector((0, 0, .5)),
+                      horn, .10))
         # Resolve the bridge from the actual saddle positions, not a guessed
         # body coordinate. These crops distinguish geometry from preview detail.
         bridge = sum((bpy.data.objects[f'V206_SADDLE_S{i}'].matrix_world.translation
@@ -278,6 +284,10 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
     camera.data.type = 'ORTHO'
     for label, position, target, scale in shots:
         hidden = []
+        saved_denoising = scene.cycles.use_denoising
+        if label == 'guitar-perimeter-detail':
+            scene.cycles.samples = 128
+            scene.cycles.use_denoising = False
         override = bpy.context.view_layer.material_override
         shape_key = None
         photo_gain = None
@@ -364,7 +374,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             scene.render.resolution_x = scene.render.resolution_y = 512
         camera.location = position
         camera.rotation_euler = (Vector(target) - camera.location).to_track_quat('-Z', 'Y').to_euler()
-        if label in {'guitar-front', 'guitar-hardware-front', 'guitar-fretboard-front'}:
+        if label in {'guitar-front', 'guitar-hardware-front', 'guitar-fretboard-front', 'guitar-perimeter-detail'}:
             camera.rotation_euler = (guitar.matrix_world.to_3x3() @ Matrix(((0, -1, 0), (1, 0, 0), (0, 0, 1)))).to_euler()
         camera.data.ortho_scale = scale
         scene.render.filepath = str(out / f'{label}-preview.png')
@@ -380,6 +390,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             bpy.context.view_layer.update()
         bpy.context.view_layer.material_override = override
         scene.cycles.samples = report['preview']['samples']
+        scene.cycles.use_denoising = saved_denoising
         scene.render.resolution_x = scene.render.resolution_y = size
         for obj in hidden:
             obj.hide_render = False
