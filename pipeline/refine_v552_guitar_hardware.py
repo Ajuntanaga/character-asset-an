@@ -29,7 +29,7 @@ def build():
     black = material('V552_Black_Anodized', (.009, .011, .012), .32, .80)
     cover = material('V552_Pickup_Cover', (.009, .011, .012), .43, .05)
     recess = material('V552_Recess', (.002, .0025, .003), .53, .15)
-    steel = material('V552_Machined_Steel', (.23, .25, .26), .25, .95)
+    steel = material('V552_Machined_Steel', (.56, .59, .61), .25, .95)
     lettering = material('V552_Pickup_Lettering', (.16, .17, .17), .48, .10)
 
     def mesh(name, vertices, faces, mat, parent=guitar, bevel=0, smooth=False):
@@ -116,6 +116,15 @@ def build():
                    (r + 1) * count + (i + 1) % count, (r + 1) * count + i)
                   for r in range(3) for i in range(count)]
         mesh(f'V552_Tuner_S{index}', vertices, faces, black, bevel=.00008, smooth=True)
+        # Product reference has a narrow exposed steel collar at each tuner neck.
+        # Axis and radius follow the existing tuner; do not shift string saddles.
+        collar_vertices = [(x + dx, y + .00455 * math.cos(math.tau * k / 96),
+                            .0205 + .00455 * math.sin(math.tau * k / 96))
+                           for dx in (.0337, .0343) for k in range(96)]
+        collar_faces = [(k, (k + 1) % 96, (k + 1) % 96 + 96, k + 96)
+                        for k in range(96)]
+        mesh(f'V552_Tuner_Collar_S{index}', collar_vertices, collar_faces,
+             steel, smooth=True)
         # Socket head remains below the string in the open bridge slot.
         rings = ((.0017, .023), (.0017, .0242), (.0008, .0242), (.0008, .0233))
         vertices = [(x + .013 + radius * math.cos(math.tau * k / 24),
