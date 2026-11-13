@@ -155,7 +155,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             ('fretting-oblique', center + offset @ Vector((.12, .20, .4)), center, .27),
             ('fretting-rear', center + offset @ Vector((-.02, .14, -.4)), center, .27),
         ] + context_shots
-        if args.wrist_extension:
+        if args.wrist_extension or cuff_variant == 'wrist-fitted':
             wrist = rig.matrix_world @ rig.pose.bones['DEF-Hand.L'].head
             shots += [(f'wrist-{angle}', wrist + offset @ Vector((0, 0, .6)), wrist, .23) for angle in (0, -15, 15)]
     if args.mode == 'groom-build':

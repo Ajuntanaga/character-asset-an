@@ -71,6 +71,16 @@ def build(clearance=.002, length=.040):
         bm.to_mesh(data)
     finally:
         bm.free()
+    uv = data.uv_layers.new(name='UVMap')
+    ring_parameters = (0., .08, .5, .92, 1.)
+    for polygon in data.polygons:
+        columns = [data.loops[i].vertex_index % count for i in polygon.loop_indices]
+        seam = 0 in columns and count - 1 in columns
+        for loop_index in polygon.loop_indices:
+            vertex_index = data.loops[loop_index].vertex_index
+            column = vertex_index % count
+            u = 1. if seam and column == 0 else column / count
+            uv.data[loop_index].uv = (u, ring_parameters[vertex_index // count])
     cuff = bpy.data.objects.new(name, data)
     bpy.context.scene.collection.objects.link(cuff)
     for material in source.data.materials:
