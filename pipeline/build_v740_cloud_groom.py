@@ -315,7 +315,10 @@ for p, n, root_uv in guides:
     # V21 reference-side review: side locks remain tiny wire loops.
     # Increase side radius by 1.5 mm, smoothly retaining the crown radius.
     radius = 1.45*(rng.uniform(.0014, .0020)+top*.00175)+.0015*(1-top)
-    length = rng.uniform(.005, .010)+top*.012
+    # Resolved curl review (43470719530): long crown travel and the added
+    # arch create upright hollow loops instead of the reference ringlets.
+    # Shorten crown pitch; preserve side curls, roots and random placement.
+    length = rng.uniform(.005, .010)+top*.004
     turns = rng.uniform(1.10, 1.65)
     phase = rng.uniform(-math.pi, math.pi)
     theta = phase+math.tau*turns*(t+.10*np.sin(math.pi*t))
@@ -323,10 +326,9 @@ for p, n, root_uv in guides:
     helix = radius*curl_envelope[:, None]*(
         .80*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
     sweep = tangent*(.002*top*np.sin(math.pi*t))[:, None]
-    # V23 isolated curls remain a shallow open lattice. Raise the middle of
-    # crown locks, with zero displacement at root/tip, rather than extending
-    # their pointed ends. Side curls and the underlying coverage stay fixed.
-    crown_arch = n*(.012*top*np.sin(math.pi*t)**2)[:, None]
+    # Keep a modest crown lift without stretching the ringlet into an arch.
+    # The former 12 mm lift exceeded the curl radius by more than twice.
+    crown_arch = n*(.003*top*np.sin(math.pi*t)**2)[:, None]
     # v16 clips the lower half of the .80-radius helix onto the scalp.
     # Lift the centerline beyond its normal excursion to retain rounded locks.
     guide = (p+n*(.00016+(radius*.95+.0006)*emerge[:, None])
