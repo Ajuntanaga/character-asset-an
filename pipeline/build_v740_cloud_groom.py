@@ -304,7 +304,9 @@ for p, n, root_uv in guides:
     helix = radius*curl_envelope[:, None]*(
         .80*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
     sweep = tangent*(.002*top*np.sin(math.pi*t))[:, None]
-    guide = (p+n*(.00016+(radius*.45+.0006)*emerge[:, None])
+    # v16 clips the lower half of the .80-radius helix onto the scalp.
+    # Lift the centerline beyond its normal excursion to retain rounded locks.
+    guide = (p+n*(.00016+(radius*.95+.0006)*emerge[:, None])
              +axis*length*t[:, None]+sweep+helix)
     for j in range(1, len(t)):
         hit, normal, _, _ = scalp.find_nearest(Vector(guide[j]))
@@ -391,7 +393,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'curl_extent_v16',
+          'revision': 'curl_clearance_v17',
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
           'photo_coverage_repair': photo_repair,
@@ -414,6 +416,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'child_radius_scale': [.85, 1.15],
           'child_length_fraction': [.55, 1.0],
           'curl_radius_scale_from_v15': 1.45,
+          'curl_centerline_lift_radius_factor': .95,
           'crown_curl_radius_mm': [4.5675, 5.4375], 'part_flow': 'outward',
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
