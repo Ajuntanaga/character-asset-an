@@ -281,8 +281,8 @@ del strands, radii, uvs
 
 strands, radii, uvs = [], [], []
 t = np.linspace(0, 1, 16)
-for _ in range(150000):
-    if len(strands) == 48000:
+for _ in range(375000):
+    if len(strands) == 120000:
         break
     p, n, root_uv = sample()
     if not allowed(p):
@@ -306,7 +306,7 @@ for _ in range(150000):
             if signed < .0003:
                 path[j] += np.array(normal)*(.0003-signed)
     strands.append(path)
-    radii.append(rng.uniform(.000025, .000038)*np.maximum(.06, 1-t*t))
+    radii.append(rng.uniform(.000035, .000050)*np.maximum(.06, 1-t*t))
     uvs.append(root_uv)
 undercoat = install('V740_NATIVE_UNDERCOAT', strands, radii, uvs)
 head.update_tag(refresh={'DATA'})
@@ -321,7 +321,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'photo_coverage_repair': photo_repair,
           'skin_transition_half_width_mm': feather*1000,
           'skin_transition_vertices': int(((weights > 0) & (weights < 1)).sum()),
-          'undercoat_length_mm': [10, 16], 'undercoat_target': 48000,
+          'undercoat_length_mm': [10, 16], 'undercoat_target': 120000,
+          'undercoat_radius_microns': [35, 50],
           'children_per_guide': 96, 'hair_roughness': .52,
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
