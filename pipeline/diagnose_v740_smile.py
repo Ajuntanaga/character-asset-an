@@ -101,6 +101,60 @@ def compare_lower_face_fit():
             'triangle_count': len(triangles), 'comparisons': comparisons}
 
 
+def compare_modifier_stages():
+    """Measure the same mouth region and actual driven keys at each stack prefix."""
+    modifiers = list(head.modifiers)
+    flags = [m.show_viewport for m in modifiers]
+    stages = []
+    try:
+        for count in range(len(modifiers) + 1):
+            for index, modifier in enumerate(modifiers):
+                modifier.show_viewport = flags[index] and index < count
+            head.update_tag(refresh={'OBJECT'})
+            rest, triangles, _, topology = surface(0.)
+            rest_keys = {k.name: float(k.value) for k in head.data.shape_keys.key_blocks
+                         if abs(k.value) > 1e-8}
+            posed, _, _, posed_topology = surface(1.)
+            posed_keys = {k.name: float(k.value) for k in head.data.shape_keys.key_blocks
+                          if abs(k.value) > 1e-8}
+            assert topology == posed_topology and rest.shape == posed.shape
+            centers = rest[triangles].mean(axis=1)
+            mouth = ((abs(centers[:, 0]) < .055) & (centers[:, 1] < -.065)
+                     & (centers[:, 2] > 1.54) & (centers[:, 2] < 1.61))
+            rn, ra = normals(rest, triangles)
+            pn, pa = normals(posed, triangles)
+            valid = mouth & (ra > 1e-12)
+            ids = np.flatnonzero(valid)
+            assert len(ids), 'Empty evaluated mouth region'
+            dots = np.clip(np.sum(rn * pn, axis=1), -1., 1.)
+            ratios = pa / np.maximum(ra, 1e-20)
+            worst = ids[np.argsort(dots[ids])[:12]]
+            stages.append({
+                'enabled_prefix': count, 'vertex_count': len(rest),
+                'rest_keys': rest_keys, 'smile_keys': posed_keys,
+                'mouth_triangles': len(ids),
+                'rotated_over_90': int(np.sum(valid & (dots < 0))),
+                'below_one_fifth_area': int(np.sum(valid & (ratios < .2))),
+                'worst': [{'vertices': triangles[i].tolist(),
+                           'rest_center': centers[i].tolist(),
+                           'rotation_degrees': float(np.degrees(np.arccos(dots[i]))),
+                           'area_ratio': float(ratios[i])} for i in worst]})
+    finally:
+        for modifier, flag in zip(modifiers, flags):
+            modifier.show_viewport = flag
+        for name, value in saved.items():
+            control[name] = value
+        head.update_tag(refresh={'OBJECT'})
+        rig.update_tag(refresh={'OBJECT'})
+        bpy.context.view_layer.update()
+    return {'modifiers': [{'name': m.name, 'type': m.type,
+                           'viewport': flag, 'render': m.show_render,
+                           'levels': getattr(m, 'levels', None)}
+                          for m, flag in zip(modifiers, flags)],
+            'stages': stages,
+            'restored': all(m.show_viewport == flag for m, flag in zip(modifiers, flags))}
+
+
 records = []
 try:
     basis, triangles, polygon_ids, topology = surface(0.)
@@ -150,4 +204,5 @@ out.mkdir(exist_ok=True)
     'controls_restored': all(control[name] == value for name, value in saved.items()),
     'samples': records,
     'lower_face_fit_comparison': compare_lower_face_fit(),
+    'modifier_comparison': compare_modifier_stages(),
 }, indent=2))

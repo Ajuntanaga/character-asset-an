@@ -1,6 +1,10 @@
 name: Native smile fit diagnostic
 on:
   workflow_dispatch:
+    inputs:
+      render_eye_comparison:
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -24,6 +28,7 @@ jobs:
           gh run download 43418752707 --repo "$GITHUB_REPOSITORY" --name native-groom-checkpoint --dir checkpoint
           test -s checkpoint/V740_cloud_groom_trial.blend
       - name: Download pinned skin atlas for eye comparison
+        if: inputs.render_eye_comparison
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -38,6 +43,7 @@ jobs:
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/diagnose_v740_smile.py
       - name: Separate skin texture from eye geometry
+        if: inputs.render_eye_comparison
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_eye_texture.py
       - uses: actions/upload-artifact@v4
