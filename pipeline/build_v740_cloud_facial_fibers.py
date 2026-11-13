@@ -28,17 +28,91 @@ mesh.calc_loop_triangles()
 rng = np.random.default_rng(740)
 report = {}
 
+
+def native_beard_mask(records, tree, surface_triangles, threshold):
+    """Resample the current photo material; old samples only define growth sites."""
+    image = bpy.data.images.load(str(Path('Character_An_photoreal_head_basecolor_v326.png').resolve()),
+                                 check_existing=False)
+    try:
+        width, height = image.size
+        assert width > 0 and height > 0
+        pixels = np.empty(width*height*4, dtype=np.float32)
+        image.pixels.foreach_get(pixels)
+        pixels = pixels.reshape(height, width, 4)
+        assert np.isfinite(pixels).all() and pixels[..., :3].std() > .01
+        native = mesh.uv_layers['UVMap']
+        repaired = mesh.uv_layers['V740_ObservedSidePhotoUV']
+        blend = mesh.attributes['V740_ObservedSidePhotoBlend']
+
+        def sample(uv):
+            # Blender image rows start at the bottom, matching UV coordinates.
+            x = np.clip(float(uv.x)*width-.5, 0, width-1)
+            y = np.clip(float(uv.y)*height-.5, 0, height-1)
+            ix, iy = int(x), int(y)
+            jx, jy = min(ix+1, width-1), min(iy+1, height-1)
+            fx, fy = x-ix, y-iy
+            return ((1-fy)*((1-fx)*pixels[iy,ix,:3]+fx*pixels[iy,jx,:3])
+                    + fy*((1-fx)*pixels[jy,ix,:3]+fx*pixels[jy,jx,:3]))
+
+        updated = []
+        for record in records:
+            x, _, z = record['point']
+            hit, normal, index, _ = tree.ray_cast(Vector((x,-.5,z)), Vector((0,1,0)))
+            if hit is None or normal.y > -.10:
+                continue
+            triangle = surface_triangles[index]
+            a, b, c = coords[list(triangle.vertices)].astype(np.float64)
+            edge_b, edge_c = b-a, c-a
+            normal64 = np.cross(edge_b, edge_c)
+            denom = float(normal64 @ normal64)
+            if denom < 1e-24:
+                continue
+            offset = np.asarray(hit, dtype=np.float64)-a
+            v = float(np.cross(offset, edge_c) @ normal64)/denom
+            w = float(np.cross(edge_b, offset) @ normal64)/denom
+            bary = (1-v-w, v, w)
+            if not all(math.isfinite(v) and -.01 <= v <= 1.01 for v in bary):
+                continue
+            colors = []
+            for layer in (native, repaired):
+                uv = sum((layer.data[i].uv * weight for i, weight in zip(triangle.loops, bary)),
+                         Vector((0,0)))
+                colors.append(sample(uv))
+            weight = sum(blend.data[i].value*b for i,b in zip(triangle.vertices,bary))
+            rgb = colors[0]*(1-weight)+colors[1]*weight
+            updated.append(dict(record, luma=float(rgb @ np.array((.2126,.7152,.0722)))))
+
+        def eligible(items):
+            return {region: sum(r['luma'] < threshold and predicate(r['point']) for r in items)
+                    for region, predicate in {
+                        'all': lambda p: True,
+                        'moustache': lambda p: abs(p[0]) < .033 and p[2] > 1.579,
+                        'chin': lambda p: abs(p[0]) < .025 and p[2] < 1.56,
+                    }.items()}
+        return updated, {'source': 'current native UV photo with observed-side repair blend',
+                         'historical_eligible': eligible(records), 'native_eligible': eligible(updated),
+                         'projection_rejected': len(records)-len(updated),
+                         'growth_sites_and_lip_nose_exclusions': 'historical; unchanged'}
+    finally:
+        bpy.data.images.remove(image)
+
+
 for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     ('BROW','v740_brow_growth.json.gz',.44,1900,7,1.645,1.700),
     ('BEARD','v740_beard_growth.json.gz',.43,6500,6,1.495,1.625),
 ]:
-    triangles = [tuple(t.vertices) for t in mesh.loop_triangles
-                 if all(z_low < coords[i,2] < z_high and coords[i,1] < -.025 for i in t.vertices)]
+    surface_triangles = [t for t in mesh.loop_triangles
+                         if all(z_low < coords[i,2] < z_high and coords[i,1] < -.025 for i in t.vertices)]
+    triangles = [tuple(t.vertices) for t in surface_triangles]
     bvh = BVHTree.FromPolygons(vectors,triangles,all_triangles=True)
     records = json.loads(gzip.decompress((ROOT/sample_file).read_bytes()))
+    mask_report = {'source': 'historical brow mask'}
+    if kind == 'BEARD':
+        records, mask_report = native_beard_mask(records, bvh, surface_triangles, threshold)
     selected = []
     for side in ('L','R'):
         candidates = [r for r in records if r['side']==side and r['luma']<threshold]
+        assert candidates, f'No eligible {kind} candidates on {side}'
         probabilities = np.array([max(.01,(threshold-r['luma'])/threshold) for r in candidates])
         indices = rng.choice(len(candidates),min(per_side,len(candidates)),replace=False,
                              p=probabilities/probabilities.sum())
@@ -158,7 +232,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     obj.matrix_basis = Matrix.Identity(4)
     obj['surface_attachment'] = 'V740 native face barycentric shape-key deformation plus DEF-Head parent'
     report[kind] = {'fiber_counts':counts,'vertices':len(points),'shape_keys':len(keys),
-                    'key_drivers':len(data.shape_keys.animation_data.drivers)}
+                    'key_drivers':len(data.shape_keys.animation_data.drivers), 'growth_mask':mask_report}
 rig.update_tag(refresh={'OBJECT'})
 bpy.context.view_layer.update()
 assert len(rig.animation_data.drivers) == 1957

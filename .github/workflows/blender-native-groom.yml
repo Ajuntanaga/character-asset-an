@@ -35,7 +35,6 @@ jobs:
           gh release download checkpoint-v739 --pattern V739_native_face_trial.blend
           echo '63f795279e1c0ce770ba7238619c276a4ec0e2f2c5d3afca8a829981916dce21  V739_native_face_trial.blend' | sha256sum -c -
       - name: Download native photo texture
-        if: ${{ inputs.textured }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
