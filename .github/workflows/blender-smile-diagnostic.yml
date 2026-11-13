@@ -51,6 +51,9 @@ jobs:
       - name: Compare fitted and reconstructed donor smile
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/diagnose_v740_smile.py
+      - name: Inspect native blink boundary and drivers
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/diagnose_v740_blink.py
       - name: Separate skin texture from eye geometry
         if: inputs.render_eye_comparison
         run: |
@@ -74,6 +77,7 @@ jobs:
           name: smile-fit-diagnostic
           path: |
             results/smile_surface_diagnostic.json
+            results/blink_boundary_diagnostic.json
             results/skin_normal_comparison.json
             results/renders/v740_skin_*.png
             results/renders/v740_eye_texture_*.png
