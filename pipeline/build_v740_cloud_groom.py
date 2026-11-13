@@ -323,7 +323,16 @@ for p, n, root_uv in guides:
         # A broad lock gathers toward its tip instead of keeping a pipe-shaped section.
         clump_width = bundle*(1-.70*smooth((t-.35)/.65))
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
-        path += u*rng.uniform(-.00018, .00018)*np.sin(math.pi*t)[:, None]
+        # Children share a lock direction, but not an identical helical centerline.
+        # Identical phase made the isolated render read as solid wire loops.
+        child_theta = theta + rng.uniform(-.45, .45)*emerge
+        child_radius = radius*rng.uniform(.85, 1.15)
+        child_helix = child_radius*curl_envelope[:, None]*(
+            .80*np.cos(child_theta)[:, None]*u+np.sin(child_theta)[:, None]*v)
+        path += (child_helix-helix)*bundle[:, None]
+        irregularity = rng.uniform(.00006, .00014)*np.sin(
+            math.tau*rng.uniform(3., 5.)*t+rng.uniform(-math.pi, math.pi))
+        path += u*(irregularity*np.sin(math.pi*t))[:, None]
         width = rng.uniform(.000030, .000043)
         taper = np.maximum(.04, (1-t)/.15)*np.minimum(1., 1-.08*t)
         taper[t < .85] = 1-.08*t[t < .85]
@@ -373,7 +382,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'surface_following_undercoat_v10',
+          'revision': 'desynchronized_curl_children_v11',
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
           'photo_coverage_repair': photo_repair,
@@ -392,6 +401,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'children_per_guide': 96, 'hair_roughness': .52,
           'curl_turns': [1.10, 1.65], 'curl_normal_flattening': .80,
           'curl_tip_clump_fraction': .30,
+          'child_phase_offset_radians': [-.45, .45],
+          'child_radius_scale': [.85, 1.15],
           'crown_curl_radius_mm': [6.3, 7.5], 'part_flow': 'outward',
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
