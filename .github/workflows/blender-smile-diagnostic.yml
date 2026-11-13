@@ -40,7 +40,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           test "$(gh run view 43418752707 --repo "$GITHUB_REPOSITORY" --json conclusion --jq .conclusion)" = success
-          gh run download 43418752707 --repo "$GITHUB_REPOSITORY" --name native-groom-checkpoint --dir checkpoint
+          for attempt in 1 2 3; do
+            staging="checkpoint-attempt-$attempt"
+            if timeout --kill-after=10s 180s gh run download 43418752707 --repo "$GITHUB_REPOSITORY" --name native-groom-checkpoint --dir "$staging" && test -s "$staging/V740_cloud_groom_trial.blend"; then
+              mv "$staging" checkpoint
+              break
+            fi
+            echo "Checkpoint download attempt $attempt failed or timed out"
+          done
           test -s checkpoint/V740_cloud_groom_trial.blend
       - name: Download pinned skin atlas for eye comparison
         if: inputs.render_eyelid_albedo || inputs.render_blink_surface || inputs.render_eye_comparison || inputs.render_eye_fit || inputs.render_skin_normals || inputs.trial_smile_corner
