@@ -13,6 +13,9 @@ from guitar_geometry import GuitarGeometry, load_authoritative_mapping
 
 DIGITS = ('Index', 'Middle', 'Ring', 'Pinky', 'Thumb')
 PAD_MIN_DOT = math.cos(math.radians(35.))
+# Aim inside the acceptance cone: the weighted least-squares compromise and
+# final subdivided skin evaluation can otherwise land just outside 35 degrees.
+PAD_FIT_TARGET_DOT = math.cos(math.radians(34.))
 NAIL_MIN_DOT = math.cos(math.radians(60.))
 
 
@@ -335,7 +338,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
             # Orientation is an explicit acceptance condition below. The
             # high-weight cone penalties guide the fit without demanding a
             # perfectly flat pad/nail on the rounded fingertip.
-            r.append(max(0., PAD_MIN_DOT - n.dot(desired)) * cone_weight * orientation_weight)
+            r.append(max(0., PAD_FIT_TARGET_DOT - n.dot(desired)) * cone_weight * orientation_weight)
             r.append(max(0., NAIL_MIN_DOT - nail_direction.dot(-desired)) * cone_weight * orientation_weight)
         # Keep non-thumb knuckles and shafts on the front/edge of the fretboard.
         for digit in DIGITS[:4]:
@@ -610,6 +613,7 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
               'thumb_axial_roll_degrees': math.degrees(values[26]),
               'thumb_distal_flexion_degrees': np.degrees(values[24:26]).tolist(),
               'orientation_limits': {'pad_min_dot': PAD_MIN_DOT, 'nail_min_dot': NAIL_MIN_DOT},
+              'orientation_fit_target': {'pad_min_dot': PAD_FIT_TARGET_DOT, 'pad_margin_degrees': 1.},
               'orientation_refinement_loss': orientation_history,
               'orientation_refinement_cone_weight': .24 if axial_trial else None,
               'pad_sampling': 'nearest own distal skin to persistent pad; weight > 0.95; radius 4mm',
