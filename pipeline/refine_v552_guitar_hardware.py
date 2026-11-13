@@ -247,11 +247,59 @@ def build():
         inlay_names.append(cap.name)
 
     bpy.context.view_layer.update()
+    # The six bass strings in the product photo resolve winding relief.
+    # Use shallow transverse bump bands, not extra mesh, so the existing
+    # outer gauges and all contact-solving surfaces remain unchanged.
+    wound_strings = []
+    for string in guitar.children_recursive:
+        if not string.name.startswith('V206_STRING_'):
+            continue
+        gauge = float(string.get('gauge_in', 0))
+        if gauge < .024:
+            continue
+        assert string.type == 'CURVE' and len(string.data.materials) == 1
+        source = string.data.materials[0]
+        mat = source.copy()
+        mat.name = 'V751_Wound_' + string.name
+        nodes, links = mat.node_tree.nodes, mat.node_tree.links
+        shader = nodes.get('Principled BSDF')
+        assert shader and not shader.inputs['Normal'].is_linked
+        # Trial pitch follows gauge; it is a visual approximation, not a
+        # manufacturer winding specification. Coordinates are guitar metres.
+        pitch = .00005 + .18 * gauge * .0254
+        coord = nodes.new('ShaderNodeTexCoord')
+        coord.object = guitar
+        direction = nodes.new('ShaderNodeVectorMath')
+        direction.operation = 'DOT_PRODUCT'
+        points = string.data.splines[0].points
+        local = guitar.matrix_world.inverted() @ string.matrix_world
+        axis = (local @ points[-1].co.xyz - local @ points[0].co.xyz).normalized()
+        direction.inputs[1].default_value = axis
+        phase = nodes.new('ShaderNodeMath')
+        phase.operation = 'MULTIPLY'
+        phase.inputs[1].default_value = 2 * math.pi / pitch
+        bands = nodes.new('ShaderNodeMath')
+        bands.operation = 'SINE'
+        bump = nodes.new('ShaderNodeBump')
+        bump.inputs['Strength'].default_value = .35
+        bump.inputs['Distance'].default_value = pitch * .15
+        links.new(coord.outputs['Object'], direction.inputs[0])
+        links.new(direction.outputs['Value'], phase.inputs[0])
+        links.new(phase.outputs[0], bands.inputs[0])
+        links.new(bands.outputs[0], bump.inputs['Height'])
+        links.new(bump.outputs['Normal'], shader.inputs['Normal'])
+        string.data = string.data.copy()
+        string.data.materials[0] = mat
+        wound_strings.append({'object': string.name, 'source_material': source.name,
+                              'gauge_in': gauge, 'trial_pitch_m': pitch,
+                              'method': 'transverse_bump_bands'})
+    assert len(wound_strings) == 6, 'Expected six wound and two plain strings'
     for name, original in saddles.items():
         assert max(abs(a - b) for row_a, row_b in zip(original, bpy.data.objects[name].matrix_world)
                    for a, b in zip(row_a, row_b)) < 1e-9, name
     assert len(rig.animation_data.drivers) == 1957
     return {'created': created, 'hidden_originals': hidden,
+            'wound_string_materials': wound_strings,
             'ring_inlay_centers': inlay_names,
             'saddle_transforms_unchanged': True, 'main_drivers': 1957,
             'reference': 'references/props/strandberg/strandberg_full_product.jpg'}
