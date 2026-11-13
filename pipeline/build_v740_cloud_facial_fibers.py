@@ -153,12 +153,12 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
         if kind == 'BROW':
             direction = Vector((sign*(.32+.68*u),0.,.95-1.30*u)).normalized()
             length = rng.uniform(.0030,.0052)*(1.-.22*u)
-            radius = rng.uniform(.000025,.000040)
+            radius = rng.uniform(.000040,.000060)
         else:
             mustache = root.z > 1.579
             direction = Vector((sign*(.6 if mustache else .2),0.,-1.)).normalized()
             length = rng.uniform(.0030,.0048) if mustache else rng.uniform(.0024,.0047)
-            radius = rng.uniform(.000030,.000050)
+            radius = rng.uniform(.000040,.000065)
         centers, normals, samples = [], [], []
         for j in range(steps):
             t = j/(steps-1.)
@@ -195,7 +195,8 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             tangent = (centers[min(j+1,steps-1)]-centers[max(0,j-1)]).normalized()
             across = tangent.cross(normal).normalized()
             perpendicular = across.cross(tangent).normalized()
-            width = max(.000003,radius*(1.-.93*t**1.3))
+            # Keep a full shaft; concentrate taper near the distal tip.
+            width = max(.000003,radius*(1.-.95*t**4.0))
             for k in range(3):
                 angle = k*math.tau/3
                 points.append(center+width*(math.cos(angle)*perpendicular+math.sin(angle)*across))
@@ -253,7 +254,9 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     obj.matrix_basis = Matrix.Identity(4)
     obj['surface_attachment'] = 'V740 native face barycentric shape-key deformation plus DEF-Head parent'
     report[kind] = {'fiber_counts':counts,'vertices':len(points),'shape_keys':len(keys),
-                    'key_drivers':len(data.shape_keys.animation_data.drivers), 'growth_mask':mask_report}
+                    'key_drivers':len(data.shape_keys.animation_data.drivers), 'growth_mask':mask_report,
+                    'shaft_radius_m': [.000040, .000060 if kind=='BROW' else .000065],
+                    'taper': {'amount': .95, 'exponent': 4.0}}
 rig.update_tag(refresh={'OBJECT'})
 bpy.context.view_layer.update()
 assert len(rig.animation_data.drivers) == 1957
