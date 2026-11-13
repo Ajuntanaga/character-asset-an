@@ -88,6 +88,13 @@ while queue:
 signed = np.where(inside, distances, -distances)
 weights = np.clip(.5+signed/(2*feather), 0, 1)
 weights = weights*weights*(3-2*weights)
+# The reference atlas contains clothing/background wedges on the lower neck.
+# Fade below the jaw in rest coordinates; the point attribute follows FACS.
+neck_fade_top, neck_fade_bottom = 1.515, 1.480
+lower_neck = np.clip((neck_fade_top-co[:, 2])/(neck_fade_top-neck_fade_bottom), 0, 1)
+lower_neck = lower_neck*lower_neck*(3-2*lower_neck)
+weights = np.maximum(weights, lower_neck)
+assert np.isfinite(weights).all() and weights.min() >= 0 and weights.max() <= 1
 attribute = head.data.attributes.new('V740_CleanSkinBlend', 'FLOAT', 'POINT')
 attribute.data.foreach_set('value', weights.astype(np.float32))
 skin = bpy.data.materials['V736_NATIVE_PHOTO_SKIN'].copy()
@@ -320,6 +327,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'revision': 'observed_side_photo_repair_v5',
           'photo_coverage_repair': photo_repair,
           'skin_transition_half_width_mm': feather*1000,
+          'lower_neck_clean_fade_z': [neck_fade_bottom, neck_fade_top],
+          'lower_neck_blended_vertices': int(np.count_nonzero(lower_neck)),
           'skin_transition_vertices': int(((weights > 0) & (weights < 1)).sum()),
           'undercoat_length_mm': [10, 16], 'undercoat_target': 120000,
           'undercoat_radius_microns': [35, 50],
