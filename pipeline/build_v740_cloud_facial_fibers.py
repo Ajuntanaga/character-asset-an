@@ -3,12 +3,14 @@ import bpy
 import json
 import gzip
 import math
+import runpy
 import numpy as np
 from pathlib import Path
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
 ROOT = Path(__file__).resolve().parent
+cranium = runpy.run_path(str(ROOT / 'native_cranium_mapping.py'))
 OUT = Path('results')
 OUT.mkdir(exist_ok=True)
 body = bpy.data.objects['V740_NATIVE_FACE']
@@ -48,8 +50,9 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
         # growth region, then reproject every point onto this trial's Basis.
         root = Vector(record['point'])
         if kind == 'BROW':
-            t = min(1., max(0., (root.z-1.665)/.130))
-            root.z -= .055*t*t*(3-2*t)
+            # Growth samples are pre-compression donor coordinates; use the
+            # same final field as the restored native face, not V739's old field.
+            root.z = float(cranium['compress'](root.z, cranium['TRIAL_REDUCTION']))
         sign = 1. if root.x > 0 else -1.
         u = min(1.,max(0.,(abs(root.x)-.016)/.050))
         if kind == 'BROW':
