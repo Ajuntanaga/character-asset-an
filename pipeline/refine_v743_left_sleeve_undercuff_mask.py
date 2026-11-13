@@ -73,12 +73,15 @@ def build(cuff, overlap=.006, radial_limit=.16):
         # whose vertices all survive; count their edges before shell/subsurf.
         removed_set = set(removed)
         kept_edges = Counter()
+        removed_edges = Counter()
         for face in mesh.polygons:
-            if face.material_index != 6 or any(i in removed_set for i in face.vertices):
+            if face.material_index != 6:
                 continue
+            target = (removed_edges if any(i in removed_set for i in face.vertices)
+                      else kept_edges)
             indices = list(face.vertices)
             for a, b in zip(indices, indices[1:] + indices[:1]):
-                kept_edges[tuple(sorted((a, b)))] += 1
+                target[tuple(sorted((a, b)))] += 1
         all_boundary_edges = [edge for edge, uses in kept_edges.items() if uses == 1]
         adjacency = {}
         for a, b in all_boundary_edges:
@@ -94,6 +97,23 @@ def build(cuff, overlap=.006, radial_limit=.16):
                 pending.append(neighbor)
         boundary_edges = [edge for edge in all_boundary_edges if edge[0] in reached]
         boundary_indices = sorted({i for edge in boundary_edges for i in edge})
+        # A surviving boundary is a mask interface only when an incident
+        # jacket face was removed. Original openings are not seam anchors.
+        interface_edges = [edge for edge in all_boundary_edges
+                           if removed_edges[edge]]
+        interface_indices = sorted({i for edge in interface_edges for i in edge})
+        interface = {
+            'classification': 'retained_jacket_edge_adjacent_to_removed_jacket_face',
+            'space': 'world_m',
+            'edges': interface_edges,
+            'vertices': {str(i): list(evaluated.matrix_world @ mesh.vertices[i].co)
+                         for i in interface_indices},
+            'weights': {str(i): {body.vertex_groups[g.group].name: g.weight
+                                 for g in body.data.vertices[i].groups}
+                        for i in interface_indices},
+            'original_boundary_edges_excluded': sum(not removed_edges[e] for e in boundary_edges),
+            'seam_accepted': False,
+        }
         boundary = {
             'space': 'world_m',
             'stage': 'armature_only_before_mask_shell_and_subdivision',
@@ -130,6 +150,7 @@ def build(cuff, overlap=.006, radial_limit=.16):
             'removed_vertices': len(removed), 'candidate_vertices': len(candidates),
             'nearby_jacket_selection': dict(nearby),
             'surviving_jacket_boundary': boundary,
+            'mask_cut_interface': interface,
             'nearby_jacket_axial_bins_mm': radial_bins,
             'overlap_m': overlap, 'radial_limit_m': radial_limit,
             'selection_axis': list(axis),
