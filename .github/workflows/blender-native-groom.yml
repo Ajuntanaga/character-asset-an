@@ -14,6 +14,10 @@ on:
         description: Render unlit skin base color to diagnose texture versus lighting
         type: boolean
         default: false
+      clean_albedo:
+        description: Compare separate cleaned skin atlas trial
+        type: boolean
+        default: false
       undercoat:
         description: Render isolated undercoat and curl comparisons
         type: boolean
@@ -72,6 +76,10 @@ jobs:
         if: ${{ inputs.textured }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_textured.py
+      - name: Render cleaned atlas comparison
+        if: ${{ inputs.clean_albedo }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v741_clean_albedo.py
       - name: Render unlit skin diagnostic
         if: ${{ inputs.albedo }}
         run: |

@@ -26,7 +26,7 @@ if texture_path:
     for material in head.data.materials:
         if material and material.use_nodes:
             for node in material.node_tree.nodes:
-                if node.type == 'TEX_IMAGE' and node.image and Path(node.image.filepath).name == texture_path.name:
+                if node.type == 'TEX_IMAGE' and node.image and Path(node.image.filepath).name == globals().get('TEXTURE_SOURCE_NAME', texture_path.name):
                     node.image = atlas
                     matched += 1
     assert matched, 'Expected native face basecolor image node missing'

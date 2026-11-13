@@ -1,0 +1,16 @@
+{
+  "status": "trial_not_promoted",
+  "source": "production_v326_photoreal_facebuilder/textures/Character_An_photoreal_head_basecolor_v326.png",
+  "method": "remote image generation edit",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "visual_review": [
+    "Crosshatching and beard pigment substantially reduced",
+    "Broad atlas layout retained visually, exact feature registration unverified",
+    "Some eye and nose shading remains",
+    "Lower resolution than original 4096 square atlas"
+  ],
+  "next": "Render on existing UV mesh remotely before acceptance; original untouched"
+}
