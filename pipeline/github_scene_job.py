@@ -216,6 +216,10 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
                       for i in range(1, 9)), Vector()) / 8
         axes = guitar.matrix_world.to_quaternion()
         bridge += axes @ Vector((.015, 0, .015))
+        fret_markers = [bpy.data.objects[f'V206_INLAY_F12_{i}'] for i in (1, 2)]
+        fret_center = sum((obj.matrix_world.translation for obj in fret_markers), Vector()) / 2
+        shots.append(('guitar-fretboard-front',
+                      fret_center + axes @ Vector((0, 0, .5)), fret_center, .12))
         shots += [
             ('guitar-hardware-front', bridge + axes @ Vector((0, 0, .5)), bridge, .15),
             ('guitar-hardware-oblique', bridge + axes @ Vector((.20, -.18, .40)), bridge, .15),
@@ -349,7 +353,7 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             scene.render.resolution_x = scene.render.resolution_y = 512
         camera.location = position
         camera.rotation_euler = (Vector(target) - camera.location).to_track_quat('-Z', 'Y').to_euler()
-        if label in {'guitar-front', 'guitar-hardware-front'}:
+        if label in {'guitar-front', 'guitar-hardware-front', 'guitar-fretboard-front'}:
             camera.rotation_euler = (guitar.matrix_world.to_3x3() @ Matrix(((0, -1, 0), (1, 0, 0), (0, 0, 1)))).to_euler()
         camera.data.ortho_scale = scale
         scene.render.filepath = str(out / f'{label}-preview.png')
