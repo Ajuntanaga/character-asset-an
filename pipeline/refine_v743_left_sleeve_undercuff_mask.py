@@ -43,14 +43,18 @@ def build(cuff, overlap=.006):
             offset = evaluated.matrix_world @ mesh.vertices[i].co - centers[0]
             axial = offset.dot(axis)
             radial = (offset - axial * axis).length
-            if -.12 < axial < limit and radial < .09:
-                reason = ('selected' if i in candidates else
+            if -.22 < axial < .12 and radial < .16:
+                inside = -.12 < axial < limit and radial < .09
+                reason = ('outside_mask_volume' if not inside else
+                          'selected' if i in candidates else
                           'shared_material' if i in other else 'weight_filter')
                 nearby[reason] += 1
                 bucket = str(round(axial / .005) * 5)
                 row = radial_bins.setdefault(bucket, {'count': 0,
                     'radial_min_mm': float('inf'), 'radial_max_mm': 0.,
-                    'excluded_by_weight': 0, 'shared_material': 0})
+                    'excluded_by_weight': 0, 'shared_material': 0,
+                    'outside_mask_volume': 0})
+                row['outside_mask_volume'] += reason == 'outside_mask_volume'
                 row['count'] += 1
                 row['radial_min_mm'] = min(row['radial_min_mm'], radial * 1000)
                 row['radial_max_mm'] = max(row['radial_max_mm'], radial * 1000)
