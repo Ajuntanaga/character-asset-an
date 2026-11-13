@@ -245,20 +245,20 @@ for p, n, root_uv in guides:
     forward = -.48 if p[1] < -.040 and p[2] > 1.687 else .75
     flow = np.array([-.32*np.sign(p[0]-.039)*top, forward, -.58*(1-top)])
     tangent = unit(flow-n*np.dot(flow, n))
-    axis = unit(tangent*(.80-.16*top)+n*(.42+.27*top))
+    axis = unit(tangent*.90+n*(.22+.12*top))
     u = unit(n-axis*np.dot(n, axis))
     v = unit(np.cross(axis, u))
     root_u, root_v = tangent, unit(np.cross(n, tangent))
-    # Flatten and vary each curl along a swept lock; avoid uniform spring coils.
+    # Keep axial travel short so locks form rounded curls rather than pointed tufts.
     radius = rng.uniform(.0028, .0040)+top*.0010
-    length = rng.uniform(.012, .021)+top*.007
-    turns = rng.uniform(.75, 1.35)
+    length = rng.uniform(.005, .010)+top*.003
+    turns = rng.uniform(1.10, 1.65)
     phase = rng.uniform(-math.pi, math.pi)
     theta = phase+math.tau*turns*(t+.10*np.sin(math.pi*t))
-    curl_envelope = emerge*(1-.45*t)
+    curl_envelope = emerge*(1-.15*t)
     helix = radius*curl_envelope[:, None]*(
-        .42*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
-    sweep = tangent*(.004*top*np.sin(math.pi*t))[:, None]
+        .80*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
+    sweep = tangent*(.002*top*np.sin(math.pi*t))[:, None]
     guide = (p+n*(.00016+(radius*.45+.0006)*emerge[:, None])
              +axis*length*t[:, None]+sweep+helix)
     for j in range(1, len(t)):
@@ -331,7 +331,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'swept_irregular_curl_locks_v6',
+          'revision': 'compact_rounded_curl_locks_v7',
           'photo_coverage_repair': photo_repair,
           'skin_transition_half_width_mm': feather*1000,
           'lower_neck_clean_fade_z': [neck_fade_bottom, neck_fade_top],
@@ -340,7 +340,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'undercoat_length_mm': [10, 16], 'undercoat_target': 120000,
           'undercoat_radius_microns': [35, 50],
           'children_per_guide': 96, 'hair_roughness': .52,
-          'curl_turns': [.75, 1.35], 'curl_normal_flattening': .42,
+          'curl_turns': [1.10, 1.65], 'curl_normal_flattening': .80,
           'curl_tip_clump_fraction': .30,
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
