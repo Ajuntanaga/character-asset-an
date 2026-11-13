@@ -106,13 +106,20 @@ try:
     scene.cycles.device = 'CPU'
     scene.cycles.samples = globals().get('SAMPLES', 24)
     scene.cycles.use_adaptive_sampling = True
-    scene.cycles.adaptive_threshold = .08
-    scene.cycles.use_denoising = True
+    scene.cycles.adaptive_threshold = globals().get('ADAPTIVE_THRESHOLD', .08)
+    scene.cycles.use_denoising = globals().get('DENOISE', True)
     scene.cycles.max_bounces = 6
     scene.render.threads_mode = 'FIXED'
     scene.render.threads = 2
-    scene.render.resolution_x = 512
-    scene.render.resolution_y = 640
+    scene.render.resolution_x, scene.render.resolution_y = globals().get('RESOLUTION', (512, 640))
+    border = globals().get('BORDER')
+    if border:
+        x0, x1, y0, y1 = border
+        assert 0 <= x0 < x1 <= 1 and 0 <= y0 < y1 <= 1
+        scene.render.use_border = True
+        scene.render.use_crop_to_border = True
+        scene.render.border_min_x, scene.render.border_max_x = x0, x1
+        scene.render.border_min_y, scene.render.border_max_y = y0, y1
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = 'PNG'
     scene.view_settings.view_transform = globals().get('VIEW_TRANSFORM', 'AgX')
@@ -202,6 +209,9 @@ for name in ['V737_EYE.L', 'V737_EYE.R', 'V738_CORNEA.L', 'V738_CORNEA.R']:
                        'matrix_world': [list(row) for row in obj.matrix_world],
                        'materials': materials}
 report = {'review_scope': ('native photo skin and groom appearance; animation not evaluated' if texture_path else 'scalp, brow and beard shape and coverage; skin and animation not evaluated'), 'renders': results, 'eye_setup': eye_setup, 'cameras': camera_records, 'excluded_objects': sorted(excluded), 'restored_properties': saved_props,
+          'render_settings': {'resolution': globals().get('RESOLUTION', (512, 640)),
+              'border': globals().get('BORDER'), 'samples': globals().get('SAMPLES', 24),
+              'denoise': globals().get('DENOISE', True)},
           'head_turn_degrees': head_turn, 'evaluated_head_turn_degrees': head_turn_evaluated,
           'head_basis_restored': all(abs(head_fk.matrix_basis[i][j]-head_basis[i][j]) < 1e-6 for i in range(4) for j in range(4)),
           'rig_drivers': len(rig.animation_data.drivers),
