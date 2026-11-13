@@ -2,6 +2,10 @@ name: Native surface groom reconstruction
 on:
   workflow_dispatch:
     inputs:
+      textured:
+        description: Render native photo skin and groom appearance
+        type: boolean
+        default: false
       expressions:
         description: Render rest, jaw, blink and brow deformation comparisons
         type: boolean
@@ -26,6 +30,13 @@ jobs:
         run: |
           gh release download checkpoint-v739 --pattern V739_native_face_trial.blend
           echo '63f795279e1c0ce770ba7238619c276a4ec0e2f2c5d3afca8a829981916dce21  V739_native_face_trial.blend' | sha256sum -c -
+      - name: Download native photo texture
+        if: ${{ inputs.textured }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download checkpoint-v739 --pattern Character_An_photoreal_head_basecolor_v326.png
+          echo 'aa09646354554ea5c634dcbaa1083367894addc067784de6174c76e4dc1691fd  Character_An_photoreal_head_basecolor_v326.png' | sha256sum -c -
       - name: Install pinned Blender
         run: |
           curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
@@ -46,6 +57,10 @@ jobs:
       - name: Render scalp shape and coverage
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_cloud_groom.py
+      - name: Render native photo skin
+        if: ${{ inputs.textured }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_textured.py
       - name: Render expression comparisons
         if: ${{ inputs.expressions }}
         run: |

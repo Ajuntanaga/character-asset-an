@@ -1,4 +1,4 @@
-"""Cloud scalp-groom review with a neutral head material; not a skin or likeness render."""
+"""Cloud groom review; neutral by default, optionally using the staged photo atlas."""
 from pathlib import Path
 import json
 import bpy
@@ -10,17 +10,31 @@ names = ['V740_NATIVE_FACE', 'V737_GAZE.L', 'V737_GAZE.R', 'V737_EYE.L', 'V737_E
          'V738_CORNEA.L', 'V738_CORNEA.R', 'V739_ORAL_CAVITY', 'V737_DENTAL_UPPER',
          'V739_DENTAL_LOWER', 'V739_DENTAL_TONGUE', 'V740_NATIVE_CURLS',
          'V740_NATIVE_UNDERCOAT', 'V740_BROW_FIBERS', 'V740_BEARD_FIBERS']
-# The isolated checkpoint's external photo texture is intentionally not used.
 head = bpy.data.objects['V740_NATIVE_FACE']
-clay = bpy.data.materials.new('Cloud groom review neutral head')
-clay.use_nodes = True
-shader = clay.node_tree.nodes.get('Principled BSDF')
-shader.inputs['Base Color'].default_value = (.25, .25, .25, 1)
-shader.inputs['Roughness'].default_value = .7
-head.data.materials.clear()
-head.data.materials.append(clay)
-for polygon in head.data.polygons:
-    polygon.material_index = 0
+texture_path = globals().get('TEXTURE_PATH')
+if texture_path:
+    texture_path = Path(texture_path).resolve()
+    assert texture_path.is_file(), texture_path
+    matched = 0
+    for material in head.data.materials:
+        if material and material.use_nodes:
+            for node in material.node_tree.nodes:
+                if node.type == 'TEX_IMAGE' and node.image and Path(node.image.filepath).name == texture_path.name:
+                    node.image.filepath = str(texture_path)
+                    node.image.reload()
+                    assert node.image.has_data
+                    matched += 1
+    assert matched, 'Expected native face basecolor image node missing'
+else:
+    clay = bpy.data.materials.new('Cloud groom review neutral head')
+    clay.use_nodes = True
+    shader = clay.node_tree.nodes.get('Principled BSDF')
+    shader.inputs['Base Color'].default_value = (.25, .25, .25, 1)
+    shader.inputs['Roughness'].default_value = .7
+    head.data.materials.clear()
+    head.data.materials.append(clay)
+    for polygon in head.data.polygons:
+        polygon.material_index = 0
 rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
 head_ctrl = rig.pose.bones['Head']
 source_scene = bpy.context.scene
@@ -110,7 +124,7 @@ finally:
     if world:
         bpy.data.worlds.remove(world)
     bpy.context.view_layer.update()
-report = {'review_scope': 'scalp, brow and beard shape and coverage; skin and animation not evaluated', 'renders': results, 'restored_properties': saved_props,
+report = {'review_scope': ('native photo skin and groom appearance; animation not evaluated' if texture_path else 'scalp, brow and beard shape and coverage; skin and animation not evaluated'), 'renders': results, 'restored_properties': saved_props,
           'rig_drivers': len(rig.animation_data.drivers),
           'production_unchanged': bpy.data.filepath == production and bpy.context.scene == source_scene}
 (OUT.parent/(globals().get('TAG','v740_neutral')+'_render_report.json')).write_text(json.dumps(report, indent=2))
