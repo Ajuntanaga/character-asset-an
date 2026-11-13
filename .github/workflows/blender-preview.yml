@@ -139,6 +139,15 @@ jobs:
           if [ "$DELIT_FACE" = true ]; then extra+=(--delit-face); fi
           extra+=(--review-scope "${REVIEW_SCOPE:-full}")
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec "scenes/$SCENE" --threads 2 --python-exit-code 1 --python pipeline/github_scene_job.py -- --mode "$MODE" --output results "${extra[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: previews-${{ inputs.mode }}-${{ github.run_number }}
+          path: |
+            results/*.png
+            results/*.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Package built scene as a checked delta
         if: inputs.mode == 'build-review'
         run: |
@@ -217,15 +226,6 @@ jobs:
               manifest[p.name] = {'sha256': digest, 'bytes': p.stat().st_size}
           pathlib.Path('results/build-manifest.json').write_text(json.dumps(manifest,indent=2))
           PY
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: previews-${{ inputs.mode }}-${{ github.run_number }}
-          path: |
-            results/*.png
-            results/*.json
-          if-no-files-found: warn
-          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: always()
         with:
