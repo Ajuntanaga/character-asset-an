@@ -2,7 +2,7 @@
 from pathlib import Path
 import json
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 OUT = Path('results/renders')
 OUT.mkdir(parents=True, exist_ok=True)
@@ -48,6 +48,7 @@ assert bpy.data.scenes.get('V740_LIVE_PREVIEW') is None
 assert all(name in bpy.data.objects for name in names)
 scene = bpy.data.scenes.new('V740_LIVE_PREVIEW')
 visibility, created, results, saved_props = {}, [], [], {}
+camera_records = {}
 world = None
 target = Vector((0, -.015, 1.640))
 
@@ -105,10 +106,23 @@ try:
     scene.view_settings.view_transform = 'AgX'
     scene.view_settings.exposure = -1.3
     for view in globals().get('VIEWS', ['front', 'three_quarter']):
-        camera.location = {'front': (0,-.9,1.640), 'profile': (-.9,-.015,1.640),
-                           'three_quarter': (-.65,-.665,1.640),
-                           'three_quarter_reference_side': (.65,-.665,1.640)}[view]
-        aim(camera)
+        if view == 'reference_orientation':
+            # The donor was nonlinearly rescaled: reuse orientation only, not its
+            # original translation or perspective fit. Keep framing comparable.
+            fitted = json.loads((Path(__file__).resolve().parent.parent /
+                'references/derived/photoreal_facebuilder_v1/fitted_cameras_v326.json').read_text())
+            rotation = Matrix(fitted['three_quarter']['matrix']).to_3x3()
+            camera.location = target + rotation.col[2].normalized()*.9
+            camera.rotation_euler = rotation.to_euler()
+        else:
+            camera.location = {'front': (0,-.9,1.640), 'profile': (-.9,-.015,1.640),
+                               'three_quarter': (-.65,-.665,1.640),
+                               'three_quarter_reference_side': (.65,-.665,1.640)}[view]
+            aim(camera)
+        camera_records[view] = {'location': list(camera.location),
+            'rotation_euler': list(camera.rotation_euler), 'type': camera.data.type,
+            'ortho_scale': camera.data.ortho_scale,
+            'reference_orientation_only': view == 'reference_orientation'}
         scene.render.filepath = str(OUT/(globals().get('TAG','v740_neutral')+'_'+view+'.png'))
         bpy.ops.render.render(write_still=True, scene=scene.name)
         results.append(scene.render.filepath)
@@ -129,7 +143,7 @@ finally:
     if world:
         bpy.data.worlds.remove(world)
     bpy.context.view_layer.update()
-report = {'review_scope': ('native photo skin and groom appearance; animation not evaluated' if texture_path else 'scalp, brow and beard shape and coverage; skin and animation not evaluated'), 'renders': results, 'excluded_objects': sorted(excluded), 'restored_properties': saved_props,
+report = {'review_scope': ('native photo skin and groom appearance; animation not evaluated' if texture_path else 'scalp, brow and beard shape and coverage; skin and animation not evaluated'), 'renders': results, 'cameras': camera_records, 'excluded_objects': sorted(excluded), 'restored_properties': saved_props,
           'rig_drivers': len(rig.animation_data.drivers),
           'production_unchanged': bpy.data.filepath == production and bpy.context.scene == source_scene}
 (OUT.parent/(globals().get('TAG','v740_neutral')+'_render_report.json')).write_text(json.dumps(report, indent=2))
