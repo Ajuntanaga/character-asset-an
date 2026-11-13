@@ -79,8 +79,20 @@ def build(cuff, overlap=.006, radial_limit=.16):
             indices = list(face.vertices)
             for a, b in zip(indices, indices[1:] + indices[:1]):
                 kept_edges[tuple(sorted((a, b)))] += 1
-        boundary_edges = [edge for edge, uses in kept_edges.items() if uses == 1
-                          and any(i in candidates for i in edge)]
+        all_boundary_edges = [edge for edge, uses in kept_edges.items() if uses == 1]
+        adjacency = {}
+        for a, b in all_boundary_edges:
+            adjacency.setdefault(a, set()).add(b)
+            adjacency.setdefault(b, set()).add(a)
+        # Follow whole connected boundaries; candidate-only edges truncate loops.
+        reached = set(adjacency) & candidates
+        pending = list(reached)
+        while pending:
+            vertex = pending.pop()
+            for neighbor in adjacency[vertex] - reached:
+                reached.add(neighbor)
+                pending.append(neighbor)
+        boundary_edges = [edge for edge in all_boundary_edges if edge[0] in reached]
         boundary_indices = sorted({i for edge in boundary_edges for i in edge})
         boundary = {
             'space': 'world_m',

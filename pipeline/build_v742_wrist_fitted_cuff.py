@@ -8,7 +8,7 @@ import bpy
 from mathutils import Matrix, Vector
 
 
-def build(clearance=.002, length=.040):
+def build(clearance=.002, length=.040, forearm_directed=False):
     main = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
     hand = bpy.data.objects['V545_NATIVE_HAND.L']
     source = bpy.data.objects['V357_CUFF_PATCH.L']
@@ -53,6 +53,7 @@ def build(clearance=.002, length=.040):
     axis = Vector(basis[-1])
     if axis.dot(elbow - center) < 0:
         axis.negate()
+    extrusion_axis = (elbow - center).normalized() if forearm_directed else axis.copy()
     bone_world = main.matrix_world @ main.pose.bones['DEF-Hand.L'].matrix
     location, rotation, _ = bone_world.decompose()
     frame = Matrix.LocRotScale(location, rotation, Vector((1, 1, 1)))
@@ -64,7 +65,7 @@ def build(clearance=.002, length=.040):
     count = len(rim)
     for t in (0., .08, .5, .92, 1.):
         for original, offset in zip(rim, radial):
-            world = original + axis * (length * t) + offset * (.18 * t) + offset.normalized() * clearance
+            world = original + extrusion_axis * (length * t) + offset * (.18 * t) + offset.normalized() * clearance
             points.append(inverse @ world)
     faces = [(j * count + i, j * count + (i + 1) % count,
               (j + 1) * count + (i + 1) % count, (j + 1) * count + i)
@@ -116,6 +117,9 @@ def build(clearance=.002, length=.040):
     return cuff, {'status': 'TRIAL_REQUIRES_RENDER_AND_MOTION_REVIEW',
                   'rim_samples': count, 'clearance_m': clearance,
                   'opening_axis': list(axis),
+                  'extrusion_axis': list(extrusion_axis),
+                  'forearm_directed': forearm_directed,
+                  'opening_to_extrusion_angle_rad': axis.angle(extrusion_axis),
                   'minimum_radius_m': min(v.length for v in radial),
                   'length_m': length, 'binding_error': error,
                   'fabric_rest_attribute': 'V441_CuffRest',
