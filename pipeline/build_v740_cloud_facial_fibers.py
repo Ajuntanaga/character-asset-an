@@ -108,7 +108,24 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     records = json.loads(gzip.decompress((ROOT/sample_file).read_bytes()))
     mask_report = {'source': 'historical brow mask'}
     if kind == 'BEARD':
+        # Add native-projected moustache sites without moving the established
+        # lip/nose boundary or increasing cheek/jaw sampling density.
+        growth_rng = np.random.default_rng(741)
+        historical_count = len(records)
+        for x, z in growth_rng.uniform((-.033, 1.579), (.033, 1.598), (4000, 2)):
+            if abs(x) < .001:
+                continue
+            if ((x/.039)**2+((z-1.571)/.011)**2) < 1.15:
+                continue
+            if z > 1.588 and abs(x) < .025:
+                continue
+            records.append({'side': 'L' if x > 0 else 'R',
+                            'point': [float(x), -.5, float(z)], 'luma': 1.0})
+        extra_sites = len(records)-historical_count
         records, mask_report = native_beard_mask(records, bvh, surface_triangles, threshold)
+        mask_report['supplemental_moustache_sites'] = extra_sites
+        mask_report['growth_sites_and_lip_nose_exclusions'] = (
+            'historical sites plus native-projected moustache samples; exclusions unchanged')
     selected = []
     for side in ('L','R'):
         candidates = [r for r in records if r['side']==side and r['luma']<threshold]
