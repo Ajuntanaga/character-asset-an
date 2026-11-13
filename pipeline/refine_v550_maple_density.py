@@ -73,6 +73,27 @@ def build(output, save=True):
     for slot in top.material_slots:
         if slot.material == original:
             slot.material = material
+    # Reference maple board has subtle grain, not the neck shader's dark stripes.
+    # Copy only the board material so the neck and original remain untouched.
+    board_report = None
+    if variant == 'restrained':
+        board = bpy.data.objects['V206_FRETBOARD']
+        board_original = bpy.data.materials['V356_PALE_MAPLE']
+        assert any(slot.material == board_original for slot in board.material_slots)
+        board_material = board_original.copy()
+        board_material.name = 'V748_SUBTLE_MAPLE_FRETBOARD'
+        ramps = [node for node in board_material.node_tree.nodes
+                 if node.type == 'VALTORGB']
+        assert len(ramps) == 1, 'Expected the original maple grain color ramp'
+        grain_colors = ((.48, .30, .14, 1), (.62, .43, .24, 1))
+        assert len(ramps[0].color_ramp.elements) == 2
+        for element, color in zip(ramps[0].color_ramp.elements, grain_colors):
+            element.color = color
+        for slot in board.material_slots:
+            if slot.material == board_original:
+                slot.material = board_material
+        board_report = {'material': board_material.name,
+                        'grain_colors': grain_colors, 'neck_changed': False}
     material['V550_density_applied'] = True
     from refine_v552_guitar_hardware import build as build_hardware
     hardware = build_hardware()
@@ -88,6 +109,7 @@ def build(output, save=True):
               'stain_tint': [.47, .52, .45, 1],
               'edge_material': edge_material.name,
               'body_geometry_changed': False, 'hardware': hardware,
+              'fretboard': board_report,
               'burst_changed': True, 'burst_exponent': burst_exponent, 'main_drivers': 1957,
               'output': path.name if save else None}
     (out / 'maple-density-report.json').write_text(json.dumps(report, indent=2))
