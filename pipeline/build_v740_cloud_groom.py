@@ -115,11 +115,15 @@ source_skin_ior = float(shader.inputs['IOR'].default_value)
 shader.inputs['IOR'].default_value = 1.4
 assert shader.inputs['Base Color'].is_linked
 photo = shader.inputs['Base Color'].links[0].from_socket
-tex = nodes.new('ShaderNodeTexCoord')
+# Rest coordinates keep procedural skin detail attached during facial animation.
+rest_skin = head.data.attributes.new('V740_SkinRestPosition', 'FLOAT_VECTOR', 'POINT')
+rest_skin.data.foreach_set('vector', co.astype(np.float32).ravel())
+rest_node = nodes.new('ShaderNodeAttribute')
+rest_node.attribute_name = rest_skin.name
 noise = nodes.new('ShaderNodeTexNoise')
 noise.inputs['Scale'].default_value = 25
 noise.inputs['Detail'].default_value = 2
-links.new(tex.outputs['Object'], noise.inputs['Vector'])
+links.new(rest_node.outputs['Vector'], noise.inputs['Vector'])
 ramp = nodes.new('ShaderNodeValToRGB')
 ramp.color_ramp.elements[0].color = (.22, .10, .047, 1)
 ramp.color_ramp.elements[1].color = (.30, .148, .078, 1)
@@ -131,11 +135,6 @@ links.new(mask.outputs['Fac'], mix.inputs[0])
 links.new(photo, mix.inputs[1])
 links.new(ramp.outputs['Color'], mix.inputs[2])
 links.new(mix.outputs['Color'], shader.inputs['Base Color'])
-# Rest coordinates keep procedural skin detail attached during facial animation.
-rest_skin = head.data.attributes.new('V740_SkinRestPosition', 'FLOAT_VECTOR', 'POINT')
-rest_skin.data.foreach_set('vector', co.astype(np.float32).ravel())
-rest_node = nodes.new('ShaderNodeAttribute')
-rest_node.attribute_name = rest_skin.name
 pores = nodes.new('ShaderNodeTexNoise')
 pores.name = 'V740_CleanSkinMicrodetail'
 pores.inputs['Scale'].default_value = 1400.
