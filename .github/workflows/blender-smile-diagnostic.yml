@@ -8,6 +8,9 @@ on:
       render_eye_fit:
         type: boolean
         default: false
+      trial_smile_corner:
+        type: boolean
+        default: false
       render_skin_normals:
         type: boolean
         default: false
@@ -20,7 +23,7 @@ concurrency:
 jobs:
   smile:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       OMP_NUM_THREADS: '2'
       OPENBLAS_NUM_THREADS: '2'
@@ -34,7 +37,7 @@ jobs:
           gh run download 43418752707 --repo "$GITHUB_REPOSITORY" --name native-groom-checkpoint --dir checkpoint
           test -s checkpoint/V740_cloud_groom_trial.blend
       - name: Download pinned skin atlas for eye comparison
-        if: inputs.render_eye_comparison || inputs.render_eye_fit || inputs.render_skin_normals
+        if: inputs.render_eye_comparison || inputs.render_eye_fit || inputs.render_skin_normals || inputs.trial_smile_corner
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -60,6 +63,11 @@ jobs:
         if: inputs.render_skin_normals
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_skin_normals.py
+      - name: Compare localized smile correction
+        if: inputs.trial_smile_corner
+        run: |
+          cp results/smile_surface_diagnostic.json results/v743_smile_baseline.json
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/trial_v743_smile_corner.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -71,5 +79,7 @@ jobs:
             results/renders/v740_eye_texture_*.png
             results/renders/v740_eye_fit_*.png
             results/eye_fit_comparison.json
+            results/v743_smile_*.json
+            results/renders/v743_smile_*.png
           if-no-files-found: error
           retention-days: 7
