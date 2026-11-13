@@ -446,9 +446,11 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
         # Retain earlier crossing regions: run 43415244468 cleared Middle-Ring
         # but reintroduced Index-Middle crossings after replacing its samples.
         collision_samples = {}
-        # Run 43419472026 ended with one crossing and a still-decreasing loss.
-        # Add one bounded refresh/refinement stage without relaxing acceptance.
-        for scale in (1., 2., 4., 4., 4.):
+        # Run 43424640546 stalled at two crossings and sub-limit pad normals.
+        # Raise both unmet constraints together in the final bounded stage;
+        # preserve contact targets, anatomical bounds and acceptance limits.
+        for scale, stage_cone in ((1., .24), (2., .24), (4., .24),
+                                  (4., .24), (8., .48)):
             contacts(values, True)
             # Keep residual membership fixed across finite differences and
             # line searches; refresh actual crossing regions between stages.
@@ -458,11 +460,12 @@ def build(out, thumb_support='fixed', relaxed_contact_dips=False, spread_trial=F
                 for digit, ids in refreshed_samples.items()
             }
             values, history = minimize(
-                lambda v: residual(v, True, cone_weight=.24, avoid_digits=True,
+                lambda v: residual(v, True, cone_weight=stage_cone, avoid_digits=True,
                                    separation_scale=scale, collision_samples=collision_samples),
                 values, low, high, 8)
             contacts(values, True)
-            collision_stages.append({'residual_scale': scale, 'loss': history,
+            collision_stages.append({'residual_scale': scale, 'cone_weight': stage_cone,
+                                     'loss': history,
                                      'sample_counts': {d: len(ids) for d, ids in collision_samples.items()},
                                      'surface': measure(hand)})
             collision_history.extend(history)
