@@ -264,14 +264,16 @@ for p, n, root_uv in guides:
     top = float(smooth((p[2]-1.678)/.050))
     # The front fringe curls outward and forward; sides sweep back from the part.
     forward = -.48 if p[1] < -.040 and p[2] > 1.687 else .75
-    flow = np.array([-.32*np.sign(p[0]-.039)*top, forward, -.58*(1-top)])
+    # Direct both banks away from the diagonal part; inward flow can fill the gap.
+    part_x = .041+.13*(p[1]+.065)
+    flow = np.array([.75*np.sign(p[0]-part_x)*top, forward, -.58*(1-top)])
     tangent = unit(flow-n*np.dot(flow, n))
-    axis = unit(tangent*.90+n*(.22+.12*top))
+    axis = unit(tangent*.90+n*(.22+.40*top))
     u = unit(n-axis*np.dot(n, axis))
     v = unit(np.cross(axis, u))
     root_u, root_v = tangent, unit(np.cross(n, tangent))
     # Keep axial travel short so locks form rounded curls rather than pointed tufts.
-    radius = rng.uniform(.0028, .0040)+top*.0010
+    radius = rng.uniform(.0028, .0040)+top*.0035
     length = rng.uniform(.005, .010)+top*.003
     turns = rng.uniform(1.10, 1.65)
     phase = rng.uniform(-math.pi, math.pi)
@@ -352,7 +354,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'compact_rounded_curl_locks_v7',
+          'revision': 'raised_part_directed_curls_v8',
           'photo_coverage_repair': photo_repair,
           'skin_transition_half_width_mm': feather*1000,
           'lower_neck_clean_fade_z': [neck_fade_bottom, neck_fade_top],
@@ -365,6 +367,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'children_per_guide': 96, 'hair_roughness': .52,
           'curl_turns': [1.10, 1.65], 'curl_normal_flattening': .80,
           'curl_tip_clump_fraction': .30,
+          'crown_curl_radius_mm': [6.3, 7.5], 'part_flow': 'outward',
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
 print(json.dumps(report))
