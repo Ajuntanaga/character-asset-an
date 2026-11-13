@@ -2,6 +2,9 @@ name: Native smile fit diagnostic
 on:
   workflow_dispatch:
     inputs:
+      render_eyelid_albedo:
+        type: boolean
+        default: false
       render_blink_surface:
         type: boolean
         default: false
@@ -40,7 +43,7 @@ jobs:
           gh run download 43418752707 --repo "$GITHUB_REPOSITORY" --name native-groom-checkpoint --dir checkpoint
           test -s checkpoint/V740_cloud_groom_trial.blend
       - name: Download pinned skin atlas for eye comparison
-        if: inputs.render_blink_surface || inputs.render_eye_comparison || inputs.render_eye_fit || inputs.render_skin_normals || inputs.trial_smile_corner
+        if: inputs.render_eyelid_albedo || inputs.render_blink_surface || inputs.render_eye_comparison || inputs.render_eye_fit || inputs.render_skin_normals || inputs.trial_smile_corner
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -57,6 +60,10 @@ jobs:
       - name: Inspect native blink boundary and drivers
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/diagnose_v740_blink.py
+      - name: Compare eyelid atlas at rest and blink
+        if: inputs.render_eyelid_albedo
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec checkpoint/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v745_eyelid_albedo.py
       - name: Isolate closed eyelid surface
         if: inputs.render_blink_surface
         run: |
@@ -85,6 +92,8 @@ jobs:
           path: |
             results/smile_surface_diagnostic.json
             results/blink_boundary_diagnostic.json
+            results/renders/v745_eyelid_*.png
+            results/v745_eyelid_*_render_report.json
             results/renders/v744_blink_surface_*.png
             results/skin_normal_comparison.json
             results/renders/v740_skin_*.png

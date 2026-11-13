@@ -1,0 +1,11 @@
+{
+  "status": "unrendered_trial_not_promoted",
+  "method": "remote image generation edit",
+  "source": "production_v326_photoreal_facebuilder/textures/Character_An_photoreal_head_basecolor_v326.png",
+  "visual_review": [
+    "Photographed irises and sclera removed",
+    "Broad layout retained; exact UV registration unverified",
+    "Output resolution reduced; surrounding regions also changed slightly"
+  ],
+  "next": "Remote rest and full-blink comparison required before acceptance; preserve original atlas"
+}
