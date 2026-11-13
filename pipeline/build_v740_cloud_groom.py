@@ -232,9 +232,9 @@ curl_count = len(strands)
 del strands, radii, uvs
 
 strands, radii, uvs = [], [], []
-t = np.linspace(0, 1, 10)
-for _ in range(75000):
-    if len(strands) == 28000:
+t = np.linspace(0, 1, 16)
+for _ in range(150000):
+    if len(strands) == 48000:
         break
     p, n, root_uv = sample()
     if not allowed(p):
@@ -243,8 +243,20 @@ for _ in range(75000):
     across = unit(np.cross(n, tangent))
     angle = rng.uniform(-math.pi, math.pi)
     direction = tangent*math.cos(angle)+across*math.sin(angle)
-    length = rng.uniform(.003, .006)
-    path = p+n*(.00015+.0018*np.sin(math.pi*t/2))[:, None]+direction*length*t[:, None]
+    # Overlapping curved fibers fill the space below the curl bundles.
+    # Keep the same surface-bound roots; this is hair, not a dark scalp mask.
+    length = rng.uniform(.010, .016)
+    lateral = unit(np.cross(n, direction))
+    bend = rng.uniform(-.0025, .0025)
+    path = (p+n*(.00015+.004*np.sin(math.pi*t*.85))[:, None]
+            +direction*length*t[:, None]
+            +lateral*bend*np.sin(math.pi*t)[:, None])
+    for j in range(1, len(t)):
+        hit, normal, _, _ = scalp.find_nearest(Vector(path[j]))
+        if hit is not None:
+            signed = (Vector(path[j])-hit).dot(normal)
+            if signed < .0003:
+                path[j] += np.array(normal)*(.0003-signed)
     strands.append(path)
     radii.append(rng.uniform(.000025, .000038)*np.maximum(.06, 1-t*t))
     uvs.append(root_uv)
@@ -257,7 +269,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'dense_curl_bundles_v2',
+          'revision': 'overlapping_undercoat_v3',
+          'undercoat_length_mm': [10, 16], 'undercoat_target': 48000,
           'children_per_guide': 96, 'hair_roughness': .52,
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
