@@ -10,6 +10,9 @@ names = ['V740_NATIVE_FACE', 'V737_GAZE.L', 'V737_GAZE.R', 'V737_EYE.L', 'V737_E
          'V738_CORNEA.L', 'V738_CORNEA.R', 'V739_ORAL_CAVITY', 'V737_DENTAL_UPPER',
          'V739_DENTAL_LOWER', 'V739_DENTAL_TONGUE', 'V740_NATIVE_CURLS',
          'V740_NATIVE_UNDERCOAT', 'V740_BROW_FIBERS', 'V740_BEARD_FIBERS']
+excluded = set(globals().get('EXCLUDE_OBJECTS', []))
+assert excluded <= set(names), excluded
+names = [name for name in names if name not in excluded]
 head = bpy.data.objects['V740_NATIVE_FACE']
 texture_path = globals().get('TEXTURE_PATH')
 if texture_path:
@@ -126,7 +129,7 @@ finally:
     if world:
         bpy.data.worlds.remove(world)
     bpy.context.view_layer.update()
-report = {'review_scope': ('native photo skin and groom appearance; animation not evaluated' if texture_path else 'scalp, brow and beard shape and coverage; skin and animation not evaluated'), 'renders': results, 'restored_properties': saved_props,
+report = {'review_scope': ('native photo skin and groom appearance; animation not evaluated' if texture_path else 'scalp, brow and beard shape and coverage; skin and animation not evaluated'), 'renders': results, 'excluded_objects': sorted(excluded), 'restored_properties': saved_props,
           'rig_drivers': len(rig.animation_data.drivers),
           'production_unchanged': bpy.data.filepath == production and bpy.context.scene == source_scene}
 (OUT.parent/(globals().get('TAG','v740_neutral')+'_render_report.json')).write_text(json.dumps(report, indent=2))

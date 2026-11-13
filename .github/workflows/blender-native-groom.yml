@@ -10,6 +10,10 @@ on:
         description: Render rest, jaw, blink and brow deformation comparisons
         type: boolean
         default: false
+      undercoat:
+        description: Render isolated undercoat coverage diagnostic
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -57,6 +61,10 @@ jobs:
       - name: Render scalp shape and coverage
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_cloud_groom.py
+      - name: Render isolated undercoat coverage
+        if: ${{ inputs.undercoat }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_undercoat.py
       - name: Render native photo skin
         if: ${{ inputs.textured }}
         run: |
