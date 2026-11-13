@@ -26,6 +26,10 @@ on:
         description: Render one high-resolution crown crop without denoising
         type: boolean
         default: false
+      facial_detail:
+        description: Render brows and moustache close-up without denoising
+        type: boolean
+        default: false
       undercoat_feather_mm:
         description: Undercoat hairline fade width in mm (0 disables trial)
         type: choice
@@ -113,6 +117,10 @@ jobs:
         if: ${{ inputs.curl_detail }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v747_curl_detail.py
+      - name: Render resolved facial fiber detail
+        if: ${{ inputs.facial_detail }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v748_facial_detail.py
       - name: Render cleaned atlas comparison
         if: ${{ inputs.clean_albedo }}
         run: |
