@@ -293,7 +293,9 @@ for p, n, root_uv in guides:
     v = unit(np.cross(axis, u))
     root_u, root_v = tangent, unit(np.cross(n, tangent))
     # Keep axial travel short so locks form rounded curls rather than pointed tufts.
-    radius = rng.uniform(.0014, .0020)+top*.00175
+    # v15 isolated render leaves separated tiny locks. Increase curl extent
+    # without adding strands or changing the shader; review silhouette remotely.
+    radius = 1.45*(rng.uniform(.0014, .0020)+top*.00175)
     length = rng.uniform(.005, .010)+top*.003
     turns = rng.uniform(1.10, 1.65)
     phase = rng.uniform(-math.pi, math.pi)
@@ -389,7 +391,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'dispersed_curl_phase_v15',
+          'revision': 'curl_extent_v16',
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
           'photo_coverage_repair': photo_repair,
@@ -411,7 +413,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'child_phase_offset_radians': [-1.2, 1.2],
           'child_radius_scale': [.85, 1.15],
           'child_length_fraction': [.55, 1.0],
-          'crown_curl_radius_mm': [3.15, 3.75], 'part_flow': 'outward',
+          'curl_radius_scale_from_v15': 1.45,
+          'crown_curl_radius_mm': [4.5675, 5.4375], 'part_flow': 'outward',
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
 print(json.dumps(report))
