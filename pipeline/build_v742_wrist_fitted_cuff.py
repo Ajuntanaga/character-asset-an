@@ -44,19 +44,27 @@ def build(clearance=.002, length=.040):
         evaluated.to_mesh_clear()
     center = sum(rim, Vector()) / len(rim)
     elbow = main.matrix_world @ main.pose.bones['DEF-Forearm_2.L'].head
-    axis = (elbow - center).normalized()
+    # Fit the opening normal to the donor boundary, not the elbow direction:
+    # a bent wrist can make projection onto the forearm collapse the opening.
+    import numpy as np
+    offsets = np.array([tuple(p - center) for p in rim])
+    _, singular, basis = np.linalg.svd(offsets, full_matrices=False)
+    assert singular[1] > .005, f'Degenerate donor rim: {singular.tolist()}'
+    axis = Vector(basis[-1])
+    if axis.dot(elbow - center) < 0:
+        axis.negate()
     bone_world = main.matrix_world @ main.pose.bones['DEF-Hand.L'].matrix
     location, rotation, _ = bone_world.decompose()
     frame = Matrix.LocRotScale(location, rotation, Vector((1, 1, 1)))
     inverse = frame.inverted()
     # The donor rim determines the cross-section, including its asymmetry.
     radial = [p - center - axis * (p - center).dot(axis) for p in rim]
-    assert min(v.length for v in radial) > .005
+    assert min(v.length for v in radial) > .005, f'Rim radii: {[v.length for v in radial]}'
     points = []
     count = len(rim)
     for t in (0., .08, .5, .92, 1.):
-        for offset in radial:
-            world = center + axis * (length * t) + offset * (1 + .18 * t) + offset.normalized() * clearance
+        for original, offset in zip(rim, radial):
+            world = original + axis * (length * t) + offset * (.18 * t) + offset.normalized() * clearance
             points.append(inverse @ world)
     faces = [(j * count + i, j * count + (i + 1) % count,
               (j + 1) * count + (i + 1) % count, (j + 1) * count + i)
@@ -107,6 +115,8 @@ def build(clearance=.002, length=.040):
     assert error < 1e-5, f'Unexpected cuff binding frame: {error}'
     return cuff, {'status': 'TRIAL_REQUIRES_RENDER_AND_MOTION_REVIEW',
                   'rim_samples': count, 'clearance_m': clearance,
+                  'opening_axis': list(axis),
+                  'minimum_radius_m': min(v.length for v in radial),
                   'length_m': length, 'binding_error': error,
                   'fabric_rest_attribute': 'V441_CuffRest',
                   'source_preserved': True, 'scale_inheritance': False}

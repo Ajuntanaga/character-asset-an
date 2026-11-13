@@ -50,6 +50,7 @@ on:
         default: full
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: character-blender-processing
   cancel-in-progress: false
@@ -125,6 +126,21 @@ jobs:
           assert actual == expected, (actual, expected)
           PY
           fi
+      - name: Reuse pinned hand fit for cuff-only trial
+        if: inputs.mode == 'hand-build' && inputs.cuff_variant == 'wrist-fitted'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$AXIAL_TRIAL" = true && test "$WRIST_EXTENSION" != true
+          gh run download 43428473700 -n blender-hand-build-86 -D scenes/hand-checkpoint
+          gh run download 43428473700 -n previews-hand-build-86 -D scenes/hand-previews
+          echo '7a7b0f179ee17cf498e0298345030238ca36e8c4d6764c62413f4eead90302ab  scenes/hand-checkpoint/current-v545.delta.zst' | sha256sum -c -
+          zstd -d -M1024MB --patch-from=scenes/current-v544.blend scenes/hand-checkpoint/current-v545.delta.zst -o scenes/reused-hand.blend
+          echo '2280c5107d38cd0941d0c6332de745feeeb28404e2354d08db51b1da45e1bdb8  scenes/reused-hand.blend' | sha256sum -c -
+          cp scenes/hand-previews/hand-fit-report.json results/
+          echo '{"source_run":43428473700,"status":"UNPROMOTED_HAND_FIT_REUSED_FOR_CUFF_ONLY"}' > results/hand-reuse.json
+          echo 'SCENE=reused-hand.blend' >> "$GITHUB_ENV"
+          echo 'REUSE_HAND=true' >> "$GITHUB_ENV"
       - name: Install pinned Blender
         run: |
           curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
@@ -133,6 +149,7 @@ jobs:
       - name: Check scene and optionally render
         run: |
           extra=()
+          if [ "${REUSE_HAND:-false}" = true ]; then extra+=(--reuse-hand); fi
           if [ "$AXIAL_TRIAL" = true ]; then extra+=(--axial-trial); fi
           if [ "$WRIST_EXTENSION" = true ]; then extra+=(--wrist-extension); fi
           if [ "$FACIAL_HAIR" = true ]; then extra+=(--facial-hair); fi

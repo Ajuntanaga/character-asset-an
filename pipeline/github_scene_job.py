@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=('check', 'preview', 'review', 'build-review', 'hand-build', 'groom-build', 'blink-build', 'guitar-build', 'combined-build'), default='check')
 parser.add_argument('--output', default='results')
 parser.add_argument('--facial-hair', action='store_true')
+parser.add_argument('--reuse-hand', action='store_true')
 parser.add_argument('--wrist-extension', action='store_true')
 parser.add_argument('--axial-trial', action='store_true')
 parser.add_argument('--delit-face', action='store_true')
@@ -36,6 +37,8 @@ if cuff_variant != 'baseline' and args.mode != 'hand-build':
     parser.error('Cuff trial requires hand-build')
 if cuff_variant == 'distance-weighted' and not args.wrist_extension:
     parser.error('Cuff trial requires hand-build with wrist-extension')
+if args.reuse_hand and not (args.mode == 'hand-build' and cuff_variant == 'wrist-fitted' and args.axial_trial and not args.wrist_extension):
+    parser.error('--reuse-hand requires the pinned axial wrist-fitted trial without wrist extension')
 render_device = {'requested': args.device, 'selected': 'CPU'}
 if args.device == 'CUDA':
     def gpu_trace(stage):
@@ -67,8 +70,12 @@ if args.mode == 'hand-build':
     if cuff_variant == 'distance-weighted':
         from refine_v630_left_cuff_weights import build as build_cuff
         build_cuff(out)
-    from build_v545_fretting_hand import build
-    build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension, axial_trial=args.axial_trial, hover_orientation_trial=args.axial_trial, middle_axial_trial=args.axial_trial)
+    if args.reuse_hand:
+        assert 'V545_NATIVE_HAND.L' in bpy.data.objects
+        assert (out / 'hand-fit-report.json').is_file()
+    else:
+        from build_v545_fretting_hand import build
+        build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension, axial_trial=args.axial_trial, hover_orientation_trial=args.axial_trial, middle_axial_trial=args.axial_trial)
     if cuff_variant == 'wrist-fitted':
         from build_v742_wrist_fitted_cuff import build as build_cuff
         cuff, cuff_report = build_cuff()
