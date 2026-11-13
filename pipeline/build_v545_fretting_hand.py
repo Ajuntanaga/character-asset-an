@@ -104,9 +104,10 @@ def minimize(residual, initial, low, high, iterations=40):
             if float(rr @ rr) < best[0]:
                 best = (float(rr @ rr), v)
         history.append(best[0])
-        if np.linalg.norm(best[1] - x) < 1e-5:
-            break
+        movement = np.linalg.norm(best[1] - x)
         x = best[1]
+        if movement < 1e-5:
+            break
     return x, history
 
 
