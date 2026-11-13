@@ -183,6 +183,9 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
         if args.wrist_extension or cuff_variant == 'wrist-fitted':
             wrist = rig.matrix_world @ rig.pose.bones['DEF-Hand.L'].head
             shots += [(f'wrist-{angle}', wrist + offset @ Vector((0, 0, .6)), wrist, .23) for angle in (0, -15, 15)]
+            if cuff_variant == 'wrist-fitted':
+                shots += [(f'wrist-15-{layer}', wrist + offset @ Vector((0, 0, .6)), wrist, .23)
+                          for layer in ('without-cuff', 'without-body')]
     if args.mode == 'groom-build':
         shots = [
             ('groom-front', (0, -2, 1.72), (0, 0, 1.70), .38),
@@ -323,7 +326,17 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
                     hidden.append(obj); obj.hide_render = True
             wrist_control = rig.pose.bones['IK-Hand.L']
             saved_wrist = wrist_control.matrix_basis.copy()
-            angle = int(label[len('wrist-'):])
+            angle_label = label[len('wrist-'):]
+            for suffix, object_name in (
+                    ('-without-cuff', 'V742_WRIST_FITTED_CUFF.L'),
+                    ('-without-body', 'V416_BODY_CLEAN_JOIN')):
+                if angle_label.endswith(suffix):
+                    angle_label = angle_label.removesuffix(suffix)
+                    obj = bpy.data.objects[object_name]
+                    if not obj.hide_render:
+                        hidden.append(obj)
+                        obj.hide_render = True
+            angle = int(angle_label)
             wrist_control.matrix_basis = saved_wrist @ Matrix.Rotation(math.radians(angle), 4, 'X')
             rig.update_tag(); bpy.context.view_layer.update()
             scene.cycles.samples = 16
