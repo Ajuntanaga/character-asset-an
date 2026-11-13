@@ -120,6 +120,27 @@ links.new(mask.outputs['Fac'], mix.inputs[0])
 links.new(photo, mix.inputs[1])
 links.new(ramp.outputs['Color'], mix.inputs[2])
 links.new(mix.outputs['Color'], shader.inputs['Base Color'])
+# Rest coordinates keep procedural skin detail attached during facial animation.
+rest_skin = head.data.attributes.new('V740_SkinRestPosition', 'FLOAT_VECTOR', 'POINT')
+rest_skin.data.foreach_set('vector', co.astype(np.float32).ravel())
+rest_node = nodes.new('ShaderNodeAttribute')
+rest_node.attribute_name = rest_skin.name
+pores = nodes.new('ShaderNodeTexNoise')
+pores.name = 'V740_CleanSkinMicrodetail'
+pores.inputs['Scale'].default_value = 1400.
+pores.inputs['Detail'].default_value = 2.
+links.new(rest_node.outputs['Vector'], pores.inputs['Vector'])
+bump = nodes.new('ShaderNodeBump')
+bump.inputs['Distance'].default_value = .00004
+strength = nodes.new('ShaderNodeMath')
+strength.operation = 'MULTIPLY'
+strength.inputs[1].default_value = .25
+links.new(mask.outputs['Fac'], strength.inputs[0])
+links.new(strength.outputs[0], bump.inputs['Strength'])
+links.new(pores.outputs['Fac'], bump.inputs['Height'])
+if shader.inputs['Normal'].is_linked:
+    links.new(shader.inputs['Normal'].links[0].from_socket, bump.inputs['Normal'])
+links.new(bump.outputs['Normal'], shader.inputs['Normal'])
 head.data.materials.clear()
 head.data.materials.append(skin)
 for polygon in head.data.polygons:
@@ -335,6 +356,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'photo_coverage_repair': photo_repair,
           'skin_transition_half_width_mm': feather*1000,
           'lower_neck_clean_fade_z': [neck_fade_bottom, neck_fade_top],
+          'clean_skin_microdetail': {'scale_per_meter': 1400, 'distance_m': .00004,
+                                    'strength': .25, 'coordinates': 'rest_point_attribute'},
           'lower_neck_blended_vertices': int(np.count_nonzero(lower_neck)),
           'skin_transition_vertices': int(((weights > 0) & (weights < 1)).sum()),
           'undercoat_length_mm': [10, 16], 'undercoat_target': 120000,
