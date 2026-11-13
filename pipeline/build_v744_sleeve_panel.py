@@ -61,11 +61,10 @@ def build(cuff, interface):
             total = sum(w.values())
             assert total > 0
             vertex_weights.append({name: value / total for name, value in w.items() if value > 0})
-    # An armature's fixed-weight point mapping is affine (including preserve
-    # volume). Sample its origin and basis, then invert for each desired point.
-    # This uses Blender's own deformation, not a guessed linear-skinning matrix.
+    # Sample locally: segmented/bendy bones can make the fixed-weight mapping
+    # position dependent. Newton steps fit the actual evaluated deformation.
     mesh = bpy.data.meshes.new('V744 armature fit probes')
-    basis = [Vector(), Vector((.01, 0, 0)), Vector((0, .01, 0)), Vector((0, 0, .01))]
+    basis = [Vector(), Vector((.001, 0, 0)), Vector((0, .001, 0)), Vector((0, 0, .001))]
     mesh.from_pydata([tuple(p) for _ in target for p in basis], [], [])
     panel = bpy.data.objects.new('V744_LEFT_SLEEVE_UNDERCUFF_PANEL', mesh)
     bpy.context.collection.objects.link(panel)
@@ -81,20 +80,40 @@ def build(cuff, interface):
     modifier.use_deform_preserve_volume = source_mod.use_deform_preserve_volume
     modifier.use_vertex_groups = True
     modifier.use_bone_envelopes = False
-    bpy.context.view_layer.update()
-    evaluated = panel.evaluated_get(bpy.context.evaluated_depsgraph_get())
-    probe = evaluated.to_mesh()
-    rest = []
-    try:
-        inverse_world = panel.matrix_world.inverted()
-        for j, desired in enumerate(target):
-            origin = probe.vertices[4*j].co.copy()
-            columns = [(probe.vertices[4*j+k].co-origin)/.01 for k in (1,2,3)]
-            transform = Matrix(columns).transposed()
-            assert abs(transform.determinant()) > 1e-8
-            rest.append(transform.inverted() @ (inverse_world @ desired-origin))
-    finally:
-        evaluated.to_mesh_clear()
+    inverse_world = panel.matrix_world.inverted()
+    desired_local = [inverse_world @ p for p in target]
+    rest = [p.copy() for p in desired_local]
+    fit_iterations = 0
+    for iteration in range(12):
+        for j, position in enumerate(rest):
+            for k, delta in enumerate(basis):
+                mesh.vertices[4*j+k].co = position + delta
+        mesh.update()
+        panel.update_tag()
+        bpy.context.view_layer.update()
+        evaluated = panel.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        probe = evaluated.to_mesh()
+        try:
+            residual = 0.
+            corrections = []
+            for j, desired in enumerate(desired_local):
+                origin = probe.vertices[4*j].co.copy()
+                difference = desired - origin
+                residual = max(residual, (panel.matrix_world.to_3x3() @ difference).length)
+                columns = [(probe.vertices[4*j+k].co-origin)/.001 for k in (1,2,3)]
+                transform = Matrix(columns).transposed()
+                assert abs(transform.determinant()) > 1e-8
+                corrections.append(transform.inverted() @ difference)
+        finally:
+            evaluated.to_mesh_clear()
+        fit_iterations = iteration + 1
+        if residual < .00001:
+            break
+        for j, correction in enumerate(corrections):
+            # Bound each step near the local derivative sample.
+            if correction.length > .05:
+                correction = correction.normalized() * .05
+            rest[j] += correction
     width = len(rail)
     faces = [(r*width+c, r*width+c+1, (r+1)*width+c+1, (r+1)*width+c)
              for r in range(len(rows)-1) for c in range(width-1)]
@@ -126,4 +145,5 @@ def build(cuff, interface):
     return {'status': 'TRIAL_REQUIRES_WRIST_RENDER_REVIEW', 'object': panel.name,
             'rail_vertices': width, 'rows': len(rows), 'bind_max_error_m': error,
             'open_strip': True, 'source_mesh_or_shape_keys_modified': False,
-            'binding': 'inverse_sampled_source_armature_with_preserve_volume'}
+            'fit_iterations': fit_iterations,
+            'binding': 'iterative_local_armature_inverse_with_preserve_volume'}
