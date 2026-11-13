@@ -31,13 +31,13 @@ if args.review_scope != 'full' and args.mode != 'combined-build' and not (
         args.mode == 'hand-build' and args.review_scope == 'hands'):
     parser.error('--review-scope requires combined-build, or hand-build with hands')
 cuff_variant = os.environ.get('CUFF_VARIANT', 'baseline') or 'baseline'
-if cuff_variant not in ('baseline', 'distance-weighted', 'wrist-fitted', 'sleeve-masked', 'forearm-directed'):
+if cuff_variant not in ('baseline', 'distance-weighted', 'wrist-fitted', 'sleeve-masked', 'forearm-directed', 'sleeve-panel'):
     parser.error('Unknown CUFF_VARIANT')
 if cuff_variant != 'baseline' and args.mode != 'hand-build':
     parser.error('Cuff trial requires hand-build')
 if cuff_variant == 'distance-weighted' and not args.wrist_extension:
     parser.error('Cuff trial requires hand-build with wrist-extension')
-if args.reuse_hand and not (args.mode == 'hand-build' and cuff_variant in ('wrist-fitted', 'sleeve-masked', 'forearm-directed') and args.axial_trial and not args.wrist_extension):
+if args.reuse_hand and not (args.mode == 'hand-build' and cuff_variant in ('wrist-fitted', 'sleeve-masked', 'forearm-directed', 'sleeve-panel') and args.axial_trial and not args.wrist_extension):
     parser.error('--reuse-hand requires the pinned axial wrist-fitted trial without wrist extension')
 render_device = {'requested': args.device, 'selected': 'CPU'}
 if args.device == 'CUDA':
@@ -94,12 +94,16 @@ if args.mode == 'hand-build':
     else:
         from build_v545_fretting_hand import build
         build(out, thumb_support='sliding_rear', relaxed_contact_dips=True, spread_trial=True, wrist_extension=args.wrist_extension, axial_trial=args.axial_trial, hover_orientation_trial=args.axial_trial, middle_axial_trial=args.axial_trial)
-    if cuff_variant in ('wrist-fitted', 'sleeve-masked', 'forearm-directed'):
+    if cuff_variant in ('wrist-fitted', 'sleeve-masked', 'forearm-directed', 'sleeve-panel'):
         from build_v742_wrist_fitted_cuff import build as build_cuff
-        cuff, cuff_report = build_cuff(forearm_directed=cuff_variant == 'forearm-directed')
-        if cuff_variant in ('sleeve-masked', 'forearm-directed'):
+        cuff, cuff_report = build_cuff(forearm_directed=cuff_variant in ('forearm-directed', 'sleeve-panel'))
+        if cuff_variant in ('sleeve-masked', 'forearm-directed', 'sleeve-panel'):
             from refine_v743_left_sleeve_undercuff_mask import build as mask_sleeve
             cuff_report['sleeve_mask'] = mask_sleeve(cuff)
+            if cuff_variant == 'sleeve-panel':
+                from build_v744_sleeve_panel import build as build_panel
+                cuff_report['sleeve_panel'] = build_panel(
+                    cuff, cuff_report['sleeve_mask']['mask_cut_interface'])
         source_cuff = bpy.data.objects['V357_CUFF_PATCH.L']
         source_cuff.hide_render = True
         source_cuff.hide_set(True)
@@ -183,10 +187,10 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             ('fretting-oblique', center + offset @ Vector((.12, .20, .4)), center, .27),
             ('fretting-rear', center + offset @ Vector((-.02, .14, -.4)), center, .27),
         ] + context_shots
-        if args.wrist_extension or cuff_variant in ('wrist-fitted', 'sleeve-masked', 'forearm-directed'):
+        if args.wrist_extension or cuff_variant in ('wrist-fitted', 'sleeve-masked', 'forearm-directed', 'sleeve-panel'):
             wrist = rig.matrix_world @ rig.pose.bones['DEF-Hand.L'].head
             shots += [(f'wrist-{angle}', wrist + offset @ Vector((0, 0, .6)), wrist, .23) for angle in (0, -15, 15)]
-            if cuff_variant in ('wrist-fitted', 'sleeve-masked', 'forearm-directed'):
+            if cuff_variant in ('wrist-fitted', 'sleeve-masked', 'forearm-directed', 'sleeve-panel'):
                 shots += [(f'wrist-15-{layer}', wrist + offset @ Vector((0, 0, .6)), wrist, .23)
                           for layer in ('without-cuff', 'without-body')]
     if args.mode == 'hand-build' and args.review_scope == 'hands':
