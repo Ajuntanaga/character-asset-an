@@ -3,6 +3,7 @@ import bpy
 import json
 import math
 import heapq
+import runpy
 from collections import defaultdict
 from pathlib import Path
 
@@ -115,6 +116,8 @@ head.data.materials.clear()
 head.data.materials.append(skin)
 for polygon in head.data.polygons:
     polygon.material_index = 0
+
+photo_repair = runpy.run_path(str(ROOT/'repair_v740_photo_coverage.py'))['repair_photo_coverage'](head, skin, co)
 
 head.data.calc_loop_triangles()
 scalp_triangles = [t for t in head.data.loop_triangles if kept[t.polygon_index] in scalp_faces]
@@ -314,7 +317,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'feathered_native_skin_v4',
+          'revision': 'observed_side_photo_repair_v5',
+          'photo_coverage_repair': photo_repair,
           'skin_transition_half_width_mm': feather*1000,
           'skin_transition_vertices': int(((weights > 0) & (weights < 1)).sum()),
           'undercoat_length_mm': [10, 16], 'undercoat_target': 48000,
