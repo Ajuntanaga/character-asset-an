@@ -7,7 +7,6 @@ import numpy as np
 from pathlib import Path
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
-from mathutils.geometry import barycentric_transform
 
 ROOT = Path(__file__).resolve().parent
 OUT = Path('results')
@@ -70,8 +69,22 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             if hit is None or normal.y > -.10:
                 break
             ids = triangles[index]
-            bary = barycentric_transform(hit,*[vectors[i] for i in ids],
-                                         Vector((1,0,0)),Vector((0,1,0)),Vector((0,0,1)))
+            # Compute in float64 after translating to the triangle origin.
+            # Tiny facial triangles lose precision in the float32 transform.
+            a, b, c = coords[list(ids)].astype(np.float64)
+            edge_b, edge_c = b-a, c-a
+            normal64 = np.cross(edge_b, edge_c)
+            denom = float(normal64 @ normal64)
+            if denom < 1e-24:
+                break
+            offset64 = np.asarray(hit, dtype=np.float64)-a
+            v = float(np.cross(offset64, edge_c) @ normal64)/denom
+            w = float(np.cross(edge_b, offset64) @ normal64)/denom
+            bary = np.array((1.-v-w, v, w), dtype=np.float64)
+            if not np.isfinite(bary).all() or bary.min() < -.01 or bary.max() > 1.01:
+                break
+            if np.linalg.norm(bary @ np.array((a,b,c))-np.asarray(hit)) > 2e-6:
+                break
             height = .000055+.00027*math.sin(math.pi*t)+.00007*t if kind=='BROW' else .00007+.00048*math.sin(math.pi*t)+.00035*t
             centers.append(hit+normal*height)
             normals.append(normal)
