@@ -143,7 +143,7 @@ hair = mat.node_tree.nodes.new('ShaderNodeBsdfHairPrincipled')
 hair.parametrization = 'MELANIN'
 output = mat.node_tree.nodes.new('ShaderNodeOutputMaterial')
 mat.node_tree.links.new(hair.outputs[0], output.inputs['Surface'])
-for name, value in {'Melanin': .985, 'Roughness': .38, 'Radial Roughness': .35,
+for name, value in {'Melanin': .985, 'Roughness': .52, 'Radial Roughness': .48,
                     'Random Color': .06, 'Random Roughness': .10}.items():
     if name in hair.inputs:
         hair.inputs[name].default_value = value
@@ -193,9 +193,10 @@ for p, n, root_uv in guides:
     u = unit(n-axis*np.dot(n, axis))
     v = unit(np.cross(axis, u))
     root_u, root_v = tangent, unit(np.cross(n, tangent))
-    radius = rng.uniform(.0033, .0048)+top*.0013
+    # Smaller loop openings and fuller bundles follow the dense reference curls.
+    radius = rng.uniform(.0028, .0040)+top*.0010
     length = rng.uniform(.012, .021)+top*.007
-    turns = rng.uniform(1.05, 1.85)
+    turns = rng.uniform(1.45, 2.10)
     phase = rng.uniform(-math.pi, math.pi)
     theta = phase+math.tau*turns*t
     helix = radius*emerge[:, None]*(np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
@@ -209,7 +210,7 @@ for p, n, root_uv in guides:
                 guide[j] += np.array(normal)*shift
                 corrections += 1
                 max_correction = max(max_correction, shift)
-    for _ in range(64):
+    for _ in range(96):
         angle, radial = rng.random()*math.tau, math.sqrt(rng.random())
         root_offset = radial*.0017*(math.cos(angle)*root_u+math.sin(angle)*root_v)
         hit = attachment(p+root_offset)
@@ -217,7 +218,7 @@ for p, n, root_uv in guides:
             continue
         q, normal, child_uv = hit
         q += normal*.00016
-        packed = radial*rng.uniform(.0007, .00125)*(math.cos(angle)*u+math.sin(angle)*v)
+        packed = radial*rng.uniform(.0010, .0015)*(math.cos(angle)*u+math.sin(angle)*v)
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*bundle[:, None]
         path += u*rng.uniform(-.00018, .00018)*np.sin(math.pi*t)[:, None]
         width = rng.uniform(.000030, .000043)
@@ -256,6 +257,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
+          'revision': 'dense_curl_bundles_v2',
+          'children_per_guide': 96, 'hair_roughness': .52,
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
 print(json.dumps(report))
