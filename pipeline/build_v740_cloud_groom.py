@@ -102,6 +102,9 @@ skin = bpy.data.materials['V736_NATIVE_PHOTO_SKIN'].copy()
 skin.name = 'V740_FEATHERED_NATIVE_SKIN'
 nodes, links = skin.node_tree.nodes, skin.node_tree.links
 shader = next(n for n in nodes if n.type == 'BSDF_PRINCIPLED')
+# The imported photo material has IOR 1.0, suppressing dielectric reflection.
+source_skin_ior = float(shader.inputs['IOR'].default_value)
+shader.inputs['IOR'].default_value = 1.4
 assert shader.inputs['Base Color'].is_linked
 photo = shader.inputs['Base Color'].links[0].from_socket
 tex = nodes.new('ShaderNodeTexCoord')
@@ -356,6 +359,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
           'revision': 'raised_part_directed_curls_v8',
           'photo_coverage_repair': photo_repair,
+          'skin_surface_ior': float(shader.inputs['IOR'].default_value),
+          'source_skin_surface_ior': source_skin_ior,
           'skin_transition_half_width_mm': feather*1000,
           'lower_neck_clean_fade_z': [neck_fade_bottom, neck_fade_top],
           'clean_skin_microdetail': {'scale_per_meter': 1400, 'distance_m': .00004,
