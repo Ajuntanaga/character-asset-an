@@ -10,6 +10,10 @@ on:
         description: Render rest, jaw, blink and brow deformation comparisons
         type: boolean
         default: false
+      albedo:
+        description: Render unlit skin base color to diagnose texture versus lighting
+        type: boolean
+        default: false
       undercoat:
         description: Render isolated undercoat and curl comparisons
         type: boolean
@@ -68,6 +72,10 @@ jobs:
         if: ${{ inputs.textured }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_textured.py
+      - name: Render unlit skin diagnostic
+        if: ${{ inputs.albedo }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_albedo.py
       - name: Publish appearance previews before expression tests
         if: ${{ inputs.expressions }}
         uses: actions/upload-artifact@v4

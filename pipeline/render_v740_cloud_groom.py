@@ -115,8 +115,8 @@ try:
     scene.render.resolution_y = 640
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = 'PNG'
-    scene.view_settings.view_transform = 'AgX'
-    scene.view_settings.exposure = -1.3
+    scene.view_settings.view_transform = globals().get('VIEW_TRANSFORM', 'AgX')
+    scene.view_settings.exposure = globals().get('EXPOSURE', -1.3)
     for view in globals().get('VIEWS', ['front', 'three_quarter']):
         if view == 'reference_orientation':
             # The donor was nonlinearly rescaled: reuse orientation only, not its
