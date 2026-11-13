@@ -189,6 +189,9 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             if cuff_variant in ('wrist-fitted', 'sleeve-masked'):
                 shots += [(f'wrist-15-{layer}', wrist + offset @ Vector((0, 0, .6)), wrist, .23)
                           for layer in ('without-cuff', 'without-body')]
+    if args.mode == 'hand-build' and args.review_scope == 'hands':
+        # Cuff/fretting trials do not need unchanged full-body or picking views.
+        shots = [s for s in shots if s[0].startswith(('fretting-', 'wrist-'))]
     if args.mode == 'groom-build':
         shots = [
             ('groom-front', (0, -2, 1.72), (0, 0, 1.70), .38),
