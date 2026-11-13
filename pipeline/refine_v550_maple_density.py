@@ -91,11 +91,43 @@ def build(output, save=True):
         assert len(ramps[0].color_ramp.elements) == 2
         for element, color in zip(ramps[0].color_ramp.elements, grain_colors):
             element.color = color
+        # The product board has wandering, interrupted longitudinal grain.
+        # Distort its coordinates gently before the existing anisotropic noise,
+        # avoiding the uninterrupted ruler-straight lines in the prior preview.
+        board_nodes, board_links = (board_material.node_tree.nodes,
+                                    board_material.node_tree.links)
+        grain_noise = ramps[0].inputs[0].links[0].from_node
+        assert grain_noise.type == 'TEX_NOISE'
+        grain_mapping = grain_noise.inputs['Vector'].links[0].from_node
+        assert grain_mapping.type == 'VECT_MATH' and grain_mapping.operation == 'MULTIPLY'
+        board_coordinates = grain_mapping.inputs[0].links[0].from_socket
+        grain_mapping.inputs[1].default_value = (3, 85, 12)
+        wander = board_nodes.new('ShaderNodeTexNoise')
+        wander.name = 'V749_GrainWander'
+        wander.inputs['Scale'].default_value = 6
+        wander.inputs['Detail'].default_value = 2
+        centered = board_nodes.new('ShaderNodeVectorMath')
+        centered.operation = 'SUBTRACT'
+        centered.inputs[1].default_value = (.5, .5, .5)
+        amplitude = board_nodes.new('ShaderNodeVectorMath')
+        amplitude.operation = 'MULTIPLY'
+        amplitude.inputs[1].default_value = (0, .035, 0)
+        warped = board_nodes.new('ShaderNodeVectorMath')
+        warped.operation = 'ADD'
+        board_links.new(board_coordinates, wander.inputs['Vector'])
+        board_links.new(wander.outputs['Color'], centered.inputs[0])
+        board_links.new(centered.outputs[0], amplitude.inputs[0])
+        board_links.new(board_coordinates, warped.inputs[0])
+        board_links.new(amplitude.outputs[0], warped.inputs[1])
+        board_links.new(warped.outputs[0], grain_mapping.inputs[0])
         for slot in board.material_slots:
             if slot.material == board_original:
                 slot.material = board_material
         board_report = {'material': board_material.name,
-                        'grain_colors': grain_colors, 'neck_changed': False}
+                        'grain_colors': grain_colors, 'neck_changed': False,
+                        'grain_mapping_scale': [3, 85, 12],
+                        'grain_wander_scale': 6,
+                        'grain_wander_amplitude': [0, .035, 0]}
     material['V550_density_applied'] = True
     from refine_v552_guitar_hardware import build as build_hardware
     hardware = build_hardware()
