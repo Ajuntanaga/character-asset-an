@@ -133,8 +133,14 @@ def build(output, save=True):
     hardware = build_hardware()
     # Capture the actual cloud input geometry: old construction scripts alone
     # cannot distinguish a wavy trace from cap/bevel shading artifacts.
+    body_trial = None
+    perimeter_objects = [edge_object, top]
+    if os.environ.get("CONTINUOUS_BODY") == "true":
+        from build_v751_continuous_guitar_body import build as build_body
+        shell, body_trial = build_body(edge_object, top, material, edge_material)
+        perimeter_objects.append(shell)
     perimeter = {}
-    for obj in (edge_object, top):
+    for obj in perimeter_objects:
         perimeter[obj.name] = {
             'vertices_local': [list(v.co) for v in obj.data.vertices],
             'matrix_world': [list(row) for row in obj.matrix_world],
@@ -161,7 +167,8 @@ def build(output, save=True):
               'figure_contrast_points': contrast_points,
               'stain_tint': [.47, .52, .45, 1],
               'edge_material': edge_material.name,
-              'body_geometry_changed': False, 'hardware': hardware,
+              'body_geometry_changed': body_trial is not None, 'body_trial': body_trial,
+              'hardware': hardware,
               'fretboard': board_report,
               'burst_changed': True, 'burst_exponent': burst_exponent, 'main_drivers': 1957,
               'output': path.name if save else None}

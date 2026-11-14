@@ -43,6 +43,10 @@ on:
         type: choice
         options: [baseline, fine-flame, restrained]
         default: baseline
+      continuous_body:
+        description: Reversible continuous guitar body edge trial
+        type: boolean
+        default: false
       review_scope:
         description: Full review, portrait with blinks, appearance, mouth, wardrobe, hands, or hair layer isolation
         type: choice
@@ -69,6 +73,7 @@ jobs:
       DELIT_FACE: ${{ inputs.delit_face }}
       REVIEW_SCOPE: ${{ inputs.review_scope }}
       MAPLE_VARIANT: ${{ inputs.maple_variant }}
+      CONTINUOUS_BODY: ${{ inputs.continuous_body }}
       GROOM_VARIANT: ${{ inputs.groom_variant }}
       EYE_APERTURE_VARIANT: ${{ inputs.eye_aperture_variant }}
     steps:
