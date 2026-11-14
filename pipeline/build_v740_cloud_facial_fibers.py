@@ -25,6 +25,16 @@ coords = np.empty((len(mesh.vertices),3), dtype=np.float32)
 basis.data.foreach_get('co', coords.ravel())
 vectors = [Vector(p) for p in coords]
 mesh.calc_loop_triangles()
+# Derive smooth normals from Basis, matching the projection geometry exactly.
+# Flat BVH normals jump at triangle boundaries and kink lifted fiber samples.
+basis_triangles = np.array([tuple(t.vertices) for t in mesh.loop_triangles], dtype=np.int32)
+triangle_points = coords[basis_triangles].astype(np.float64)
+area_normals = np.cross(triangle_points[:, 1]-triangle_points[:, 0],
+                        triangle_points[:, 2]-triangle_points[:, 0])
+basis_normals = np.zeros(coords.shape, dtype=np.float64)
+for corner in range(3):
+    np.add.at(basis_normals, basis_triangles[:, corner], area_normals)
+basis_normals /= np.maximum(np.linalg.norm(basis_normals, axis=1, keepdims=True), 1e-20)
 rng = np.random.default_rng(740)
 report = {}
 
@@ -194,6 +204,13 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
                 break
             if np.linalg.norm(bary @ np.array((a,b,c))-np.asarray(hit)) > 2e-6:
                 break
+            smooth_normal = Vector(bary @ basis_normals[list(ids)])
+            if smooth_normal.length_squared < 1e-12:
+                break
+            smooth_normal.normalize()
+            if smooth_normal.dot(normal) <= 0:
+                break
+            normal = smooth_normal
             height = .000055+.00027*math.sin(math.pi*t)+.00007*t if kind=='BROW' else .00007+.00048*math.sin(math.pi*t)+.00035*t
             centers.append(hit+normal*height)
             normals.append(normal)
@@ -267,7 +284,8 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     report[kind] = {'fiber_counts':counts,'vertices':len(points),'shape_keys':len(keys),
                     'key_drivers':len(data.shape_keys.animation_data.drivers), 'growth_mask':mask_report,
                     'shaft_radius_m': [.000040, .000060 if kind=='BROW' else .000065],
-                    'taper': {'amount': .95, 'exponent': 4.0}}
+                    'taper': {'amount': .95, 'exponent': 4.0},
+                    'surface_normals': 'barycentric area-weighted Basis vertex normals'}
 rig.update_tag(refresh={'OBJECT'})
 bpy.context.view_layer.update()
 assert len(rig.animation_data.drivers) == 1957
