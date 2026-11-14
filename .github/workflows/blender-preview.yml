@@ -274,6 +274,10 @@ jobs:
           with tarfile.open('cloud-results.tar.gz', 'w:gz', compresslevel=1) as archive:
               for path in sorted(files):
                   archive.add(path, arcname=str(path))
+          with tarfile.open('cloud-previews.tar.gz', 'w:gz', compresslevel=1) as archive:
+              for path in sorted(files):
+                  if path.suffix in ('.png', '.json'):
+                      archive.add(path, arcname=str(path))
           PY
           tag="cloud-results-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          gh release create "$tag" cloud-results.tar.gz --target "$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)" --draft --title "Cloud results ${GITHUB_RUN_ID}" --notes "Fallback archive after Actions artifact upload failure. Source commit: ${GITHUB_SHA}. Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}. The release tag tracks the default branch for delivery only; it is not the source revision. Trial outputs, not an accepted production checkpoint."
+          gh release create "$tag" cloud-results.tar.gz cloud-previews.tar.gz --target "$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)" --draft --title "Cloud results ${GITHUB_RUN_ID}" --notes "Fallback archive after Actions artifact upload failure. Source commit: ${GITHUB_SHA}. Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}. The release tag tracks the default branch for delivery only; it is not the source revision. Trial outputs, not an accepted production checkpoint."
