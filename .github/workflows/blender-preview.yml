@@ -18,7 +18,7 @@ on:
       cuff_variant:
         description: Isolated left cuff trial with hand build
         type: choice
-        options: [baseline, distance-weighted, wrist-fitted, sleeve-masked, forearm-directed, sleeve-panel, wrist-aligned, aligned-sleeve-masked]
+        options: [baseline, distance-weighted, wrist-fitted, sleeve-masked, forearm-directed, sleeve-panel, wrist-aligned, aligned-sleeve-masked, aligned-sleeve-panel]
         default: baseline
       facial_hair:
         description: Include the reversible beard-length trial with blink-build
@@ -132,7 +132,7 @@ jobs:
           PY
           fi
       - name: Reuse pinned hand fit for cuff-only trial
-        if: inputs.mode == 'hand-build' && (inputs.cuff_variant == 'wrist-fitted' || inputs.cuff_variant == 'sleeve-masked' || inputs.cuff_variant == 'forearm-directed' || inputs.cuff_variant == 'sleeve-panel' || inputs.cuff_variant == 'wrist-aligned' || inputs.cuff_variant == 'aligned-sleeve-masked')
+        if: inputs.mode == 'hand-build' && (inputs.cuff_variant == 'wrist-fitted' || inputs.cuff_variant == 'sleeve-masked' || inputs.cuff_variant == 'forearm-directed' || inputs.cuff_variant == 'sleeve-panel' || inputs.cuff_variant == 'wrist-aligned' || inputs.cuff_variant == 'aligned-sleeve-masked' || inputs.cuff_variant == 'aligned-sleeve-panel')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
