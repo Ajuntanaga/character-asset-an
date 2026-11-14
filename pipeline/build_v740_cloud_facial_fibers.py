@@ -214,6 +214,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     counts = {'L':0,'R':0}
     shaft_lengths = {}
     length_fit_rejected = 0
+    direction_rng = np.random.default_rng(753)
     for record in selected:
         # Historical sample indices predate topology cleanup. Use their X/Z
         # growth region, then reproject every point onto this trial's Basis.
@@ -226,7 +227,15 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             radius = rng.uniform(.000040,.000060)
         else:
             mustache = root.z > 1.579 and abs(root.x) < .033
-            direction = Vector((sign*(.6 if mustache else .2),0.,-1.)).normalized()
+            if mustache:
+                # Reference growth fans outward along the upper lip. Keep a
+                # separate random stream so length, radius and site selection
+                # remain identical to the verified surface-length trial.
+                fan = min(1., max(0., (abs(root.x)-.004)/.025))
+                angle = math.radians(20.+30.*fan+direction_rng.uniform(-7.,7.))
+                direction = Vector((sign*math.sin(angle), 0., -math.cos(angle)))
+            else:
+                direction = Vector((sign*.2,0.,-1.)).normalized()
             if mustache:
                 length = rng.uniform(.0030,.0048)
             else:
@@ -370,6 +379,10 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
                         'stretch_ratio_p50_p95_max': np.percentile(np.array(values)[:,1]/np.array(values)[:,0], [50,95,100]).tolist(),
                     } for region,values in shaft_lengths.items()},
                     'key_drivers':len(data.shape_keys.animation_data.drivers), 'growth_mask':mask_report,
+                    'moustache_direction_trial': ({'angle_from_down_degrees': [20.,50.],
+                                                   'jitter_degrees': 7., 'seed': 753,
+                                                   'lateral_range_m': [.004,.029]}
+                                                  if kind == 'BEARD' else None),
                     'shaft_radius_m': [.000040, .000060 if kind=='BROW' else .000065],
                     'taper': {'amount': .95, 'exponent': 4.0},
                     'surface_lift_profile': ('arched_brow' if kind=='BROW' else 'monotonic_beard_70_to_190_um'),
