@@ -124,7 +124,7 @@ try:
     scene.render.image_settings.file_format = 'PNG'
     scene.view_settings.view_transform = globals().get('VIEW_TRANSFORM', 'AgX')
     scene.view_settings.exposure = globals().get('EXPOSURE', -1.3)
-    for view in globals().get('VIEWS', ['front', 'three_quarter']):
+    for view in globals().get('VIEWS', ['front', 'three_quarter', 'three_quarter_reference_side']):
         if view == 'reference_orientation':
             # The donor was nonlinearly rescaled: reuse orientation only, not its
             # original translation or perspective fit. Keep framing comparable.
