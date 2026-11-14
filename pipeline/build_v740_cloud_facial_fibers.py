@@ -227,7 +227,13 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             if smooth_normal.dot(normal) <= 0:
                 break
             normal = smooth_normal
-            height = .000055+.00027*math.sin(math.pi*t)+.00007*t if kind=='BROW' else .00007+.00048*math.sin(math.pi*t)+.00035*t
+            if kind == 'BROW':
+                height = .000055+.00027*math.sin(math.pi*t)+.00007*t
+            else:
+                # Short beard shafts follow the face with a gentle tip lift.
+                # The previous arch peaked near 0.74 mm; reduce its suspected
+                # contribution to doubled strokes in the resolved preview.
+                height = .00007 + .00012*t
             centers.append(hit+normal*height)
             normals.append(normal)
             samples.append((ids,bary))
@@ -301,6 +307,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
                     'key_drivers':len(data.shape_keys.animation_data.drivers), 'growth_mask':mask_report,
                     'shaft_radius_m': [.000040, .000060 if kind=='BROW' else .000065],
                     'taper': {'amount': .95, 'exponent': 4.0},
+                    'surface_lift_profile': ('arched_brow' if kind=='BROW' else 'monotonic_beard_70_to_190_um'),
                     'surface_normals': 'barycentric area-weighted Basis vertex normals'}
 rig.update_tag(refresh={'OBJECT'})
 bpy.context.view_layer.update()
