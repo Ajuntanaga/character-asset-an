@@ -402,4 +402,41 @@ for name in ('V740_BROW_FIBERS', 'V740_BEARD_FIBERS'):
         scene.collection.objects.link(obj)
     obj.hide_render = False
     obj.hide_set(False)
+# Export the actual saved assembly dependencies without downloading the large
+# checkpoint or loading another Blender process on the workstation.
+def driver_targets(data):
+    animation = getattr(data, 'animation_data', None)
+    return sorted({target.id.name_full
+                   for curve in (animation.drivers if animation else [])
+                   for variable in curve.driver.variables
+                   for target in variable.targets if target.id is not None})
+
+assembly = {
+    'status': 'INVENTORY_ONLY_NOT_INTEGRATED',
+    'scenes': {s.name: sorted(o.name for o in s.objects) for s in bpy.data.scenes},
+    'objects': [],
+}
+for obj in sorted(bpy.data.objects, key=lambda item: item.name):
+    keys = getattr(obj.data, 'shape_keys', None)
+    assembly['objects'].append({
+        'name': obj.name, 'type': obj.type,
+        'parent': obj.parent.name if obj.parent else None,
+        'parent_type': obj.parent_type, 'parent_bone': obj.parent_bone,
+        'matrix_world': [list(row) for row in obj.matrix_world],
+        'hide_render': obj.hide_render,
+        'modifiers': [{'name': mod.name, 'type': mod.type,
+                       'object': getattr(mod, 'object', None).name
+                       if getattr(mod, 'object', None) else None}
+                      for mod in obj.modifiers],
+        'constraints': [{'name': c.name, 'type': c.type,
+                         'target': getattr(c, 'target', None).name
+                         if getattr(c, 'target', None) else None,
+                         'subtarget': getattr(c, 'subtarget', None)}
+                        for c in obj.constraints],
+        'driver_targets': driver_targets(obj),
+        'data_driver_targets': driver_targets(obj.data),
+        'key_driver_targets': driver_targets(keys),
+        'shape_keys': [key.name for key in keys.key_blocks] if keys else [],
+    })
+(OUT/'native_assembly_inventory.json').write_text(json.dumps(assembly, indent=2))
 bpy.ops.wm.save_as_mainfile(filepath=str((OUT/'V740_cloud_groom_trial.blend').resolve()), compress=True)
