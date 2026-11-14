@@ -1,5 +1,6 @@
 """Reversible open sleeve panel; fit through the actual armature deformation."""
 import bpy
+import math
 from mathutils import Vector, Matrix
 from pathlib import Path
 import runpy
@@ -45,7 +46,11 @@ def build(cuff, interface):
 
     target, vertex_weights = [], []
     # Open strip: never cap the unrelated original jacket openings.
-    rows = (-.15, 0., .2, .4, .6, .8, 1.)
+    # The open rail can sit 14 cm from the cuff. Five longitudinal cells
+    # produce coarse bends; keep each interval at most about 5 mm instead.
+    longest_span = max((inner_points[i] - points[i]).length for i in rail) + .0015
+    intervals = max(5, math.ceil(longest_span / .005))
+    rows = (-.15,) + tuple(j / intervals for j in range(intervals + 1))
     for t in rows:
         blend = max(0., t)
         for i in rail:
@@ -54,7 +59,7 @@ def build(cuff, interface):
             inner = inner + (center - inner).normalized() * .0015
             direction = inner - outer
             p = (outer - direction.normalized() * .006 if t < 0
-                 else outer.lerp(fair_points[i], min(1., t / .2)).lerp(inner, t))
+                 else outer.lerp(fair_points[i], min(1., t * direction.length / .012)).lerp(inner, t))
             target.append(p)
             w = {name: value * (1-blend) for name, value in weights[i].items()
                  if name.startswith('DEF-') and value > 0}
@@ -147,6 +152,8 @@ def build(cuff, interface):
             'rail_vertices': width, 'rows': len(rows), 'bind_max_error_m': error,
             'correspondence': correspondence,
             'source_fairing_radius_m': .012,
+            'longitudinal_target_spacing_m': .005,
+            'seam_transition_distance_m': .012,
             'source_seam_preserved': True,
             'mapping_world_m': {
                 'source_rail_vertex_ids': rail,
