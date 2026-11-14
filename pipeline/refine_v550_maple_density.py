@@ -42,9 +42,10 @@ def build(output, save=True):
     # New broad-flame albedo: decoded luminance p05/p95 are .287/.491.
     # Keep the flame visible without amplifying fine longitudinal grain into
     # white scratches. The reference has a restrained silver/olive center.
-    # The broad-burst preview retained the silhouette but flattened the figure.
-    # Restore visible flame contrast while keeping the restrained stain/coat.
-    contrast_points = ([[.287, .22], [.491, .42]] if variant == 'restrained'
+    # Run 43579930055 remained cloudy against the product reference. Widen
+    # the light/dark figure separation around the same .32 midpoint; keep
+    # texture scale, stain, burst, and geometry fixed for a controlled trial.
+    contrast_points = ([[.287, .16], [.491, .48]] if variant == 'restrained'
                        else [[.287, .18], [.491, .48]])
     for x, y in contrast_points:
         contrast.mapping.curves[3].points.new(x, y)
