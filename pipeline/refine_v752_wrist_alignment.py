@@ -25,6 +25,20 @@ def build():
             obj.to_mesh_clear()
 
     original = surface()
+    # The stretch target transfers direction, but SWING_Y does not transfer
+    # Hand.L axial twist. Seed its rotation before the existing stretch step.
+    source = main.pose.bones['Hand.L']
+    rest_delta = bone.bone.matrix_local.to_quaternion().rotation_difference(
+        source.bone.matrix_local.to_quaternion())
+    assert abs(rest_delta.angle) < math.radians(.01), 'Hand rest frames differ'
+    rotation = bone.constraints.new('COPY_ROTATION')
+    rotation.name = 'V752_WristTwistFromHand'
+    rotation.target = main
+    rotation.subtarget = source.name
+    rotation.target_space = 'WORLD'
+    rotation.owner_space = 'WORLD'
+    bone.constraints.move(len(bone.constraints) - 1, 0)
+    bpy.context.view_layer.update()
     steps = []
     for _ in range(16):
         deform = main.matrix_world @ bone.matrix @ bone.bone.matrix_local.inverted()
