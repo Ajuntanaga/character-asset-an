@@ -130,10 +130,21 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             records.append({'side': 'L' if x > 0 else 'R',
                             'point': [float(x), -.5, float(z)], 'luma': 1.0})
         extra_sites = len(records)-historical_count
+        # Historical beard sites stop at z=1.600: the upper cheek portion of
+        # the native surface otherwise cannot grow fibers, whatever its mask.
+        # Keep the central lip/nose area excluded and retain photo eligibility.
+        cheek_rng = np.random.default_rng(752)
+        cheek_sites = 0
+        for x, z in cheek_rng.uniform((.035, 1.590), (.080, 1.625), (4000, 2)):
+            for sign, side in ((1., 'L'), (-1., 'R')):
+                records.append({'side': side,
+                                'point': [float(sign*x), -.5, float(z)], 'luma': 1.0})
+                cheek_sites += 1
         records, mask_report = native_photo_mask(records, bvh, surface_triangles, threshold)
         mask_report['supplemental_moustache_sites'] = extra_sites
+        mask_report['supplemental_cheek_sites'] = cheek_sites
         mask_report['growth_sites_and_lip_nose_exclusions'] = (
-            'historical sites plus native-projected moustache samples; exclusions unchanged')
+            'historical sites plus native-projected moustache and lateral cheek samples; central lip/nose exclusions retained')
     selected = []
     for side in ('L','R'):
         candidates = [r for r in records if r['side']==side and r['luma']<threshold]
@@ -155,7 +166,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             length = rng.uniform(.0030,.0052)*(1.-.22*u)
             radius = rng.uniform(.000040,.000060)
         else:
-            mustache = root.z > 1.579
+            mustache = root.z > 1.579 and abs(root.x) < .033
             direction = Vector((sign*(.6 if mustache else .2),0.,-1.)).normalized()
             length = rng.uniform(.0030,.0048) if mustache else rng.uniform(.0024,.0047)
             radius = rng.uniform(.000040,.000065)
