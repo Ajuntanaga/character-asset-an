@@ -213,6 +213,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     points, faces, attachments, weights = [], [], [], []
     counts = {'L':0,'R':0}
     shaft_lengths = {}
+    length_fit_rejected = 0
     for record in selected:
         # Historical sample indices predate topology cleanup. Use their X/Z
         # growth region, then reproject every point onto this trial's Basis.
@@ -233,48 +234,62 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
                 cheek = min(1., max(0., (abs(root.x)-.025)/.020))
                 length = rng.uniform(.0024,.0040)*(.50-.15*cheek)
             radius = rng.uniform(.000040,.000065)
-        centers, normals, samples = [], [], []
-        for j in range(steps):
-            t = j/(steps-1.)
-            target = root+direction*(length*t)
-            hit,normal,index,_ = bvh.ray_cast(Vector((target.x,-.5,target.z)),Vector((0,1,0)))
-            if hit is None or normal.y > -.10:
+        # X/Z distance is not surface arclength, especially below the chin.
+        # Reproject a shorter/longer span, retaining real triangle bindings at
+        # every sample instead of scaling finished shafts away from the skin.
+        projected_length = length
+        length_fit_ok = False
+        for length_iteration in range(8 if kind == 'BEARD' else 1):
+            centers, normals, samples = [], [], []
+            for j in range(steps):
+                t = j/(steps-1.)
+                target = root+direction*(projected_length*t)
+                hit,normal,index,_ = bvh.ray_cast(Vector((target.x,-.5,target.z)),Vector((0,1,0)))
+                if hit is None or normal.y > -.10:
+                    break
+                ids = triangles[index]
+                # Compute in float64 after translating to the triangle origin.
+                # Tiny facial triangles lose precision in the float32 transform.
+                a, b, c = coords[list(ids)].astype(np.float64)
+                edge_b, edge_c = b-a, c-a
+                normal64 = np.cross(edge_b, edge_c)
+                denom = float(normal64 @ normal64)
+                if denom < 1e-24:
+                    break
+                offset64 = np.asarray(hit, dtype=np.float64)-a
+                v = float(np.cross(offset64, edge_c) @ normal64)/denom
+                w = float(np.cross(edge_b, offset64) @ normal64)/denom
+                bary = np.array((1.-v-w, v, w), dtype=np.float64)
+                if not np.isfinite(bary).all() or bary.min() < -.01 or bary.max() > 1.01:
+                    break
+                if np.linalg.norm(bary @ np.array((a,b,c))-np.asarray(hit)) > 2e-6:
+                    break
+                smooth_normal = Vector(bary @ basis_normals[list(ids)])
+                if smooth_normal.length_squared < 1e-12:
+                    break
+                smooth_normal.normalize()
+                if smooth_normal.dot(normal) <= 0:
+                    break
+                normal = smooth_normal
+                if kind == 'BROW':
+                    height = .000055+.00027*math.sin(math.pi*t)+.00007*t
+                else:
+                    # Short beard shafts follow the face with a gentle tip lift.
+                    # The previous arch peaked near 0.74 mm; reduce its suspected
+                    # contribution to doubled strokes in the resolved preview.
+                    height = .00007 + .00012*t
+                centers.append(hit+normal*height)
+                normals.append(normal)
+                samples.append((ids,bary))
+            if len(centers) != steps:
                 break
-            ids = triangles[index]
-            # Compute in float64 after translating to the triangle origin.
-            # Tiny facial triangles lose precision in the float32 transform.
-            a, b, c = coords[list(ids)].astype(np.float64)
-            edge_b, edge_c = b-a, c-a
-            normal64 = np.cross(edge_b, edge_c)
-            denom = float(normal64 @ normal64)
-            if denom < 1e-24:
+            measured = sum((b-a).length for a,b in zip(centers, centers[1:]))
+            if kind == 'BROW' or abs(measured-length) <= length*.03:
+                length_fit_ok = True
                 break
-            offset64 = np.asarray(hit, dtype=np.float64)-a
-            v = float(np.cross(offset64, edge_c) @ normal64)/denom
-            w = float(np.cross(edge_b, offset64) @ normal64)/denom
-            bary = np.array((1.-v-w, v, w), dtype=np.float64)
-            if not np.isfinite(bary).all() or bary.min() < -.01 or bary.max() > 1.01:
-                break
-            if np.linalg.norm(bary @ np.array((a,b,c))-np.asarray(hit)) > 2e-6:
-                break
-            smooth_normal = Vector(bary @ basis_normals[list(ids)])
-            if smooth_normal.length_squared < 1e-12:
-                break
-            smooth_normal.normalize()
-            if smooth_normal.dot(normal) <= 0:
-                break
-            normal = smooth_normal
-            if kind == 'BROW':
-                height = .000055+.00027*math.sin(math.pi*t)+.00007*t
-            else:
-                # Short beard shafts follow the face with a gentle tip lift.
-                # The previous arch peaked near 0.74 mm; reduce its suspected
-                # contribution to doubled strokes in the resolved preview.
-                height = .00007 + .00012*t
-            centers.append(hit+normal*height)
-            normals.append(normal)
-            samples.append((ids,bary))
-        if len(centers) != steps:
+            projected_length *= max(.2, min(2., length/max(measured, 1e-9)))
+        if not length_fit_ok:
+            length_fit_rejected += 1
             continue
         region = ('brow' if kind == 'BROW' else 'moustache' if mustache
                   else 'chin' if abs(root.x) < .025 else 'cheek_jaw')
@@ -345,6 +360,9 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     obj.matrix_basis = Matrix.Identity(4)
     obj['surface_attachment'] = 'V740 native face barycentric shape-key deformation plus DEF-Head parent'
     report[kind] = {'fiber_counts':counts,'vertices':len(points),'shape_keys':len(keys),
+                    'surface_length_fit': {'method': 'iterative_reprojection' if kind == 'BEARD' else 'unchanged_brow',
+                                           'tolerance_fraction': .03 if kind == 'BEARD' else None,
+                                           'rejected': length_fit_rejected},
                     'shaft_lengths_by_region': {region: {
                         'count': len(values),
                         'target_mm_p50_p95_max': (np.percentile(np.array(values)[:,0], [50,95,100])*1000).tolist(),
