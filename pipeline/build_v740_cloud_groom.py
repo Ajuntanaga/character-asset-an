@@ -388,7 +388,13 @@ for p, n, root_uv in guides:
                                      +.0014*math.sin(angle)*curl_radial)
         # V27: V26 isolated curls remain a thin open lattice. Preserve distal
         # bundle volume; individual fibers still taper and have staggered ends.
-        clump_width = bundle*(1-.30*smooth((t-.35)/.65))
+        # V34: the resolved crop shows broad cut-off lock ends. Individual
+        # shaft taper cannot narrow a bundle whose centerlines stay spread.
+        # Taper the final 20% of each child's actual length; preserve coverage
+        # and the original clump shape before that, including staggered ends.
+        end_fraction = float(length_rng.uniform(.85, 1.0))
+        tip_clump = 1-.92*smooth((t/end_fraction-.80)/.20)
+        clump_width = bundle*(1-.30*smooth((t-.35)/.65))*tip_clump
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
         # Preserve phase coherence, guide spacing, count and root spread.
         child_theta = theta + rng.uniform(-.10, .10)*emerge
@@ -396,14 +402,13 @@ for p, n, root_uv in guides:
         child_radius = radius*rng.uniform(.90, 1.10)
         child_helix = child_radius*curl_envelope[:, None]*(
             .80*np.cos(child_theta)[:, None]*u+np.sin(child_theta)[:, None]*v)
-        path += (child_helix-helix)*bundle[:, None]
+        path += (child_helix-helix)*(bundle*tip_clump)[:, None]
         irregularity = rng.uniform(.00006, .00014)*np.sin(
             math.tau*rng.uniform(3., 5.)*t+rng.uniform(-math.pi, math.pi))
         path += u*(irregularity*np.sin(math.pi*t))[:, None]
         # V28: keep fibers through at least 85% of the lock. V27 loses
         # distal coverage as children terminate from 55% onward. Retain
         # staggered tips and the same fiber count; interpolation preserves roots.
-        end_fraction = float(length_rng.uniform(.85, 1.0))
         path = np.column_stack([np.interp(t*end_fraction, t, path[:, axis_index])
                                 for axis_index in range(3)])
         width = rng.uniform(.000030, .000043)
@@ -472,7 +477,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'surface_limited_curl_part_v33',
+          'revision': 'tapered_curl_bundle_tips_v34',
           'curl_part_surface_clearance_mm': 2.,
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
@@ -503,6 +508,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'side_curl_turns': [1.10, 1.65], 'crown_curl_turns': [1.60, 2.15],
           'curl_normal_flattening': .80,
           'curl_tip_clump_fraction': .70,
+          'child_tip_clump_multiplier': .08,
+          'child_tip_clump_start_fraction': .80,
           'child_phase_offset_radians': [-.10, .10],
           'child_radius_scale': [.90, 1.10],
           'child_radius_distribution': 'uniform_coherent_lock',
