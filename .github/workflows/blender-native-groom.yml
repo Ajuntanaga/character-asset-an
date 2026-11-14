@@ -30,6 +30,11 @@ on:
         description: Render brows and moustache close-up without denoising
         type: boolean
         default: false
+      curl_bundle_scale:
+        description: Curl bundle width multiplier for controlled appearance comparison
+        type: choice
+        options: ['1', '0.7']
+        default: '1'
       undercoat_feather_mm:
         description: Undercoat hairline fade width in mm (0 disables trial)
         type: choice
@@ -46,6 +51,7 @@ jobs:
     timeout-minutes: 40
     env:
       UNDERCOAT_FEATHER_MM: ${{ inputs.undercoat_feather_mm || '0' }}
+      CURL_BUNDLE_SCALE: ${{ inputs.curl_bundle_scale || '1' }}
       OMP_NUM_THREADS: '2'
       OPENBLAS_NUM_THREADS: '2'
     steps:

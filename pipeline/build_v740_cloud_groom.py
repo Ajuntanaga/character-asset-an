@@ -299,6 +299,10 @@ def install(name, paths, widths, uvs):
     obj['attachment'] = 'Native UVMap barycentric roots; surface parent; Deform Curves on Surface'
     return obj
 
+bundle_width_scale = float(os.environ.get('CURL_BUNDLE_SCALE', '1'))
+if not .5 <= bundle_width_scale <= 1.:
+    raise ValueError('CURL_BUNDLE_SCALE must be between 0.5 and 1')
+
 t = np.linspace(0, 1, 44)
 emerge, bundle = smooth(t/.20), smooth(t/.30)
 strands, radii, uvs = [], [], []
@@ -384,7 +388,7 @@ for p, n, root_uv in guides:
         # V26: round the bundle cross-section; V25 renders as flat ribbons.
         # Guide paths and strand count stay unchanged.
         packed_scale = rng.uniform(2./3., 1.)
-        packed = radial*packed_scale*(.0014*math.cos(angle)*curl_binormal
+        packed = radial*packed_scale*bundle_width_scale*(.0014*math.cos(angle)*curl_binormal
                                      +.0014*math.sin(angle)*curl_radial)
         # V27: V26 isolated curls remain a thin open lattice. Preserve distal
         # bundle volume; individual fibers still taper and have staggered ends.
@@ -513,7 +517,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'child_phase_offset_radians': [-.10, .10],
           'child_radius_scale': [.90, 1.10],
           'child_radius_distribution': 'uniform_coherent_lock',
-          'child_bundle_half_axes_mm': [1.4, 1.4],
+          'curl_bundle_width_scale': bundle_width_scale,
+          'child_bundle_half_axes_mm': [1.4*bundle_width_scale]*2,
           'child_bundle_frame': 'path_normal_radial_binormal',
           'child_bundle_scale': [2./3., 1.],
           'child_length_fraction': [.85, 1.0],
