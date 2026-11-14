@@ -171,11 +171,37 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
         mask_report['supplemental_cheek_sites'] = cheek_sites
         mask_report['growth_sites_and_lip_nose_exclusions'] = (
             'historical sites plus native-projected moustache and lateral cheek samples; central lip/nose exclusions retained')
+    if kind == 'BEARD':
+        # Trial cheek line rises from the mouth corner toward the sideburn.
+        # Photo darkness modulates density inside this envelope; it must not
+        # turn lighting differences into bald patches or nose-side islands.
+        for record in records:
+            x, _, z = record['point']
+            lateral = abs(x)
+            if lateral >= .033:
+                edge = float(np.interp(lateral, [.033, .050, .080],
+                                       [1.585, 1.602, 1.625]))
+                fade = min(1., max(0., (edge-z)/.004))
+                fade = fade*fade*(3.-2.*fade)
+                photo = max(0., (threshold-record['luma'])/threshold)
+                record['density'] = fade*(.30+.70*photo)
+            else:
+                # Preserve the established moustache and lip exclusions.
+                record['density'] = (max(.01, (threshold-record['luma'])/threshold)
+                                     if record['luma'] < threshold else 0.)
+        mask_report['cheek_envelope_trial'] = {
+            'x_z_knots': [[.033, 1.585], [.050, 1.602], [.080, 1.625]],
+            'feather_m': .004, 'photo_density_floor': .30,
+            'eligible_by_side': {side: sum(r['side'] == side and r['density'] > 0
+                                           for r in records) for side in ('L', 'R')},
+        }
     selected = []
     for side in ('L','R'):
-        candidates = [r for r in records if r['side']==side and r['luma']<threshold]
+        candidates = [r for r in records if r['side']==side and
+                      (r['density'] > 0 if kind == 'BEARD' else r['luma'] < threshold)]
         assert candidates, f'No eligible {kind} candidates on {side}'
-        probabilities = np.array([max(.01,(threshold-r['luma'])/threshold) for r in candidates])
+        probabilities = np.array([r['density'] if kind == 'BEARD' else
+                                  max(.01,(threshold-r['luma'])/threshold) for r in candidates])
         indices = rng.choice(len(candidates),min(per_side,len(candidates)),replace=False,
                              p=probabilities/probabilities.sum())
         selected.extend(candidates[i] for i in indices)
@@ -194,7 +220,12 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
         else:
             mustache = root.z > 1.579 and abs(root.x) < .033
             direction = Vector((sign*(.6 if mustache else .2),0.,-1.)).normalized()
-            length = rng.uniform(.0030,.0048) if mustache else rng.uniform(.0024,.0047)
+            if mustache:
+                length = rng.uniform(.0030,.0048)
+            else:
+                # Short graded cheek stubble, retaining more length at chin.
+                cheek = min(1., max(0., (abs(root.x)-.025)/.020))
+                length = rng.uniform(.0024,.0040)*(1.-.65*cheek)
             radius = rng.uniform(.000040,.000065)
         centers, normals, samples = [], [], []
         for j in range(steps):
