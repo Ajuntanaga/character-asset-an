@@ -261,7 +261,44 @@ def build():
         created.append(obj.name)
 
     # Reference markers have pale centers bounded by a narrow dark rim.
-    # Keep the existing markers and their fret placement; add only a face cap.
+    # Product front and angle views resolve frets 12-24: bass-side octave
+    # pair, then treble-side singles and a treble-side pair at fret 24.
+    # Leave lower-register placement pending a reference that shows it.
+    def string_midpoint(string_id, fret):
+        string = bpy.data.objects[f'V206_STRING_{string_id}']
+        progress = sum(1 - 2 ** (-f / 12) for f in (fret - 1, fret)) / 2
+        return Vector((string['physical_nut_x_m'] + string['scale_m'] * progress,
+                       string['nut_y_m'] + (string['bridge_y_m'] - string['nut_y_m']) * progress,
+                       0))
+
+    last = bpy.data.objects['V206_INLAY_F24_1']
+    companion = last.copy()
+    companion.data = last.data.copy()
+    companion.name = 'V206_INLAY_F24_2'
+    last.users_collection[0].objects.link(companion)
+    created.append(companion.name)
+    corrected_inlays = []
+    for marker in list(guitar.children_recursive):
+        if not marker.name.startswith('V206_INLAY_') or marker.type != 'MESH':
+            continue
+        fret = int(marker['fret'])
+        if fret < 12:
+            continue
+        index = int(marker.name.rsplit('_', 1)[1])
+        fraction = ((7.5 - index) / 7 if fret == 12 else (index - .5) / 7)
+        treble = string_midpoint('S1', fret)
+        bass = string_midpoint('S8', fret)
+        position = treble.lerp(bass, fraction)
+        marker.location.x, marker.location.y = position.x, position.y
+        # Approximately 2 mm diameter in the photo, versus the old 5.6 mm.
+        coords = [v.co for v in marker.data.vertices]
+        cx = (min(v.x for v in coords) + max(v.x for v in coords)) / 2
+        cy = (min(v.y for v in coords) + max(v.y for v in coords)) / 2
+        for vertex in marker.data.vertices:
+            vertex.co.x = cx + (vertex.co.x - cx) / 2.8
+            vertex.co.y = cy + (vertex.co.y - cy) / 2.8
+        corrected_inlays.append(marker.name)
+    # Create caps after resizing so both parts retain the same ring ratio.
     inlay_center = material('V552_Inlay_Center', (.48, .53, .47), .42, 0)
     inlay_names = []
     for marker in list(guitar.children_recursive):
@@ -335,5 +372,6 @@ def build():
     return {'created': created, 'hidden_originals': hidden,
             'wound_string_materials': wound_strings,
             'ring_inlay_centers': inlay_names,
+            'reference_upper_register_inlays': corrected_inlays,
             'saddle_transforms_unchanged': True, 'main_drivers': 1957,
             'reference': 'references/props/strandberg/strandberg_full_product.jpg'}
