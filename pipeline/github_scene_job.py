@@ -370,6 +370,35 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
             angle = int(angle_label)
             wrist_control.matrix_basis = saved_wrist @ Matrix.Rotation(math.radians(angle), 4, 'X')
             rig.update_tag(); bpy.context.view_layer.update()
+            # Export the fully evaluated surface in the same pose as the image.
+            # The earlier rest-pose capsule check cannot explain posed overlap.
+            if label in ('wrist-0', 'wrist-15'):
+                body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
+                evaluated = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+                mesh = evaluated.to_mesh()
+                try:
+                    hand = rig.pose.bones['DEF-Hand.L']
+                    center_world = rig.matrix_world @ hand.head
+                    nearby = {v.index: list(evaluated.matrix_world @ v.co)
+                              for v in mesh.vertices
+                              if (evaluated.matrix_world @ v.co - center_world).length < .18}
+                    faces = [p for p in mesh.polygons
+                             if all(i in nearby for i in p.vertices)]
+                    used = {i for p in faces for i in p.vertices}
+                    payload = {
+                        'pose_degrees': angle,
+                        'space': 'world',
+                        'evaluation': 'all_active_modifiers',
+                        'hand_head': list(center_world),
+                        'hand_tail': list(rig.matrix_world @ hand.tail),
+                        'vertices': {str(i): nearby[i] for i in sorted(used)},
+                        'faces': [{'vertices': list(p.vertices),
+                                   'material_index': p.material_index} for p in faces],
+                        'materials': [m.name if m else None for m in mesh.materials],
+                    }
+                    (out / f'{label}-evaluated-surface.json').write_text(json.dumps(payload))
+                finally:
+                    evaluated.to_mesh_clear()
             scene.cycles.samples = 16
             scene.render.resolution_x = scene.render.resolution_y = 512
         camera.location = position
