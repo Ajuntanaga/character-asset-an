@@ -396,6 +396,24 @@ if args.mode in ('preview', 'review', 'build-review', 'hand-build', 'groom-build
                                    'material_index': p.material_index} for p in faces],
                         'materials': [m.name if m else None for m in mesh.materials],
                     }
+                    # The donor hand is rotated relative to the main hand bone.
+                    # Export its actual surface for collision/projection analysis;
+                    # a cylinder along DEF-Hand.L misses the visible overlap.
+                    donor = bpy.data.objects['V545_NATIVE_HAND.L'].evaluated_get(
+                        bpy.context.evaluated_depsgraph_get())
+                    donor_mesh = donor.to_mesh()
+                    try:
+                        payload['donor_hand'] = {
+                            'vertices': [list(donor.matrix_world @ v.co)
+                                         for v in donor_mesh.vertices],
+                            'faces': [list(p.vertices) for p in donor_mesh.polygons],
+                        }
+                    finally:
+                        donor.to_mesh_clear()
+                    payload['camera'] = {
+                        'position': list(position), 'target': list(target),
+                        'ortho_scale': scale,
+                    }
                     (out / f'{label}-evaluated-surface.json').write_text(json.dumps(payload))
                 finally:
                     evaluated.to_mesh_clear()
