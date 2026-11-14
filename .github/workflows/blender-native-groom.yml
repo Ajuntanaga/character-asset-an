@@ -95,6 +95,7 @@ jobs:
             results/renders/*.png
           retention-days: 7
       - name: Preserve early scalp previews when artifact upload fails
+        continue-on-error: true
         if: ${{ steps.artifact_2.outcome == 'failure' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -109,7 +110,7 @@ jobs:
                   archive.add(path, arcname=str(path))
           PYTHON
           sha256sum scalp-previews.tar.gz > scalp-previews.sha256
-          gh release create "scalp-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" scalp-previews.tar.gz scalp-previews.sha256 --target "$GITHUB_SHA" --draft --title "Scalp preview ${GITHUB_RUN_ID}" --notes "Early trial renders for visual review, not an accepted checkpoint. Source: ${GITHUB_SHA}."
+          gh release create "scalp-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" scalp-previews.tar.gz scalp-previews.sha256 --target "$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)" --draft --title "Scalp preview ${GITHUB_RUN_ID}" --notes "Early trial renders for visual review, not an accepted checkpoint. Source: ${GITHUB_SHA}."
       - name: Render native photo skin
         if: ${{ inputs.textured }}
         run: |
