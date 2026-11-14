@@ -286,8 +286,9 @@ def build():
             continue
         index = int(marker.name.rsplit('_', 1)[1])
         fraction = ((7.5 - index) / 7 if fret == 12 else (index - .5) / 7)
-        treble = string_midpoint('S1', fret)
-        bass = string_midpoint('S8', fret)
+        # This project's S1 is the 28-inch bass; S8 is the 26.5-inch treble.
+        treble = string_midpoint('S8', fret)
+        bass = string_midpoint('S1', fret)
         position = treble.lerp(bass, fraction)
         marker.location.x, marker.location.y = position.x, position.y
         # Approximately 2 mm diameter in the photo, versus the old 5.6 mm.
