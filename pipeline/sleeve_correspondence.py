@@ -1,6 +1,6 @@
 """Ordered correspondence between an open sleeve rail and a closed cuff rim."""
 from bisect import bisect_right
-from math import dist
+from math import dist, exp
 
 
 def smooth_open_rail(rail, radius=.012):
@@ -61,3 +61,20 @@ def ordered_rim_points(rail, rim):
         mapped.append([x+(y-x)*t for x, y in zip(a, b)])
     return mapped, {'method': 'source_arc_length_between_unwrapped_endpoint_matches',
                     'rim_turn_span': span, 'rim_parameters_unwrapped': parameters}
+
+
+def smooth_rail_vectors(rail, vectors, radius=.012):
+    """Arc-length Gaussian average; keep cancellation instead of renormalizing."""
+    lengths = [0.0]
+    for a, b in zip(rail, rail[1:]):
+        lengths.append(lengths[-1] + dist(a, b))
+    quadrature = [lengths[min(j+1, len(rail)-1)] - lengths[max(0, j-1)]
+                  for j in range(len(rail))]
+    result = []
+    for position in lengths:
+        weights = [exp(-.5*((s-position)/radius)**2)*q
+                   for s, q in zip(lengths, quadrature)]
+        total = sum(weights)
+        result.append([sum(w*v[k] for w, v in zip(weights, vectors))/total
+                       for k in range(3)])
+    return result
