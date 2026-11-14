@@ -109,10 +109,30 @@ def build(cuff, overlap=.006, radial_limit=.16):
         interface_edges = [edge for edge in all_boundary_edges
                            if removed_edges[edge]]
         interface_indices = sorted({i for edge in interface_edges for i in edge})
+        # Use only retained jacket faces; skin and removed sleeve faces must
+        # not tilt the overlap tangent. Compute in world space for scaling.
+        source_normals = {i: Vector() for i in interface_indices}
+        source_inward = {i: Vector() for i in interface_indices}
+        for face in mesh.polygons:
+            if face.material_index != 6 or any(i in removed_set for i in face.vertices):
+                continue
+            hits = set(face.vertices) & source_normals.keys()
+            if not hits:
+                continue
+            corners = [evaluated.matrix_world @ mesh.vertices[i].co for i in face.vertices]
+            normal = sum(((corners[j] - corners[0]).cross(corners[j+1] - corners[0])
+                          for j in range(1, len(corners)-1)), Vector())
+            centroid = sum(corners, Vector()) / len(corners)
+            for i in hits:
+                source_normals[i] += normal
+                source_inward[i] += centroid - evaluated.matrix_world @ mesh.vertices[i].co
+        assert all(n.length > 1e-12 for n in source_normals.values())
         interface = {
             'classification': 'retained_jacket_edge_adjacent_to_removed_jacket_face',
             'space': 'world_m',
             'edges': interface_edges,
+            'retained_surface_normals': {str(i): list(n.normalized()) for i, n in source_normals.items()},
+            'retained_surface_inward': {str(i): list(v) for i, v in source_inward.items()},
             'vertices': {str(i): list(evaluated.matrix_world @ mesh.vertices[i].co)
                          for i in interface_indices},
             'weights': {str(i): {body.vertex_groups[g.group].name: g.weight

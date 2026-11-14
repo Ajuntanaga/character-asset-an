@@ -58,7 +58,14 @@ def build(cuff, interface):
             inner = inner_points[i]
             inner = inner + (center - inner).normalized() * .0015
             direction = inner - outer
-            p = (outer - direction.normalized() * .006 if t < 0
+            normal = Vector(interface['retained_surface_normals'][str(i)])
+            tangent = -direction - normal * (-direction).dot(normal)
+            inward = Vector(interface['retained_surface_inward'][str(i)])
+            inward -= normal * inward.dot(normal)
+            if tangent.length < 1e-8 or tangent.dot(inward) <= 0:
+                tangent = inward
+            assert tangent.length > 1e-10, 'No retained-surface overlap direction'
+            p = (outer + tangent.normalized() * .006 if t < 0
                  else outer.lerp(fair_points[i], min(1., t * direction.length / .012)).lerp(inner, t))
             target.append(p)
             w = {name: value * (1-blend) for name, value in weights[i].items()
@@ -155,6 +162,7 @@ def build(cuff, interface):
             'longitudinal_target_spacing_m': .005,
             'seam_transition_distance_m': .012,
             'source_seam_preserved': True,
+            'overlap_direction': 'retained_jacket_surface_tangent',
             'mapping_world_m': {
                 'source_rail_vertex_ids': rail,
                 'source_rail': [list(points[i]) for i in rail],
