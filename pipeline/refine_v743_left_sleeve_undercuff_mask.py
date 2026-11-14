@@ -29,7 +29,8 @@ def build(cuff, overlap=.006, radial_limit=.16):
     evaluated = None
     try:
         for modifier, _ in states:
-            modifier.show_viewport = modifier.type == 'ARMATURE'
+            modifier.show_viewport = (modifier.type == 'ARMATURE' or
+                                      modifier.name == 'V753 posed sleeve fairing')
         bpy.context.view_layer.update()
         evaluated = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
         mesh = evaluated.to_mesh()
@@ -147,7 +148,7 @@ def build(cuff, overlap=.006, radial_limit=.16):
             'nearby_jacket_faces': [list(face.vertices) for face in mesh.polygons
                                     if face.material_index == 6 and
                                     all(str(i) in nearby_vertices for i in face.vertices)],
-            'stage': 'armature_only_before_mask_shell_and_subdivision',
+            'stage': 'deformation_and_optional_fairing_before_mask_shell_and_subdivision',
             'edges': boundary_edges,
             'vertices': {str(i): list(evaluated.matrix_world @ mesh.vertices[i].co)
                          for i in boundary_indices},
@@ -175,7 +176,7 @@ def build(cuff, overlap=.006, radial_limit=.16):
     modifier.vertex_group = keep.name
     modifier.threshold = .5
     # Run after deformation and before subdivision/shell modifiers.
-    index = max(i for i, m in enumerate(body.modifiers) if m.type == 'ARMATURE') + 1
+    index = max(i for i, m in enumerate(body.modifiers) if m.type == 'ARMATURE' or m.name == 'V753 posed sleeve fairing') + 1
     body.modifiers.move(len(body.modifiers) - 1, index)
     return {'status': 'TRIAL_REQUIRES_SEAM_AND_WRIST_MOTION_REVIEW',
             'removed_vertices': len(removed), 'candidate_vertices': len(candidates),

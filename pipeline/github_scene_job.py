@@ -103,6 +103,9 @@ if args.mode == 'hand-build':
         cuff, cuff_report = build_cuff(forearm_directed=cuff_variant in ('forearm-directed', 'sleeve-panel'))
         if cuff_variant in ('sleeve-masked', 'forearm-directed', 'sleeve-panel', 'aligned-sleeve-masked', 'aligned-sleeve-panel'):
             from refine_v743_left_sleeve_undercuff_mask import build as mask_sleeve
+            if cuff_variant == 'aligned-sleeve-panel':
+                from refine_v753_sleeve_surface import build as fair_sleeve
+                cuff_report['sleeve_fairing'] = fair_sleeve()
             cuff_report['sleeve_mask'] = mask_sleeve(cuff)
             if cuff_variant in ('sleeve-panel', 'aligned-sleeve-panel'):
                 from build_v744_sleeve_panel import build as build_panel
