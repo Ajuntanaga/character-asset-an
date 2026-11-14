@@ -186,14 +186,24 @@ top_span = float(restore_upper_head(1.728)) - top_start
 def in_part(p):
     return p[2] > part_height and -.080 < p[1] < .050 and abs(p[0]-(.041+.13*(p[1]+.065))) < .0016
 
-def crosses_part(path):
-    """Reject strands entering the part or crossing to its opposite bank."""
+def crosses_part(path, surface_clearance=None):
+    """Protect the scalp part without cutting a vertical void through raised curls."""
     # Check segment midpoints too, including short undercoat segments.
     points = np.concatenate((path, (path[:-1]+path[1:])*.5))
     active = (points[:, 2] > part_height) & (points[:, 1] > -.080) & (points[:, 1] < .050)
     bank = 1. if path[0, 0]-(.041+.13*(path[0, 1]+.065)) >= 0 else -1.
     distance = bank*(points[:, 0]-(.041+.13*(points[:, 1]+.065)))
-    return bool(np.any(active & (distance < .0016)))
+    candidates = points[active & (distance < .0016)]
+    if surface_clearance is None:
+        return bool(len(candidates))
+    # V33: the part is a scalp feature. Whole-lock rejection at every height
+    # removes roots well outside its 3.2 mm width when a raised curl overlaps it.
+    # Keep near-surface crossings excluded, but allow elevated curl overlap.
+    for point in candidates:
+        hit, normal, _, _ = scalp.find_nearest(Vector(point))
+        if hit is None or (Vector(point)-hit).dot(normal) < surface_clearance:
+            return True
+    return False
 
 part_rejections = {'curl': 0, 'undercoat': 0}
 
@@ -399,7 +409,7 @@ for p, n, root_uv in guides:
         width = rng.uniform(.000030, .000043)
         taper = np.maximum(.04, (1-t)/.15)*np.minimum(1., 1-.08*t)
         taper[t < .85] = 1-.08*t[t < .85]
-        if crosses_part(path):
+        if crosses_part(path, surface_clearance=.002):
             part_rejections['curl'] += 1
             continue
         strands.append(path)
@@ -462,7 +472,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'path_normal_curl_bundle_v32',
+          'revision': 'surface_limited_curl_part_v33',
+          'curl_part_surface_clearance_mm': 2.,
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
