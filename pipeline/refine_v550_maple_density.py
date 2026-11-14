@@ -129,6 +129,22 @@ def build(output, save=True):
                         'grain_mapping_scale': [3, 85, 12],
                         'grain_wander_scale': 6,
                         'grain_wander_amplitude': [0, .035, 0]}
+    # Record the actual inherited shader, including bump/roughness branches.
+    # The source scripts alone do not describe the downloaded scene's graph.
+    material_graph = {
+        'nodes': [{
+            'name': node.name, 'type': node.bl_idname,
+            'image': node.image.filepath if node.type == 'TEX_IMAGE' and node.image else None,
+            'inputs': {socket.name: (
+                list(socket.default_value) if hasattr(socket.default_value, '__len__')
+                and not isinstance(socket.default_value, str) else socket.default_value)
+                for socket in node.inputs
+                if hasattr(socket, 'default_value') and not socket.is_linked},
+        } for node in nodes],
+        'links': [{'from': [link.from_node.name, link.from_socket.name],
+                   'to': [link.to_node.name, link.to_socket.name]} for link in links],
+    }
+    (out / 'maple-material-graph.json').write_text(json.dumps(material_graph, indent=2))
     material['V550_density_applied'] = True
     from refine_v552_guitar_hardware import build as build_hardware
     hardware = build_hardware()
