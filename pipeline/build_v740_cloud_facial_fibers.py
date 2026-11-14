@@ -248,7 +248,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
         # every sample instead of scaling finished shafts away from the skin.
         projected_length = length
         length_fit_ok = False
-        for length_iteration in range(8 if kind == 'BEARD' else 1):
+        for length_iteration in range(8):
             centers, normals, samples = [], [], []
             for j in range(steps):
                 t = j/(steps-1.)
@@ -293,7 +293,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             if len(centers) != steps:
                 break
             measured = sum((b-a).length for a,b in zip(centers, centers[1:]))
-            if kind == 'BROW' or abs(measured-length) <= length*.03:
+            if abs(measured-length) <= length*.03:
                 length_fit_ok = True
                 break
             projected_length *= max(.2, min(2., length/max(measured, 1e-9)))
@@ -369,8 +369,8 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     obj.matrix_basis = Matrix.Identity(4)
     obj['surface_attachment'] = 'V740 native face barycentric shape-key deformation plus DEF-Head parent'
     report[kind] = {'fiber_counts':counts,'vertices':len(points),'shape_keys':len(keys),
-                    'surface_length_fit': {'method': 'iterative_reprojection' if kind == 'BEARD' else 'unchanged_brow',
-                                           'tolerance_fraction': .03 if kind == 'BEARD' else None,
+                    'surface_length_fit': {'method': 'iterative_reprojection',
+                                           'tolerance_fraction': .03,
                                            'rejected': length_fit_rejected},
                     'shaft_lengths_by_region': {region: {
                         'count': len(values),
