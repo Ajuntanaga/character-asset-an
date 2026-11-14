@@ -99,7 +99,23 @@ def native_photo_mask(records, tree, surface_triangles, threshold):
                         'moustache': lambda p: abs(p[0]) < .033 and p[2] > 1.579,
                         'chin': lambda p: abs(p[0]) < .025 and p[2] < 1.56,
                     }.items()}
+        # Separate projection loss from photo eligibility in the visibly sparse
+        # cheek region. Counts include historical and supplemental sites.
+        cheek_regions = {}
+        for side in ('L', 'R'):
+            def in_cheek(r):
+                x, _, z = r['point']
+                return r['side'] == side and .035 <= abs(x) <= .080 and 1.590 <= z <= 1.625
+            original = [r for r in records if in_cheek(r)]
+            projected = [r for r in updated if in_cheek(r)]
+            cheek_regions[side] = {
+                'sites': len(original),
+                'projected': len(projected),
+                'projection_rejected': len(original)-len(projected),
+                'photo_eligible': sum(r['luma'] < threshold for r in projected),
+            }
         return updated, {'source': 'current native UV photo with observed-side repair blend',
+                         'cheek_regions': cheek_regions,
                          'historical_eligible': eligible(records), 'native_eligible': eligible(updated),
                          'projection_rejected': len(records)-len(updated),
                          'growth_sites_and_lip_nose_exclusions': 'historical; unchanged'}
