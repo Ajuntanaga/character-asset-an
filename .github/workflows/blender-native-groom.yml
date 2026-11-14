@@ -132,6 +132,23 @@ jobs:
             results/*.json
             results/renders/*.png
           retention-days: 7
+      - name: Preserve textured previews when artifact upload fails
+        continue-on-error: true
+        if: ${{ inputs.textured && steps.artifact_3.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import tarfile
+          files = sorted(p for p in Path('results').rglob('*') if p.is_file() and p.suffix in ('.png', '.json'))
+          assert any(p.suffix == '.png' for p in files), 'No rendered previews available'
+          with tarfile.open('textured-previews.tar.gz', 'w:gz', compresslevel=1) as archive:
+              for path in files:
+                  archive.add(path, arcname=str(path))
+          PYTHON
+          sha256sum textured-previews.tar.gz > textured-previews.sha256
+          gh release create "textured-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" textured-previews.tar.gz textured-previews.sha256 --target "$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)" --draft --title "Textured preview ${GITHUB_RUN_ID}" --notes "Early trial renders for visual review, not an accepted checkpoint. Source: ${GITHUB_SHA}."
       - name: Render isolated hair layers
         if: ${{ inputs.undercoat }}
         run: |
