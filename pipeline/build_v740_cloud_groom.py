@@ -354,7 +354,14 @@ for p, n, root_uv in guides:
     # Keep bundle width radial to the curl instead of a fixed world-facing ribbon.
     curl_radial = .80*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v
     curl_radial /= np.linalg.norm(curl_radial, axis=1)[:, None]
-    curl_binormal = np.cross(axis, curl_radial)
+    # V32: bundle offsets belong in the plane normal to the strand path.
+    # Using the helix axis here kept both offsets in the curl plane,
+    # spreading the children into the concentric discs visible in V31.
+    path_tangent = np.gradient(guide, axis=0)
+    path_tangent /= np.linalg.norm(path_tangent, axis=1)[:, None]
+    curl_radial -= path_tangent*np.sum(curl_radial*path_tangent, axis=1)[:, None]
+    curl_radial /= np.linalg.norm(curl_radial, axis=1)[:, None]
+    curl_binormal = np.cross(path_tangent, curl_radial)
     curl_binormal /= np.linalg.norm(curl_binormal, axis=1)[:, None]
     for _ in range(96):
         angle, radial = rng.random()*math.tau, math.sqrt(rng.random())
@@ -373,12 +380,10 @@ for p, n, root_uv in guides:
         # bundle volume; individual fibers still taper and have staggered ends.
         clump_width = bundle*(1-.30*smooth((t-.35)/.65))
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
-        # V29: distribute child radii across the curl interior. V28 leaves
-        # hollow wire-loop locks because every child follows the same radius.
-        # Square-root sampling distributes fibers across annular area; keep
-        # phase coherence, guide spacing, strand count and root spread fixed.
+        # Preserve phase coherence, guide spacing, count and root spread.
         child_theta = theta + rng.uniform(-.10, .10)*emerge
-        child_radius = radius*math.sqrt(rng.uniform(.16, 1.0))
+        # Keep children in a coherent lock; broad annular radii fill a disc.
+        child_radius = radius*rng.uniform(.90, 1.10)
         child_helix = child_radius*curl_envelope[:, None]*(
             .80*np.cos(child_theta)[:, None]*u+np.sin(child_theta)[:, None]*v)
         path += (child_helix-helix)*bundle[:, None]
@@ -457,7 +462,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'compact_crown_pitch_trial_v30',
+          'revision': 'path_normal_curl_bundle_v32',
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
                               'trial_reduction_m': .035, 'all_shape_keys': True},
@@ -488,10 +493,10 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'curl_normal_flattening': .80,
           'curl_tip_clump_fraction': .70,
           'child_phase_offset_radians': [-.10, .10],
-          'child_radius_scale': [.4, 1.0],
-          'child_radius_distribution': 'sqrt_uniform_annular_area',
+          'child_radius_scale': [.90, 1.10],
+          'child_radius_distribution': 'uniform_coherent_lock',
           'child_bundle_half_axes_mm': [1.4, 1.4],
-          'child_bundle_frame': 'curl_binormal_radial',
+          'child_bundle_frame': 'path_normal_radial_binormal',
           'child_bundle_scale': [2./3., 1.],
           'child_length_fraction': [.85, 1.0],
           'curl_radius_scale_from_v15': 1.45,
