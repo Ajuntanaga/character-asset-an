@@ -40,6 +40,8 @@ def build(cuff, interface):
     mapped, correspondence = mapper['ordered_rim_points'](
         [list(points[i]) for i in rail], [list(p) for p in rim])
     inner_points = {i: Vector(p) for i, p in zip(rail, mapped)}
+    fair_points = dict(zip(rail, map(Vector, mapper['smooth_open_rail'](
+        [list(points[i]) for i in rail]))))
 
     target, vertex_weights = [], []
     # Open strip: never cap the unrelated original jacket openings.
@@ -52,7 +54,7 @@ def build(cuff, interface):
             inner = inner + (center - inner).normalized() * .0015
             direction = inner - outer
             p = (outer - direction.normalized() * .006 if t < 0
-                 else outer.lerp(inner, t))
+                 else outer.lerp(fair_points[i], min(1., t / .2)).lerp(inner, t))
             target.append(p)
             w = {name: value * (1-blend) for name, value in weights[i].items()
                  if name.startswith('DEF-') and value > 0}
@@ -144,6 +146,8 @@ def build(cuff, interface):
     return {'status': 'TRIAL_REQUIRES_WRIST_RENDER_REVIEW', 'object': panel.name,
             'rail_vertices': width, 'rows': len(rows), 'bind_max_error_m': error,
             'correspondence': correspondence,
+            'source_fairing_radius_m': .012,
+            'source_seam_preserved': True,
             'mapping_world_m': {
                 'source_rail_vertex_ids': rail,
                 'source_rail': [list(points[i]) for i in rail],

@@ -3,6 +3,27 @@ from bisect import bisect_right
 from math import dist
 
 
+def smooth_open_rail(rail, radius=.012):
+    """Filter mesh-edge stair steps in metres, preserving the open endpoints."""
+    lengths = [0.0]
+    for a, b in zip(rail, rail[1:]):
+        lengths.append(lengths[-1] + dist(a, b))
+    result = []
+    for i, point in enumerate(rail):
+        window = min(radius, lengths[i], lengths[-1] - lengths[i])
+        if window <= 1e-9:
+            result.append(list(point))
+            continue
+        weights = [max(0., 1. - abs(s-lengths[i])/window) for s in lengths]
+        # Arc-length quadrature avoids bias toward densely tessellated folds.
+        weights = [w * (lengths[min(j+1, len(rail)-1)] - lengths[max(0, j-1)])
+                   for j, w in enumerate(weights)]
+        total = sum(weights)
+        result.append([sum(w*p[k] for w, p in zip(weights, rail))/total
+                       for k in range(3)])
+    return result
+
+
 def ordered_rim_points(rail, rim):
     edges = list(zip(rim, rim[1:] + rim[:1]))
     cumulative = [0.0]
