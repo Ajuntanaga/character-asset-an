@@ -185,6 +185,11 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
                 fade = fade*fade*(3.-2.*fade)
                 photo = max(0., (threshold-record['luma'])/threshold)
                 record['density'] = fade*(.30+.70*photo)
+            elif z > 1.598:
+                # Historical dark samples include nose-side/under-eye islands.
+                # The moustache seed region ends here; central skin above it
+                # is outside the beard even when the photo contains shadows.
+                record['density'] = 0.
             else:
                 # Preserve the established moustache and lip exclusions.
                 record['density'] = (max(.01, (threshold-record['luma'])/threshold)
