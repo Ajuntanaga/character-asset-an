@@ -212,6 +212,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
         selected.extend(candidates[i] for i in indices)
     points, faces, attachments, weights = [], [], [], []
     counts = {'L':0,'R':0}
+    shaft_lengths = {}
     for record in selected:
         # Historical sample indices predate topology cleanup. Use their X/Z
         # growth region, then reproject every point onto this trial's Basis.
@@ -228,9 +229,9 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             if mustache:
                 length = rng.uniform(.0030,.0048)
             else:
-                # Short graded cheek stubble, retaining more length at chin.
+                # Close-trimmed chin with the existing shorter lateral stubble.
                 cheek = min(1., max(0., (abs(root.x)-.025)/.020))
-                length = rng.uniform(.0024,.0040)*(1.-.65*cheek)
+                length = rng.uniform(.0024,.0040)*(.50-.15*cheek)
             radius = rng.uniform(.000040,.000065)
         centers, normals, samples = [], [], []
         for j in range(steps):
@@ -275,6 +276,10 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             samples.append((ids,bary))
         if len(centers) != steps:
             continue
+        region = ('brow' if kind == 'BROW' else 'moustache' if mustache
+                  else 'chin' if abs(root.x) < .025 else 'cheek_jaw')
+        actual_length = sum((b-a).length for a,b in zip(centers, centers[1:]))
+        shaft_lengths.setdefault(region, []).append((length, actual_length))
         offset = len(points)
         for j,(center,normal,(ids,bary)) in enumerate(zip(centers,normals,samples)):
             t = j/(steps-1.)
@@ -340,6 +345,12 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     obj.matrix_basis = Matrix.Identity(4)
     obj['surface_attachment'] = 'V740 native face barycentric shape-key deformation plus DEF-Head parent'
     report[kind] = {'fiber_counts':counts,'vertices':len(points),'shape_keys':len(keys),
+                    'shaft_lengths_by_region': {region: {
+                        'count': len(values),
+                        'target_mm_p50_p95_max': (np.percentile(np.array(values)[:,0], [50,95,100])*1000).tolist(),
+                        'actual_mm_p50_p95_max': (np.percentile(np.array(values)[:,1], [50,95,100])*1000).tolist(),
+                        'stretch_ratio_p50_p95_max': np.percentile(np.array(values)[:,1]/np.array(values)[:,0], [50,95,100]).tolist(),
+                    } for region,values in shaft_lengths.items()},
                     'key_drivers':len(data.shape_keys.animation_data.drivers), 'growth_mask':mask_report,
                     'shaft_radius_m': [.000040, .000060 if kind=='BROW' else .000065],
                     'taper': {'amount': .95, 'exponent': 4.0},
