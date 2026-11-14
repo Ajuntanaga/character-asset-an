@@ -181,7 +181,9 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             if lateral >= .033:
                 edge = float(np.interp(lateral, [.033, .050, .080],
                                        [1.585, 1.602, 1.625]))
-                fade = min(1., max(0., (edge-z)/.004))
+                # Reference cheek coverage thins gradually toward the upper edge.
+                # Keep the envelope and central lip exclusions fixed for comparison.
+                fade = min(1., max(0., (edge-z)/.010))
                 fade = fade*fade*(3.-2.*fade)
                 photo = max(0., (threshold-record['luma'])/threshold)
                 record['density'] = fade*(.30+.70*photo)
@@ -196,7 +198,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
                                      if record['luma'] < threshold else 0.)
         mask_report['cheek_envelope_trial'] = {
             'x_z_knots': [[.033, 1.585], [.050, 1.602], [.080, 1.625]],
-            'feather_m': .004, 'photo_density_floor': .30,
+            'feather_m': .010, 'photo_density_floor': .30,
             'eligible_by_side': {side: sum(r['side'] == side and r['density'] > 0
                                            for r in records) for side in ('L', 'R')},
         }
