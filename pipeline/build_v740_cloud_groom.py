@@ -310,6 +310,7 @@ corrections, max_correction = 0, 0.
 # Separate stream keeps guide placement and previous variation comparable.
 length_rng = np.random.default_rng(74012)
 shape_rng = np.random.default_rng(74031)
+section_rng = np.random.default_rng(74041)
 for p, n, root_uv in guides:
     top = float(smooth((p[2]-top_start)/top_span))
     # The front fringe curls outward and forward; sides sweep back from the part.
@@ -349,12 +350,15 @@ for p, n, root_uv in guides:
     shape_phase = shape_rng.uniform(-math.pi, math.pi)
     radius_variation = 1.+.22*np.sin(math.tau*1.25*t+shape_phase)*np.sin(math.pi*t)
     curl_envelope = emerge*(1-.15*t)*radius_variation
+    # Resolved V747 crop shows repeated hollow circular locks. Vary their
+    # normal cross-section coherently per lock, retaining roots and strands.
+    normal_scale = section_rng.uniform(.40, .85)
     helix = radius*curl_envelope[:, None]*(
-        .80*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
+        normal_scale*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
     sweep = tangent*(.002*top*np.sin(math.pi*t))[:, None]
-    # v16 clips the lower half of the .80-radius helix onto the scalp.
-    # Lift the centerline beyond its normal excursion to retain rounded locks.
-    guide = (p+n*(.00016+(radius*.95+.0006)*emerge[:, None])
+    # Match centerline lift to each compressed section; the existing surface
+    # projection below enforces clearance for the final guide.
+    guide = (p+n*(.00016+(radius*(normal_scale+.15)+.0006)*emerge[:, None])
              +axis*length*t[:, None]+sweep+helix)
     for j in range(1, len(t)):
         hit, normal, _, _ = scalp.find_nearest(Vector(guide[j]))
@@ -366,7 +370,7 @@ for p, n, root_uv in guides:
                 corrections += 1
                 max_correction = max(max_correction, shift)
     # Keep bundle width radial to the curl instead of a fixed world-facing ribbon.
-    curl_radial = .80*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v
+    curl_radial = normal_scale*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v
     curl_radial /= np.linalg.norm(curl_radial, axis=1)[:, None]
     # V32: bundle offsets belong in the plane normal to the strand path.
     # Using the helix axis here kept both offsets in the curl plane,
@@ -405,7 +409,7 @@ for p, n, root_uv in guides:
         # Keep children in a coherent lock; broad annular radii fill a disc.
         child_radius = radius*rng.uniform(.90, 1.10)
         child_helix = child_radius*curl_envelope[:, None]*(
-            .80*np.cos(child_theta)[:, None]*u+np.sin(child_theta)[:, None]*v)
+            normal_scale*np.cos(child_theta)[:, None]*u+np.sin(child_theta)[:, None]*v)
         path += (child_helix-helix)*(bundle*tip_clump)[:, None]
         irregularity = rng.uniform(.00006, .00014)*np.sin(
             math.tau*rng.uniform(3., 5.)*t+rng.uniform(-math.pi, math.pi))
@@ -510,7 +514,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'curl_radius_modulation_amplitude': .22,
           'curl_radius_modulation_cycles': 1.25,
           'side_curl_turns': [1.10, 1.65], 'crown_curl_turns': [1.60, 2.15],
-          'curl_normal_flattening': .80,
+          'curl_normal_flattening_range': [.40, .85],
           'curl_tip_clump_fraction': .70,
           'child_tip_clump_multiplier': .08,
           'child_tip_clump_start_fraction': .80,
@@ -525,7 +529,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'curl_radius_scale_from_v15': 1.45,
           'side_curl_radius_addition_mm': 1.5,
           'side_curl_radius_mm': [3.53, 4.40],
-          'curl_centerline_lift_radius_factor': .95,
+          'curl_centerline_lift_radius_factor_range': [.55, 1.],
           'crown_curl_radius_mm': [4.5675, 5.4375], 'part_flow': 'outward',
           'status': 'unreviewed_groom_trial'}
 (OUT/'groom_report.json').write_text(json.dumps(report, indent=2))
