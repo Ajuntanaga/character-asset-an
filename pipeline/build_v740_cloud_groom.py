@@ -313,6 +313,11 @@ shape_rng = np.random.default_rng(74031)
 section_rng = np.random.default_rng(74041)
 subclump_rng = np.random.default_rng(74051)
 centerline_rng = np.random.default_rng(74061)
+# Extra fibers use a separate stream: every original guide and its first 96
+# children remain identical, permitting a density-only rendered comparison.
+density_rng = np.random.default_rng(74071)
+children_per_guide = int(os.environ.get('CURL_CHILDREN_PER_GUIDE', '96'))
+assert children_per_guide in (96, 288)
 for p, n, root_uv in guides:
     top = float(smooth((p[2]-top_start)/top_span))
     # The front fringe curls outward and forward; sides sweep back from the part.
@@ -397,8 +402,10 @@ for p, n, root_uv in guides:
     # Trial: eight coherent sublocks vary the synchronized cable without sampling
     # the broad annular radii that previously produced concentric discs.
     subclump_phases = subclump_rng.uniform(-.45, .45, 8)
-    for child_index in range(96):
-        angle, radial = rng.random()*math.tau, math.sqrt(rng.random())
+    for child_index in range(children_per_guide):
+        child_rng = rng if child_index < 96 else density_rng
+        child_length_rng = length_rng if child_index < 96 else density_rng
+        angle, radial = child_rng.random()*math.tau, math.sqrt(child_rng.random())
         root_offset = radial*.0017*(math.cos(angle)*root_u+math.sin(angle)*root_v)
         hit = attachment(p+root_offset)
         if hit is None or not allowed(hit[0]):
@@ -407,7 +414,7 @@ for p, n, root_uv in guides:
         q += normal*.00016
         # V26: round the bundle cross-section; V25 renders as flat ribbons.
         # Guide paths and strand count stay unchanged.
-        packed_scale = rng.uniform(2./3., 1.)
+        packed_scale = child_rng.uniform(2./3., 1.)
         packed = radial*packed_scale*bundle_width_scale*(.0014*math.cos(angle)*curl_binormal
                                      +.0014*math.sin(angle)*curl_radial)
         # V27: V26 isolated curls remain a thin open lattice. Preserve distal
@@ -416,28 +423,28 @@ for p, n, root_uv in guides:
         # shaft taper cannot narrow a bundle whose centerlines stay spread.
         # Taper the final 20% of each child's actual length; preserve coverage
         # and the original clump shape before that, including staggered ends.
-        end_fraction = float(length_rng.uniform(.85, 1.0))
+        end_fraction = float(child_length_rng.uniform(.85, 1.0))
         tip_clump = 1-.92*smooth((t/end_fraction-.80)/.20)
         clump_width = bundle*(1-.30*smooth((t-.35)/.65))*tip_clump
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
         # Root displacement remains zero; each 12-strand group fans gently
         # through the middle of the curl, then converges toward the guide.
-        subclump_phase = subclump_phases[child_index // 12]*np.sin(math.pi*t)
-        child_theta = theta + rng.uniform(-.10, .10)*emerge + subclump_phase
+        subclump_phase = subclump_phases[(child_index % 96) // 12]*np.sin(math.pi*t)
+        child_theta = theta + child_rng.uniform(-.10, .10)*emerge + subclump_phase
         # Keep children in a coherent lock; broad annular radii fill a disc.
-        child_radius = radius*rng.uniform(.90, 1.10)
+        child_radius = radius*child_rng.uniform(.90, 1.10)
         child_helix = child_radius*curl_envelope[:, None]*(
             normal_scale*np.cos(child_theta)[:, None]*u+np.sin(child_theta)[:, None]*v)
         path += (child_helix-helix)*(bundle*tip_clump)[:, None]
-        irregularity = rng.uniform(.00006, .00014)*np.sin(
-            math.tau*rng.uniform(3., 5.)*t+rng.uniform(-math.pi, math.pi))
+        irregularity = child_rng.uniform(.00006, .00014)*np.sin(
+            math.tau*child_rng.uniform(3., 5.)*t+child_rng.uniform(-math.pi, math.pi))
         path += u*(irregularity*np.sin(math.pi*t))[:, None]
         # V28: keep fibers through at least 85% of the lock. V27 loses
         # distal coverage as children terminate from 55% onward. Retain
         # staggered tips and the same fiber count; interpolation preserves roots.
         path = np.column_stack([np.interp(t*end_fraction, t, path[:, axis_index])
                                 for axis_index in range(3)])
-        width = rng.uniform(.000030, .000043)
+        width = child_rng.uniform(.000030, .000043)
         taper = np.maximum(.04, (1-t)/.15)*np.minimum(1., 1-.08*t)
         taper[t < .85] = 1-.08*t[t < .85]
         if crosses_part(path, surface_clearance=.002):
@@ -527,7 +534,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'undercoat_surface_following': True, 'undercoat_max_lift_mm': 1.8,
           'undercoat_tip_lift_mm': .3,
           'undercoat_radius_microns': [35, 50],
-          'children_per_guide': 96, 'guide_spacing_mm': 5.6, 'hair_roughness': .52,
+          'children_per_guide': children_per_guide, 'guide_spacing_mm': 5.6, 'hair_roughness': .52,
           'crown_axial_length_mm': [3., 6.],
           'crown_extra_arch_mm': 0.,
           'axis_lateral_variation': [-.45, .45],

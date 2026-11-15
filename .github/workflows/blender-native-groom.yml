@@ -56,6 +56,8 @@ jobs:
     timeout-minutes: 40
     env:
       UNDERCOAT_FEATHER_MM: ${{ inputs.undercoat_feather_mm || '0' }}
+      # Density comparison preserves baseline guides and their first 96 fibers.
+      CURL_CHILDREN_PER_GUIDE: '288'
       CURL_BUNDLE_SCALE: ${{ inputs.curl_bundle_scale || '1' }}
       # Denser coverage trial; baseline remains available at the previous revision.
       BEARD_PER_SIDE: '9500'
