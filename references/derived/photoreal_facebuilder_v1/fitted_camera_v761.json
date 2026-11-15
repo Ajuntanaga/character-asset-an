@@ -1,0 +1,49 @@
+{
+  "status": "approximate_donor_correspondence_fit_not_image_landmark_validation",
+  "matrix": [
+    [
+      0.9016957735888897,
+      -0.014108600800601334,
+      0.4321408095463595,
+      0.26789838232437985
+    ],
+    [
+      0.4323567234588191,
+      0.02128353432930713,
+      -0.901451426781503,
+      -0.5337673864673208
+    ],
+    [
+      0.003520734566518219,
+      0.9996739261128613,
+      0.0252912213665068,
+      1.627694890938263
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "camera": {
+    "type": "PERSP",
+    "lens": 49.999996185302734,
+    "sensor_width": 36.0,
+    "sensor_height": 24.0,
+    "sensor_fit": "AUTO",
+    "shift_x": 0.0,
+    "shift_y": 0.0,
+    "ortho_scale": 6.0
+  },
+  "size": [
+    645,
+    813
+  ],
+  "image": "character_an_three_quarter_v1.png",
+  "points": 2555,
+  "ray_residual_rms": 0.007858166998839273,
+  "ray_residual_max": 0.02136101886950814,
+  "initial_ray_residual_rms": 0.013408481625690454,
+  "scope": "Neutral native face under V736 landmark remap; source donor camera held at original intrinsics; no mesh or rig edits."
+}

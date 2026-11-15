@@ -150,13 +150,18 @@ try:
             vertical_extent = camera.data.ortho_scale / max(1.0, aspect)
             distance = vertical_extent * camera.data.lens / camera.data.sensor_height
             camera.location = target + camera.rotation_euler.to_matrix().col[2] * distance
+        if globals().get('CAMERA_RECORD'):
+            fitted_record = globals()['CAMERA_RECORD']
+            camera.matrix_world = Matrix(fitted_record['matrix'])
+            for key, value in fitted_record['camera'].items():
+                setattr(camera.data, key, value)
         camera_records[view] = {'location': list(camera.location),
             'rotation_euler': list(camera.rotation_euler), 'type': camera.data.type,
             'ortho_scale': camera.data.ortho_scale,
             'lens': camera.data.lens, 'sensor_fit': camera.data.sensor_fit,
             'sensor_height': camera.data.sensor_height,
-            'reference_fit': False,
-            'reference_orientation_only': view == 'reference_orientation'}
+            'reference_fit': globals().get('CAMERA_RECORD', {}).get('status', False),
+            'reference_orientation_only': view == 'reference_orientation' and not globals().get('CAMERA_RECORD')}
         scene.render.filepath = str(OUT/(globals().get('TAG','v740_neutral')+'_'+view+'.png'))
         bpy.ops.render.render(write_still=True, scene=scene.name)
         results.append(scene.render.filepath)
