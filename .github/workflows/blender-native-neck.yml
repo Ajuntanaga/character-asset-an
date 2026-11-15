@@ -10,7 +10,7 @@ on:
       review:
         description: Review an existing checkpoint without rebuilding the groom
         type: choice
-        options: [neck-motion, skin-albedo, skin-calibration, body-join, projection, hair-shader, fitted-camera]
+        options: [neck-motion, skin-albedo, skin-calibration, body-join, projection, hair-shader, fitted-camera, eyelids]
         default: neck-motion
 permissions:
   contents: read
@@ -71,6 +71,10 @@ jobs:
         if: ${{ inputs.review == 'fitted-camera' }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v761_fitted_camera.py
+      - name: Compare partial native eyelid closure
+        if: ${{ inputs.review == 'eyelids' }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v762_eyelid_comparison.py
       - name: Compare hair highlight width with fixed geometry
         if: ${{ inputs.review == 'hair-shader' }}
         run: |
@@ -94,6 +98,7 @@ jobs:
           name: native-${{ inputs.review || 'neck-motion' }}-preview
           path: |
             results/*.json
+            results/renders/v762*.png
             results/renders/v761*.png
             results/renders/v760*.png
             results/renders/v759*.png
