@@ -34,10 +34,10 @@ jobs:
           gh run download "$FIT_RUN" --name hair-fitting-preview --dir preview
           gh run download "$LIBRARY_RUN" --name licensed-hair-library --dir hair-library
           mkdir release
-          cp checkpoint/results/V765_licensed_hair_trial.blend release/
+          cp checkpoint/results/V766_licensed_hair_trial.blend release/
           cp checkpoint/licenses/hair-asset-sources.md release/
-          cp preview/renders/v765*.png release/
-          cp preview/v765*.json release/
+          cp preview/renders/v766*.png release/
+          cp preview/v766*.json release/
           tar -czf release/licensed-hair-library.tar.gz hair-library
           target=$(gh run view "$FIT_RUN" --json headSha --jq .headSha)
           cd release

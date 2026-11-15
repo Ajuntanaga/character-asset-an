@@ -68,15 +68,15 @@ jobs:
       - name: Fit grooms and render actual character
         if: inputs.mode == 'fit'
         run: |
-          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/fit_v765_hair_assets.py
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/fit_v766_hair_assets.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: hair-fitting-preview
           path: |
             results/hair-library/*.json
-            results/v765*.json
-            results/renders/v765*.png
+            results/v766*.json
+            results/renders/v766*.png
           retention-days: 14
       - uses: actions/upload-artifact@v4
         if: inputs.mode == 'extract' && success()
@@ -89,6 +89,6 @@ jobs:
         with:
           name: licensed-hair-checkpoint
           path: |
-            results/V765*.blend
+            results/V766*.blend
             licenses/hair-asset-sources.md
           retention-days: 14
