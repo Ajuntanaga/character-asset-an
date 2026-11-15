@@ -384,7 +384,10 @@ for p, n, root_uv in guides:
     guide = (p+n*(.00016+(radius*(normal_scale+.15)+.0006)*emerge[:, None])
              +axis*length*t[:, None]+sweep+bend+helix)
     if crown_lift_mm:
-        guide += n*(crown_lift_mm*.001*top*emerge)[:, None]
+        # The resolved crown trial exposed straight root stalks: emerge reaches
+        # one at t=.2, putting the entire 12 mm rise below the curl body.
+        # Distribute elevation over the whole lock, preserving root and tip.
+        guide += n*(crown_lift_mm*.001*top*smooth(t))[:, None]
     for j in range(1, len(t)):
         hit, normal, _, _ = scalp.find_nearest(Vector(guide[j]))
         if hit is not None:
@@ -519,6 +522,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
           'revision': 'bent_parent_axes_v37',
           'crown_lift_mm': crown_lift_mm,
+          'crown_lift_profile': 'whole_strand_smoothstep',
           'parent_axis_bend_radius_scale': [.55, .85],
           'parent_axis_bend_envelope': 'sin_pi_t',
           'parent_axis_bend_turns': .5,
