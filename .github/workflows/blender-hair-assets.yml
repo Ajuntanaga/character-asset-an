@@ -1,0 +1,49 @@
+name: Licensed hair asset intake
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: character-blender-processing
+  cancel-in-progress: false
+jobs:
+  intake:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download licensed donor files
+        run: |
+          mkdir -p hair-assets/einar results/hair-assets
+          curl --fail --location --retry 2 --max-time 480 -o /tmp/einar.zip 'https://studio.blender.org/download-source/files/41/419e83fb75f30b989adf7920dec7a21c/419e83fb75f30b989adf7920dec7a21c.zip'
+          test "$(stat -c %s /tmp/einar.zip)" = 579834421
+          unzip -q /tmp/einar.zip -d hair-assets/einar
+          curl --fail --location --retry 2 --max-time 180 -o hair-assets/bystedt-hair.blend https://download.blender.org/demo/geometry-nodes/hair_nodes-female_hair_styles.blend
+          test "$(stat -c %s hair-assets/bystedt-hair.blend)" = 28612482
+          cp licenses/hair-asset-sources.md hair-assets/SOURCES.md
+          find hair-assets -type f -name '*.blend' -exec sha256sum {} + > results/hair-assets/source-sha256.txt
+      - name: Install pinned Blender
+        run: |
+          curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
+          echo '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168  /tmp/blender.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/blender.tar.xz -C /tmp
+      - name: Inspect existing grooms and their dependencies
+        run: |
+          einar_file=$(find hair-assets/einar -type f -name '*.blend' | head -n 1)
+          test -n "$einar_file"
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec "$einar_file" --threads 2 --python-exit-code 1 --python pipeline/inspect_v763_hair_assets.py -- einar
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec hair-assets/bystedt-hair.blend --threads 2 --python-exit-code 1 --python pipeline/inspect_v763_hair_assets.py -- bystedt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hair-asset-inventory
+          path: results/hair-assets
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: licensed-hair-donors
+          path: hair-assets
+          retention-days: 7
