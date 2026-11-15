@@ -10,7 +10,7 @@ on:
       review:
         description: Review an existing checkpoint without rebuilding the groom
         type: choice
-        options: [neck-motion, skin-albedo, skin-calibration, body-join, projection, hair-shader, fitted-camera, eyelids]
+        options: [neck-motion, skin-albedo, skin-calibration, body-join, projection, hair-shader, fitted-camera, eyelids, groom-refinement]
         default: neck-motion
 permissions:
   contents: read
@@ -79,6 +79,10 @@ jobs:
         if: ${{ inputs.review == 'hair-shader' }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v760_hair_shader_comparison.py
+      - name: Compare original groom with finer dark fibers
+        if: ${{ inputs.review == 'groom-refinement' }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v762_groom_refinement.py
       - name: Bind neck without altering facial keys
         if: ${{ inputs.review == 'neck-motion' }}
         run: |
