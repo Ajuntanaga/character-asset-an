@@ -47,3 +47,13 @@ runpy.run_path(str(Path(__file__).with_name('render_v740_cloud_groom.py')), init
     'CAMERA_TARGET': (0., 0., 1.45), 'ORTHO_SCALE': .85,
     'VIEWS': ['front', 'three_quarter'], 'SAMPLES': 16,
 })
+
+# Test the actual clothed assembly: isolated neck turns cannot expose collar intersections.
+for label, degrees in [('left', 25.), ('right', -25.)]:
+    runpy.run_path(str(Path(__file__).with_name('render_v740_cloud_groom.py')), init_globals={
+        'TAG': 'v757_body_join_' + label,
+        'EXTRA_OBJECTS': [body.name], 'PRESERVE_MATERIALS': True,
+        'CAMERA_TARGET': (0., 0., 1.52), 'ORTHO_SCALE': .58,
+        'VIEWS': ['front', 'three_quarter'], 'SAMPLES': 16,
+        'HEAD_TURN_DEGREES': degrees,
+    })
