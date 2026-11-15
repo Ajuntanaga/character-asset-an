@@ -1,0 +1,94 @@
+name: Fit licensed character hair
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [extract, fit]
+        default: extract
+      library_run:
+        description: Hair library extraction run (required for fit)
+        type: string
+        default: ''
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: character-blender-processing
+  cancel-in-progress: false
+jobs:
+  hair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        id: blender-cache
+        with:
+          path: /tmp/blender-5.2.2-linux-x64
+          key: blender-linux-5.2.2-84098912789d
+      - name: Install pinned Blender
+        if: steps.blender-cache.outputs.cache-hit != 'true'
+        run: |
+          curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
+          echo '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168  /tmp/blender.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/blender.tar.xz -C /tmp
+      - name: Download existing character checkpoint
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 43751367525 --repo "$GITHUB_REPOSITORY" --name native-groom-checkpoint --dir results
+          test -f results/V740_cloud_groom_trial.blend
+      - name: Download donor sources
+        if: inputs.mode == 'extract'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 43766942360 --repo "$GITHUB_REPOSITORY" --name licensed-hair-donors --dir hair-assets
+      - name: Extract finished grooms and target fitting surface
+        if: inputs.mode == 'extract'
+        run: |
+          einar_file=$(find hair-assets/einar -type f -name '*.blend' | head -n 1)
+          test -n "$einar_file"
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec "$einar_file" --threads 2 --python-exit-code 1 --python pipeline/extract_v764_hair_assets.py -- einar
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec hair-assets/bystedt-hair.blend --threads 2 --python-exit-code 1 --python pipeline/extract_v764_hair_assets.py -- bystedt
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/extract_v764_hair_assets.py -- target
+          cp licenses/hair-asset-sources.md results/hair-library/SOURCES.md
+      - name: Download extracted strand library
+        if: inputs.mode == 'fit'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LIBRARY_RUN: ${{ inputs.library_run }}
+        run: |
+          [[ "$LIBRARY_RUN" =~ ^[0-9]+$ ]]
+          gh run download "$LIBRARY_RUN" --repo "$GITHUB_REPOSITORY" --name licensed-hair-library --dir results/hair-library
+      - name: Fit grooms and render actual character
+        if: inputs.mode == 'fit'
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/fit_v764_hair_assets.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hair-fitting-preview
+          path: |
+            results/hair-library/*.json
+            results/v764*.json
+            results/renders/v764*.png
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: inputs.mode == 'extract' && success()
+        with:
+          name: licensed-hair-library
+          path: results/hair-library
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: inputs.mode == 'fit' && success()
+        with:
+          name: licensed-hair-checkpoint
+          path: |
+            results/V764*.blend
+            licenses/hair-asset-sources.md
+          retention-days: 14
