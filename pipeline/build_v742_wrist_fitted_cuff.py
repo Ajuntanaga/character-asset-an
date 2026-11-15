@@ -5,7 +5,8 @@ The sleeve overlap and motion remain subject to visual review.
 """
 import bmesh
 import bpy
-from mathutils import Matrix, Vector
+import math
+from mathutils import Matrix, Vector, Quaternion
 
 
 def build(clearance=.002, length=.040, forearm_directed=False):
@@ -61,11 +62,29 @@ def build(clearance=.002, length=.040, forearm_directed=False):
     # The donor rim determines the cross-section, including its asymmetry.
     radial = [p - center - axis * (p - center).dot(axis) for p in rim]
     assert min(v.length for v in radial) > .005, f'Rim radii: {[v.length for v in radial]}'
+    # Sweep the opening along a circular centerline with matching tangent.
+    # Translating its fixed plane toward an almost perpendicular forearm
+    # creates a sheared tube; rotate each section with the centerline instead.
+    bend_normal = axis.cross(extrusion_axis)
+    bend_angle = math.atan2(bend_normal.length, axis.dot(extrusion_axis))
+    if bend_angle > 1e-6:
+        bend_normal.normalize()
+        bend_direction = bend_normal.cross(axis).normalized()
     points = []
     count = len(rim)
     for t in (0., .08, .5, .92, 1.):
+        if bend_angle > 1e-6:
+            angle = bend_angle * t
+            radius = length / bend_angle
+            section_center = center + radius * (
+                axis * math.sin(angle) + bend_direction * (1 - math.cos(angle)))
+            section_rotation = Quaternion(bend_normal, angle)
+        else:
+            section_center = center + axis * (length * t)
+            section_rotation = Quaternion()
         for original, offset in zip(rim, radial):
-            world = original + extrusion_axis * (length * t) + offset * (.18 * t) + offset.normalized() * clearance
+            local_offset = original - center + offset * (.18 * t) + offset.normalized() * clearance
+            world = section_center + section_rotation @ local_offset
             points.append(inverse @ world)
     faces = [(j * count + i, j * count + (i + 1) % count,
               (j + 1) * count + (i + 1) % count, (j + 1) * count + i)
@@ -119,6 +138,8 @@ def build(clearance=.002, length=.040, forearm_directed=False):
                   'opening_axis': list(axis),
                   'extrusion_axis': list(extrusion_axis),
                   'forearm_directed': forearm_directed,
+                  'section_transport': 'circular_centerline_tangent',
+                  'centerline_radius_m': length / bend_angle if bend_angle > 1e-6 else None,
                   'opening_to_extrusion_angle_rad': axis.angle(extrusion_axis),
                   'minimum_radius_m': min(v.length for v in radial),
                   'length_m': length, 'binding_error': error,
