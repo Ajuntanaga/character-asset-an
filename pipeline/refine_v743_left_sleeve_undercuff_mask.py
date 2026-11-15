@@ -13,8 +13,18 @@ def build(cuff, overlap=.006, radial_limit=.16, thumb_relief=False):
     centers = [cuff.matrix_world @ (sum((v.co for v in
                cuff.data.vertices[j * count:(j + 1) * count]), Vector()) / count)
                for j in (0, 4)]
-    axis = (centers[1] - centers[0]).normalized()
-    limit = (centers[1] - centers[0]).length - overlap
+    # A curved cuff's end-to-end chord is not its proximal opening normal.
+    # Cut parallel to the actual attachment ring, retaining the overlap.
+    import numpy as np
+    proximal = [cuff.matrix_world @ v.co for v in cuff.data.vertices[4 * count:5 * count]]
+    offsets = np.array([tuple(p - centers[1]) for p in proximal])
+    _, singular, basis = np.linalg.svd(offsets, full_matrices=False)
+    assert singular[1] > .005, 'Degenerate proximal cuff opening'
+    axis = Vector(basis[-1])
+    chord = centers[1] - centers[0]
+    if axis.dot(chord) < 0:
+        axis.negate()
+    limit = chord.dot(axis) - overlap
     groups = {body.vertex_groups[n].index for n in ('DEF-Hand.L', 'DEF-Forearm_2.L')}
     candidates = {v.index for v in body.data.vertices
                   if any(g.group in groups and g.weight > .2 for g in v.groups)}
@@ -207,6 +217,7 @@ def build(cuff, overlap=.006, radial_limit=.16, thumb_relief=False):
             'thumb_relief': {'enabled': thumb_relief, 'extension_m': .030,
                              'direction': list(relief_direction) if relief_direction is not None else None},
             'selection_axis': list(axis),
+            'selection_plane': 'proximal_ring_best_fit',
             'shape_keys': [k.name for k in body.data.shape_keys.key_blocks],
             'source_topology_and_key_coordinates_modified': False,
             'modifier': modifier.name}
