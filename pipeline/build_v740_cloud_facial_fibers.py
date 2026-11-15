@@ -3,11 +3,15 @@ import bpy
 import json
 import gzip
 import math
+import os
 import runpy
 import numpy as np
 from pathlib import Path
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
+
+LATERAL_LENGTH_SCALE = float(os.environ.get('BEARD_LATERAL_LENGTH_SCALE', '1'))
+assert LATERAL_LENGTH_SCALE in (1., 1.5), 'Unsupported lateral beard length trial'
 
 ROOT = Path(__file__).resolve().parent
 cranium = runpy.run_path(str(ROOT / 'native_cranium_mapping.py'))
@@ -244,6 +248,8 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
                 # Close-trimmed chin with the existing shorter lateral stubble.
                 cheek = min(1., max(0., (abs(root.x)-.025)/.020))
                 length = rng.uniform(.0024,.0040)*(.50-.15*cheek)
+                # Optional coverage comparison; preserve chin and moustache.
+                length *= 1.+(LATERAL_LENGTH_SCALE-1.)*cheek
             radius = rng.uniform(.000040,.000065)
         # X/Z distance is not surface arclength, especially below the chin.
         # Reproject a shorter/longer span, retaining real triangle bindings at
@@ -385,6 +391,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
                                                    'jitter_degrees': 7., 'seed': 753,
                                                    'lateral_range_m': [.004,.029]}
                                                   if kind == 'BEARD' else None),
+                    'lateral_length_scale': LATERAL_LENGTH_SCALE if kind == 'BEARD' else None,
                     'shaft_radius_m': [.000040, .000060 if kind=='BROW' else .000065],
                     'taper': {'amount': .95, 'exponent': 4.0},
                     'surface_lift_profile': ('arched_brow' if kind=='BROW' else 'monotonic_beard_70_to_190_um'),

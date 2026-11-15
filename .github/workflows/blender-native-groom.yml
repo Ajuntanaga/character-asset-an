@@ -40,6 +40,11 @@ on:
         type: choice
         options: ['0', '4', '6']
         default: '0'
+      beard_lateral_length_scale:
+        description: Lateral beard shaft length comparison (chin and moustache preserved)
+        type: choice
+        options: ['1', '1.5']
+        default: '1'
 permissions:
   contents: write
 concurrency:
@@ -52,6 +57,7 @@ jobs:
     env:
       UNDERCOAT_FEATHER_MM: ${{ inputs.undercoat_feather_mm || '0' }}
       CURL_BUNDLE_SCALE: ${{ inputs.curl_bundle_scale || '1' }}
+      BEARD_LATERAL_LENGTH_SCALE: ${{ inputs.beard_lateral_length_scale || '1' }}
       OMP_NUM_THREADS: '2'
       OPENBLAS_NUM_THREADS: '2'
     steps:
