@@ -24,7 +24,9 @@ def smooth_open_rail(rail, radius=.012):
     return result
 
 
-def ordered_rim_points(rail, rim):
+def ordered_rim_points(rail, rim, closed=False):
+    if closed:
+        rail = rail + rail[:1]
     edges = list(zip(rim, rim[1:] + rim[:1]))
     cumulative = [0.0]
     for a, b in edges:
@@ -46,7 +48,7 @@ def ordered_rim_points(rail, rim):
     for previous, current in zip(nearest, nearest[1:]):
         unwrapped.append(unwrapped[-1] + (current-previous+.5) % 1.-.5)
     span = unwrapped[-1]-unwrapped[0]
-    assert .05 < abs(span) < 1., 'Sleeve rail must cover one open arc of the cuff'
+    assert (abs(abs(span)-1.) < 1e-6 if closed else .05 < abs(span) < 1.), 'Sleeve rail must cover the expected cuff arc'
     source_lengths = [0.0]
     for a, b in zip(rail, rail[1:]):
         source_lengths.append(source_lengths[-1]+dist(a, b))
@@ -77,20 +79,25 @@ def ordered_rim_points(rail, rim):
         t = (distance-cumulative[j])/(cumulative[j+1]-cumulative[j])
         a, b = edges[j]
         mapped.append([x+(y-x)*t for x, y in zip(a, b)])
-    return mapped, {'method': 'monotone_nearest_rim_with_ten_percent_arc_length',
+    if closed:
+        mapped, parameters = mapped[:-1], parameters[:-1]
+    return mapped, {'closed': closed, 'method': 'monotone_nearest_rim_with_ten_percent_arc_length',
                     'rim_turn_span': span, 'rim_parameters_unwrapped': parameters}
 
 
-def smooth_rail_vectors(rail, vectors, radius=.012):
+def smooth_rail_vectors(rail, vectors, radius=.012, closed=False):
     """Arc-length Gaussian average; keep cancellation instead of renormalizing."""
     lengths = [0.0]
     for a, b in zip(rail, rail[1:]):
         lengths.append(lengths[-1] + dist(a, b))
     quadrature = [lengths[min(j+1, len(rail)-1)] - lengths[max(0, j-1)]
                   for j in range(len(rail))]
+    perimeter = lengths[-1] + dist(rail[-1], rail[0])
+    if closed:
+        quadrature = [dist(rail[j-1], rail[j]) + dist(rail[j], rail[(j+1)%len(rail)]) for j in range(len(rail))]
     result = []
     for position in lengths:
-        weights = [exp(-.5*((s-position)/radius)**2)*q
+        weights = [exp(-.5*((min(abs(s-position), perimeter-abs(s-position)) if closed else abs(s-position))/radius)**2)*q
                    for s, q in zip(lengths, quadrature)]
         total = sum(weights)
         result.append([sum(w*v[k] for w, v in zip(weights, vectors))/total

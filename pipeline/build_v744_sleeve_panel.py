@@ -26,12 +26,13 @@ def build(cuff, interface):
             adjacency.setdefault(a, set()).add(b)
             adjacency.setdefault(b, set()).add(a)
     ends = [i for i, neighbors in adjacency.items() if len(neighbors) == 1]
-    assert len(ends) == 2 and all(len(n) <= 2 for n in adjacency.values())
-    rail, previous, current = [], None, min(ends)
+    closed = not ends and bool(adjacency)
+    assert (closed or len(ends) == 2) and all(len(n) <= 2 for n in adjacency.values())
+    rail, previous, current = [], None, min(adjacency if closed else ends)
     while current is not None:
         rail.append(current)
-        following = adjacency[current] - {previous}
-        previous, current = current, next(iter(following), None)
+        following = adjacency[current] - {previous} - set(rail)
+        previous, current = current, min(following) if following else None
         assert len(rail) <= len(adjacency)
     assert len(rail) == len(adjacency)
     n = len(cuff.data.vertices) // 5
@@ -52,9 +53,10 @@ def build(cuff, interface):
         return center + axis * ((1-t)*za + t*zb) + radial * ((1-t)*ra.length + t*rb.length)
     mapper = runpy.run_path(str(Path(__file__).with_name('sleeve_correspondence.py')))
     mapped, correspondence = mapper['ordered_rim_points'](
-        [list(points[i]) for i in rail], [list(p) for p in rim])
+        [list(points[i]) for i in rail], [list(p) for p in rim], closed=closed)
     inner_points = {i: Vector(p) for i, p in zip(rail, mapped)}
-    fair_points = dict(zip(rail, map(Vector, mapper['smooth_open_rail'](
+    fair_points = dict(zip(rail, map(Vector, mapper['smooth_rail_vectors'](
+        [list(points[i]) for i in rail], [list(points[i]) for i in rail], closed=True) if closed else mapper['smooth_open_rail'](
         [list(points[i]) for i in rail]))))
 
     # Independent face-tangent choices flip abruptly at tessellation folds.
@@ -74,7 +76,7 @@ def build(cuff, interface):
         assert tangent.length > 1e-10, 'No retained-surface overlap direction'
         overlap_vectors.append(list(tangent.normalized() * .006))
     overlap = dict(zip(rail, map(Vector, mapper['smooth_rail_vectors'](
-        [list(points[i]) for i in rail], overlap_vectors))))
+        [list(points[i]) for i in rail], overlap_vectors, closed=closed))))
 
     target, vertex_weights = [], []
     # Open strip: never cap the unrelated original jacket openings.
@@ -153,8 +155,8 @@ def build(cuff, interface):
                 correction = correction.normalized() * .05
             rest[j] += correction
     width = len(rail)
-    faces = [(r*width+c, r*width+c+1, (r+1)*width+c+1, (r+1)*width+c)
-             for r in range(len(rows)-1) for c in range(width-1)]
+    faces = [(r*width+c, r*width+(c+1)%width, (r+1)*width+(c+1)%width, (r+1)*width+c)
+             for r in range(len(rows)-1) for c in range(width if closed else width-1)]
     final_mesh = bpy.data.meshes.new('V744 weighted open sleeve panel')
     final_mesh.from_pydata(rest, [], faces)
     final_mesh.materials.append(body.data.materials[6])
@@ -196,6 +198,6 @@ def build(cuff, interface):
                 'cuff_rim': [list(p) for p in rim],
                 'inset_inner_rail': [list(p) for p in target[-width:]],
             },
-            'open_strip': True, 'source_mesh_or_shape_keys_modified': False,
+            'open_strip': not closed, 'source_mesh_or_shape_keys_modified': False,
             'fit_iterations': fit_iterations,
             'binding': 'iterative_local_armature_inverse_with_preserve_volume'}
