@@ -53,7 +53,9 @@ for vertex in head.data.vertices:
 modifier = head.modifiers.new('V755 neck-to-head skinning trial', 'ARMATURE')
 modifier.object = rig
 modifier.use_deform_preserve_volume = True
-head.modifiers.move(len(head.modifiers) - 1, 0)
+with bpy.context.temp_override(object=head, active_object=head):
+    bpy.ops.object.modifier_move_to_index(modifier=modifier.name, index=0)
+assert head.modifiers[0] == modifier
 bpy.context.view_layer.update()
 after = evaluated_world()
 assert len(before) == len(after)
