@@ -29,6 +29,7 @@ removed = set(parts['Eyes']['faces']) | set(parts['Mouth']['faces'])
 kept = [i for i in range(len(mesh.polygons) + len(removed)) if i not in removed]
 scalp_faces = set(parts['Scalp']['faces'])
 report = {'source': bpy.data.filepath, 'grooms': {}, 'preserved_shape_keys': len(original_keys),
+          'revision': 'full donor curls; fitted brow height; explicit hair material',
           'preserved_rig_drivers': len(rig.animation_data.drivers),
           'head_matrix_world': [list(row) for row in head.matrix_world],
           'head_local_bounds': [coords.min(0).tolist(), coords.max(0).tolist()],
@@ -111,9 +112,11 @@ material = bpy.data.materials.new('V764_DARK_NATURAL_HAIR')
 material.use_nodes = True
 material.node_tree.nodes.clear()
 shader = material.node_tree.nodes.new('ShaderNodeBsdfHairPrincipled')
+shader.model = 'CHIANG'
 shader.parametrization = 'MELANIN'
-for name, value in {'Melanin': .99, 'Melanin Redness': .15, 'Roughness': .58,
-                    'Radial Roughness': .52, 'Random Color': .05, 'Random Roughness': .10}.items():
+for name, value in {'Melanin': .99, 'Melanin Redness': .10, 'Roughness': .27,
+                    'Radial Roughness': .32, 'Coat': .12,
+                    'Random Color': .03, 'Random Roughness': .10}.items():
     if name in shader.inputs:
         shader.inputs[name].default_value = value
 output = material.node_tree.nodes.new('ShaderNodeOutputMaterial')
@@ -123,9 +126,12 @@ group.interface.new_socket(name='Geometry', in_out='INPUT', socket_type='NodeSoc
 group.interface.new_socket(name='Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
 inp = group.nodes.new('NodeGroupInput')
 deform = group.nodes.new('GeometryNodeDeformCurvesOnSurface')
+set_material = group.nodes.new('GeometryNodeSetMaterial')
+set_material.inputs['Material'].default_value = material
 out = group.nodes.new('NodeGroupOutput')
 group.links.new(inp.outputs['Geometry'], deform.inputs['Curves'])
-group.links.new(deform.outputs['Curves'], out.inputs['Geometry'])
+group.links.new(deform.outputs['Curves'], set_material.inputs['Geometry'])
+group.links.new(set_material.outputs['Geometry'], out.inputs['Geometry'])
 installed = []
 
 
@@ -184,15 +190,18 @@ for first, last in zip(data['offsets'][:-1], data['offsets'][1:]):
     if p[2] < hairline or in_part:
         scalp_rejected += 1
         continue
-    _, donor_normal, _, _ = donor_tree.find_nearest(Vector(root))
-    if donor_normal is None:
-        continue
-    normal_mapped = unit(np.asarray(donor_normal) / np.array((.105, .11, .080)))
-    rotate = rotation(normal_mapped, normal)
-    delta = (source-root) * .065
     top = float(smooth((p[2]-1.685)/.055))
-    delta = delta @ rotate.T
-    path = trim(p + delta, .020 + .045*top)
+    # The long donor style carries its defined curls toward the tips. Cropping
+    # the root section discarded those curls and left only a fluffy underlayer.
+    # Retain the whole strand, shorten its arc length, and turn the long style's
+    # average growth direction outward for this short, tightly curled haircut.
+    delta = source-root
+    arc_length = np.linalg.norm(np.diff(delta, axis=0), axis=1).sum()
+    desired_length = .032 + .050*top
+    sweep = np.array((-.20 if p[0] < part_x else .20, .15, .10))
+    direction = unit(normal + sweep)
+    rotate = rotation(delta[-1], direction)
+    path = p + (delta @ rotate.T)*(desired_length/max(arc_length, 1e-8))
     # Keep imported roots and strand bodies on the visible side of the scalp.
     # The surface lookup also accounts for the donor and target having different heads.
     for index, point in enumerate(path):
@@ -201,9 +210,16 @@ for first, last in zip(data['offsets'][:-1], data['offsets'][1:]):
             clearance = (Vector(point)-hit).dot(n)
             if clearance < .00012:
                 path[index] += np.asarray(n)*(.00012-clearance)
-    paths.append(path)
-    uvs.append(uv)
-install('V764_ASSET_SCALP', paths, uvs, .000045,
+    # Three closely spaced fibers retain the donor clump flow at human density.
+    tangent = unit(np.cross(normal, np.array((0., 0., 1.))))
+    for offset in (-.00012, 0., .00012):
+        sibling = scalp.attach(p + tangent*offset)
+        if sibling is None:
+            continue
+        sibling_root, _, sibling_uv = sibling
+        paths.append(path + sibling_root-p)
+        uvs.append(sibling_uv)
+install('V764_ASSET_SCALP', paths, uvs, .000055,
         'Daniel Bystedt - Hair Styles - CC BY-SA; adapted curly groom')
 report['scalp_rejected_outside_reference_hairline'] = scalp_rejected
 
@@ -224,8 +240,8 @@ for kind, source_parts, radius in [
             root = source[0]
             guess = root.copy()
             if kind == 'BROWS':
-                guess[0] *= .94
-                guess[2] = 1.674 + (root[2]-1.687)*.70
+                guess[0] *= 1.02
+                guess[2] = 1.664 + (root[2]-1.687)*.70
                 length = .0060
             elif kind == 'LASHES':
                 guess[0] *= 1.38
@@ -288,13 +304,20 @@ notice.write((ROOT.parent / 'licenses/hair-asset-sources.md').read_text())
 assert {k.name: float(k.value) for k in mesh.shape_keys.key_blocks} == original_keys
 bpy.context.view_layer.update()
 report['installed_objects'] = installed
+report['evaluated_materials'] = {}
+depsgraph = bpy.context.evaluated_depsgraph_get()
+for name in installed:
+    evaluated = bpy.data.objects[name].evaluated_get(depsgraph)
+    materials = [m.name if m else None for m in evaluated.data.materials]
+    assert material.name in materials, (name, materials)
+    report['evaluated_materials'][name] = materials
 (OUT / 'v764_hair_fit.json').write_text(json.dumps(report, indent=2))
 bpy.ops.wm.save_as_mainfile(filepath=str((OUT / 'V764_licensed_hair_trial.blend').resolve()), compress=True)
 
 camera = json.loads((ROOT.parent / 'references/derived/photoreal_facebuilder_v1/fitted_camera_v761.json').read_text())
 base = {'EXTRA_OBJECTS': installed, 'EXCLUDE_OBJECTS': old_names,
         'PRESERVE_MATERIALS': True, 'RESOLUTION': tuple(camera['size']),
-        'SAMPLES': 32, 'ADAPTIVE_THRESHOLD': .06, 'DENOISE': True}
+        'SAMPLES': 128, 'ADAPTIVE_THRESHOLD': .02, 'DENOISE': True}
 runpy.run_path(str(ROOT / 'render_v740_cloud_groom.py'), init_globals={
     **base, 'TAG': 'v764_asset_hair', 'VIEWS': ['reference_orientation'], 'CAMERA_RECORD': camera})
 runpy.run_path(str(ROOT / 'render_v740_cloud_groom.py'), init_globals={
