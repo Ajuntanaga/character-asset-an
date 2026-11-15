@@ -10,7 +10,7 @@ on:
       review:
         description: Review an existing checkpoint without rebuilding the groom
         type: choice
-        options: [neck-motion, skin-albedo, skin-calibration, body-join]
+        options: [neck-motion, skin-albedo, skin-calibration, body-join, projection]
         default: neck-motion
 permissions:
   contents: read
@@ -63,6 +63,10 @@ jobs:
         if: ${{ inputs.review == 'skin-calibration' }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/calibrate_v756_neck_albedo.py
+      - name: Compare orthographic and perspective framing
+        if: ${{ inputs.review == 'projection' }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v759_projection_comparison.py
       - name: Bind neck without altering facial keys
         if: ${{ inputs.review == 'neck-motion' }}
         run: |
@@ -82,6 +86,7 @@ jobs:
           name: native-${{ inputs.review || 'neck-motion' }}-preview
           path: |
             results/*.json
+            results/renders/v759*.png
             results/renders/v757*.png
             results/renders/v756*.png
             results/renders/v755*.png

@@ -88,7 +88,8 @@ try:
         head_turn_evaluated = math.degrees(before_head.rotation_difference(head_ctrl.matrix.to_quaternion()).angle)
         assert head_turn_evaluated > abs(head_turn)*.8, 'FK head turn did not reach evaluated head'
     camera = add('V740_PREVIEW_CAMERA', bpy.data.cameras.new('V740_PREVIEW_CAMERA'))
-    camera.data.type = 'ORTHO'
+    camera.data.type = globals().get('CAMERA_PROJECTION', 'ORTHO')
+    assert camera.data.type in {'ORTHO', 'PERSP'}
     camera.data.ortho_scale = globals().get('ORTHO_SCALE', .35)
     scene.camera = camera
     for label, location, power, size in [('KEY',(-.5,-.7,2.15),65,.14),('FILL',(.55,-.5,1.72),25,.30),('RIM',(.4,.45,2),45,.25)]:
@@ -139,9 +140,22 @@ try:
                                'three_quarter': (-.65,-.665,1.640),
                                'three_quarter_reference_side': (.65,-.665,1.640)}[view]
             aim(camera)
+        if camera.data.type == 'PERSP':
+            # Match the orthographic vertical extent at the target plane.
+            # This isolates perspective, not the donor's nonlinear shape remap.
+            camera.data.sensor_fit = 'VERTICAL'
+            camera.data.sensor_height = 36.0
+            camera.data.lens = float(globals().get('CAMERA_LENS', 50.0))
+            aspect = scene.render.resolution_x / scene.render.resolution_y
+            vertical_extent = camera.data.ortho_scale / max(1.0, aspect)
+            distance = vertical_extent * camera.data.lens / camera.data.sensor_height
+            camera.location = target + camera.rotation_euler.to_matrix().col[2] * distance
         camera_records[view] = {'location': list(camera.location),
             'rotation_euler': list(camera.rotation_euler), 'type': camera.data.type,
             'ortho_scale': camera.data.ortho_scale,
+            'lens': camera.data.lens, 'sensor_fit': camera.data.sensor_fit,
+            'sensor_height': camera.data.sensor_height,
+            'reference_fit': False,
             'reference_orientation_only': view == 'reference_orientation'}
         scene.render.filepath = str(OUT/(globals().get('TAG','v740_neutral')+'_'+view+'.png'))
         bpy.ops.render.render(write_still=True, scene=scene.name)
