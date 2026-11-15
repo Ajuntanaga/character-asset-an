@@ -25,6 +25,19 @@ def build(cuff, overlap=.006, radial_limit=.16, thumb_relief=False):
     if axis.dot(chord) < 0:
         axis.negate()
     limit = chord.dot(axis) - overlap
+    armature = next(m.object for m in body.modifiers if m.type == 'ARMATURE')
+    hand_bone = armature.pose.bones['DEF-Hand.L']
+    wrist = armature.matrix_world @ hand_bone.head
+    hand_axis = (armature.matrix_world @ hand_bone.tail - wrist).normalized()
+
+    def distal_hand_region(position):
+        # The proximal cuff plane is highly oblique to the bent hand. Its
+        # half-space alone can retain sleeve anchors on the dorsal hand.
+        offset = position - wrist
+        along = offset.dot(hand_axis)
+        radius = (offset - hand_axis * along).length
+        return thumb_relief and -.008 < along < .12 and radius < .085
+
     groups = {body.vertex_groups[n].index for n in ('DEF-Hand.L', 'DEF-Forearm_2.L')}
     candidates = {v.index for v in body.data.vertices
                   if any(g.group in groups and g.weight > .2 for g in v.groups)}
@@ -72,7 +85,8 @@ def build(cuff, overlap=.006, radial_limit=.16, thumb_relief=False):
             axial = offset.dot(axis)
             radial = (offset - axial * axis).length
             if -.22 < axial < .12 and radial < .16:
-                inside = -.12 < axial < axial_limit(offset) and radial < radial_limit
+                inside = ((-.12 < axial < axial_limit(offset) and radial < radial_limit)
+                          or distal_hand_region(offset + centers[0]))
                 reason = ('outside_mask_volume' if not inside else
                           'selected' if i in candidates else
                           'shared_material' if i in other else 'weight_filter')
@@ -99,7 +113,8 @@ def build(cuff, overlap=.006, radial_limit=.16, thumb_relief=False):
             offset = evaluated.matrix_world @ mesh.vertices[i].co - centers[0]
             axial = offset.dot(axis)
             radial = (offset - axial * axis).length
-            if -.12 < axial < axial_limit(offset) and radial < radial_limit:
+            if ((-.12 < axial < axial_limit(offset) and radial < radial_limit)
+                    or distal_hand_region(offset + centers[0])):
                 removed.append(i)
         # Export the actual surviving jacket edge, not only axial summaries.
         # This small report supports a remote sleeve-transition repair without
