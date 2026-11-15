@@ -254,9 +254,12 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
             if mustache:
                 length = rng.uniform(.0030,.0048)
             else:
-                # Close-trimmed chin with the existing shorter lateral stubble.
+                # Reference jaw/chin has fuller growth than the upper cheeks.
+                # Preserve root selection and RNG draws; vary only shaft length.
                 cheek = min(1., max(0., (abs(root.x)-.025)/.020))
-                length = rng.uniform(.0024,.0040)*(.50-.15*cheek)
+                upper = min(1., max(0., (root.z-1.550)/.050))
+                upper = upper*upper*(3.-2.*upper)
+                length = rng.uniform(.0024,.0040)*(1.-.65*cheek*upper)
                 # Optional coverage comparison; preserve chin and moustache.
                 length *= 1.+(LATERAL_LENGTH_SCALE-1.)*cheek
             radius = rng.uniform(.000040,.000065)
@@ -400,6 +403,11 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
                                                    'jitter_degrees': 7., 'seed': 753,
                                                    'lateral_range_m': [.004,.029]}
                                                   if kind == 'BEARD' else None),
+                    'regional_length_trial': ({'base_length_mm': [2.4, 4.0],
+                                               'upper_cheek_scale': .35,
+                                               'height_transition_m': [1.550, 1.600],
+                                               'root_selection_changed': False}
+                                              if kind == 'BEARD' else None),
                     'lateral_length_scale': LATERAL_LENGTH_SCALE if kind == 'BEARD' else None,
                     'shaft_radius_m': [.000040, .000060 if kind=='BROW' else .000065],
                     'taper': {'amount': .95, 'exponent': 4.0},
