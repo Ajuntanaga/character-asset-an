@@ -31,8 +31,9 @@ report = {'status': 'COLOR_TRIAL_NOT_ACCEPTED',
           'before': before, 'after': [list(e.color) for e in ramp.color_ramp.elements],
           'scope': 'Procedural skin ramp only; cleanup weights, facial atlas and rig retained.'}
 Path('results/v756_skin_calibration.json').write_text(json.dumps(report, indent=2)+'\n')
-bpy.ops.wm.save_as_mainfile(filepath=str(Path('results/V756_skin_calibration_trial.blend').resolve()))
-runpy.run_path(str(root/'render_v740_albedo.py'))
-runpy.run_path(str(root/'render_v740_cloud_groom.py'), init_globals={
-    'TEXTURE_PATH': 'Character_An_photoreal_head_basecolor_v326.png',
-    'TAG': 'v756_skin_calibration', 'VIEWS': ['front'], 'SAMPLES': 32})
+if not globals().get("MATERIAL_ONLY", False):
+    bpy.ops.wm.save_as_mainfile(filepath=str(Path('results/V756_skin_calibration_trial.blend').resolve()))
+    runpy.run_path(str(root/'render_v740_albedo.py'))
+    runpy.run_path(str(root/'render_v740_cloud_groom.py'), init_globals={
+        'TEXTURE_PATH': 'Character_An_photoreal_head_basecolor_v326.png',
+        'TAG': 'v756_skin_calibration', 'VIEWS': ['front'], 'SAMPLES': 32})

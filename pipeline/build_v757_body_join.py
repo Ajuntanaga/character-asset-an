@@ -39,6 +39,10 @@ body.hide_render = False
 body.hide_viewport = False
 body.hide_set(False)
 report['rig_rest_max_error'] = max(errors.values())
+# Reuse measured skin calibration without saving or rendering an intermediate scene.
+runpy.run_path(str(Path(__file__).with_name('calibrate_v756_neck_albedo.py')),
+               init_globals={'MATERIAL_ONLY': True})
+report['skin_calibration'] = 'v756_skin_calibration.json'
 report['status'] = 'BODY_JOIN_TRIAL_REQUIRES_RENDER_REVIEW'
 Path('results/v757-body-join.json').write_text(json.dumps(report, indent=2))
 bpy.ops.wm.save_as_mainfile(filepath=str(Path('results/V757_body_join_trial.blend').resolve()), compress=True)
