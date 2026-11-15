@@ -312,6 +312,7 @@ length_rng = np.random.default_rng(74012)
 shape_rng = np.random.default_rng(74031)
 section_rng = np.random.default_rng(74041)
 subclump_rng = np.random.default_rng(74051)
+centerline_rng = np.random.default_rng(74061)
 for p, n, root_uv in guides:
     top = float(smooth((p[2]-top_start)/top_span))
     # The front fringe curls outward and forward; sides sweep back from the part.
@@ -359,10 +360,19 @@ for p, n, root_uv in guides:
     helix = radius*curl_envelope[:, None]*(
         normal_scale*np.cos(theta)[:, None]*u+np.sin(theta)[:, None]*v)
     sweep = tangent*(.002*top*np.sin(math.pi*t))[:, None]
+    # Resolved V36 still forms hollow tubes around straight curl axes.
+    # Bend each parent axis through the interior of its lock. The displacement
+    # vanishes at the root and tip and is shared by all children; this changes
+    # the lock silhouette rather than adding another layer of fiber jitter.
+    bend_phase = centerline_rng.uniform(-math.pi, math.pi)
+    bend_scale = centerline_rng.uniform(.55, .85)
+    bend = radius*bend_scale*np.sin(math.pi*t)[:, None]*(
+        np.cos(math.pi*t+bend_phase)[:, None]*u
+        +np.sin(math.pi*t+bend_phase)[:, None]*v)
     # Match centerline lift to each compressed section; the existing surface
     # projection below enforces clearance for the final guide.
     guide = (p+n*(.00016+(radius*(normal_scale+.15)+.0006)*emerge[:, None])
-             +axis*length*t[:, None]+sweep+helix)
+             +axis*length*t[:, None]+sweep+bend+helix)
     for j in range(1, len(t)):
         hit, normal, _, _ = scalp.find_nearest(Vector(guide[j]))
         if hit is not None:
@@ -493,7 +503,10 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'phase_subclumps_v36',
+          'revision': 'bent_parent_axes_v37',
+          'parent_axis_bend_radius_scale': [.55, .85],
+          'parent_axis_bend_envelope': 'sin_pi_t',
+          'parent_axis_bend_turns': .5,
           'curl_part_surface_clearance_mm': 2.,
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
