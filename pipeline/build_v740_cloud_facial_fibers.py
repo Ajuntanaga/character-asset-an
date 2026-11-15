@@ -454,5 +454,29 @@ for obj in sorted(bpy.data.objects, key=lambda item: item.name):
         'key_driver_targets': driver_targets(keys),
         'shape_keys': [key.name for key in keys.key_blocks] if keys else [],
     })
+# Capture the attachment geometry in explicit coordinate spaces. The isolated
+# head is bone-parented, so world and mesh coordinates must not be conflated
+# when transferring its lower neck onto the full-body armature.
+from collections import Counter
+edge_uses = Counter(tuple(sorted(edge)) for polygon in body.data.polygons
+                    for edge in polygon.edge_keys)
+boundary_ids = sorted({vertex for edge, count in edge_uses.items()
+                       if count == 1 for vertex in edge})
+assembly['head_attachment'] = {
+    'object': body.name,
+    'matrix_parent_inverse': [list(row) for row in body.matrix_parent_inverse],
+    'boundary_edges': [list(edge) for edge, count in edge_uses.items() if count == 1],
+    'boundary_vertices': [
+        {'index': index, 'mesh_co': list(body.data.vertices[index].co),
+         'world_co': list(body.matrix_world @ body.data.vertices[index].co)}
+        for index in boundary_ids],
+    'bones': [
+        {'name': bone.name, 'parent': bone.parent.name if bone.parent else None,
+         'rest_matrix_armature': [list(row) for row in bone.matrix_local],
+         'pose_matrix_armature': [list(row) for row in rig.pose.bones[bone.name].matrix],
+         'use_deform': bone.use_deform}
+        for bone in rig.data.bones
+        if 'head' in bone.name.lower() or 'neck' in bone.name.lower()],
+}
 (OUT/'native_assembly_inventory.json').write_text(json.dumps(assembly, indent=2))
 bpy.ops.wm.save_as_mainfile(filepath=str((OUT/'V740_cloud_groom_trial.blend').resolve()), compress=True)
