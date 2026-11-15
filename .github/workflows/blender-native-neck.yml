@@ -10,7 +10,7 @@ on:
       review:
         description: Review an existing checkpoint without rebuilding the groom
         type: choice
-        options: [neck-motion, skin-albedo]
+        options: [neck-motion, skin-albedo, skin-calibration]
         default: neck-motion
 permissions:
   contents: read
@@ -41,7 +41,7 @@ jobs:
           echo '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168  /tmp/blender.tar.xz' | sha256sum -c -
           tar -xJf /tmp/blender.tar.xz -C /tmp
       - name: Download photo for skin review
-        if: ${{ inputs.review == 'skin-albedo' }}
+        if: ${{ inputs.review == 'skin-albedo' || inputs.review == 'skin-calibration' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -51,12 +51,16 @@ jobs:
         if: ${{ inputs.review == 'skin-albedo' }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_albedo.py
+      - name: Calibrate procedural skin and render comparison
+        if: ${{ inputs.review == 'skin-calibration' }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/calibrate_v756_neck_albedo.py
       - name: Bind neck without altering facial keys
-        if: ${{ inputs.review != 'skin-albedo' }}
+        if: ${{ inputs.review == 'neck-motion' }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/build_v755_neck_skinning_trial.py
       - name: Render neutral and head turns
-        if: ${{ inputs.review != 'skin-albedo' }}
+        if: ${{ inputs.review == 'neck-motion' }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V755_neck_skinning_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v755_neck_motion.py
       - uses: actions/upload-artifact@v4
@@ -65,6 +69,7 @@ jobs:
           name: native-${{ inputs.review || 'neck-motion' }}-preview
           path: |
             results/*.json
+            results/renders/v756*.png
             results/renders/v755*.png
             results/renders/v740_unlit_basecolor*.png
           retention-days: 7
@@ -72,5 +77,7 @@ jobs:
         if: always()
         with:
           name: native-neck-checkpoint
-          path: results/V755_neck_skinning_trial.blend
+          path: |
+            results/V755_neck_skinning_trial.blend
+            results/V756_skin_calibration_trial.blend
           retention-days: 7
