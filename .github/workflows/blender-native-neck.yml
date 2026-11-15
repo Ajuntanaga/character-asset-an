@@ -10,7 +10,7 @@ on:
       review:
         description: Review an existing checkpoint without rebuilding the groom
         type: choice
-        options: [neck-motion, skin-albedo, skin-calibration]
+        options: [neck-motion, skin-albedo, skin-calibration, body-join]
         default: neck-motion
 permissions:
   contents: read
@@ -35,6 +35,51 @@ jobs:
           [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
           gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --name native-groom-checkpoint --dir results
           test -f results/V740_cloud_groom_trial.blend
+      - name: Download body for assembly
+        if: ${{ inputs.review == 'body-join' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: body-join
+        run: |
+          mkdir -p scenes results
+          gh release download checkpoint-v528 --pattern current-v528.blend --dir scenes
+          gh release download checkpoint-v543 --pattern current-v543.delta.zst --dir scenes
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          manifest=json.loads(pathlib.Path('github_assets/scene-manifest.json').read_text())
+          for name in ('current-v528.blend', 'current-v543.delta.zst'):
+              with pathlib.Path('scenes',name).open('rb') as f: actual=hashlib.file_digest(f,'sha256').hexdigest()
+              assert actual == manifest[name]['sha256'], (name, actual)
+          PY
+          zstd -d -M1024MB --patch-from=scenes/current-v528.blend scenes/current-v543.delta.zst -o scenes/current-v543.blend
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          p=pathlib.Path('scenes/current-v543.blend')
+          expected=json.loads(pathlib.Path('github_assets/scene-manifest.json').read_text())['current-v543.blend']['sha256']
+          with p.open('rb') as f: actual=hashlib.file_digest(f,'sha256').hexdigest()
+          assert actual == expected, (actual, expected)
+          PY
+          scene=current-v543.blend
+          if [ "$MODE" != build-review ]; then
+            gh release download checkpoint-v544 --pattern current-v544.delta.zst --dir scenes
+            python3 - <<'PY'
+          import hashlib,json,pathlib
+          p=pathlib.Path('scenes/current-v544.delta.zst')
+          expected=json.loads(pathlib.Path('github_assets/scene-manifest.json').read_text())[p.name]['sha256']
+          with p.open('rb') as f: actual=hashlib.file_digest(f,'sha256').hexdigest()
+          assert actual == expected, (actual, expected)
+          PY
+            zstd -d -M1024MB --patch-from=scenes/current-v543.blend scenes/current-v544.delta.zst -o scenes/current-v544.blend
+            python3 - <<'PY'
+          import hashlib,json,pathlib
+          p=pathlib.Path('scenes/current-v544.blend')
+          expected=json.loads(pathlib.Path('github_assets/scene-manifest.json').read_text())[p.name]['sha256']
+          with p.open('rb') as f: actual=hashlib.file_digest(f,'sha256').hexdigest()
+          assert actual == expected, (actual, expected)
+          PY
+            scene=current-v544.blend
+          fi
+          echo "SCENE=$scene" >> "$GITHUB_ENV"
       - name: Install pinned Blender
         run: |
           curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
@@ -63,12 +108,18 @@ jobs:
         if: ${{ inputs.review == 'neck-motion' }}
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V755_neck_skinning_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v755_neck_motion.py
+      - name: Bind native neck for body assembly
+        if: ${{ inputs.review == 'body-join' }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/build_v755_neck_skinning_trial.py
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V755_neck_skinning_trial.blend --threads 2 --python-exit-code 1 --python pipeline/build_v757_body_join.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: native-${{ inputs.review || 'neck-motion' }}-preview
           path: |
             results/*.json
+            results/renders/v757*.png
             results/renders/v756*.png
             results/renders/v755*.png
             results/renders/v740_unlit_basecolor*.png
@@ -78,6 +129,7 @@ jobs:
         with:
           name: native-neck-checkpoint
           path: |
+            results/V757_body_join_trial.blend
             results/V755_neck_skinning_trial.blend
             results/V756_skin_calibration_trial.blend
           retention-days: 7

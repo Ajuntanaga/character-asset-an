@@ -11,6 +11,7 @@ names = ['V740_NATIVE_FACE', 'V737_GAZE.L', 'V737_GAZE.R', 'V737_EYE.L', 'V737_E
          'V738_CORNEA.L', 'V738_CORNEA.R', 'V739_ORAL_CAVITY', 'V737_DENTAL_UPPER',
          'V739_DENTAL_LOWER', 'V739_DENTAL_TONGUE', 'V740_NATIVE_CURLS',
          'V740_NATIVE_UNDERCOAT', 'V740_BROW_FIBERS', 'V740_BEARD_FIBERS']
+names += list(globals().get('EXTRA_OBJECTS', []))
 excluded = set(globals().get('EXCLUDE_OBJECTS', []))
 assert excluded <= set(names), excluded
 names = [name for name in names if name not in excluded]
@@ -30,7 +31,7 @@ if texture_path:
                     node.image = atlas
                     matched += 1
     assert matched, 'Expected native face basecolor image node missing'
-else:
+elif not globals().get('PRESERVE_MATERIALS', False):
     clay = bpy.data.materials.new('Cloud groom review neutral head')
     clay.use_nodes = True
     shader = clay.node_tree.nodes.get('Principled BSDF')
