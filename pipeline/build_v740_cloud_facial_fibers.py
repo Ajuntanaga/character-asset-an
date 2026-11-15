@@ -10,6 +10,9 @@ from pathlib import Path
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
+BEARD_PER_SIDE = int(os.environ.get('BEARD_PER_SIDE', '6500'))
+assert BEARD_PER_SIDE in (6500, 9500), 'Unsupported beard density trial'
+
 LATERAL_LENGTH_SCALE = float(os.environ.get('BEARD_LATERAL_LENGTH_SCALE', '1'))
 assert LATERAL_LENGTH_SCALE in (1., 1.5), 'Unsupported lateral beard length trial'
 
@@ -129,7 +132,7 @@ def native_photo_mask(records, tree, surface_triangles, threshold):
 
 for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     ('BROW','v740_brow_growth.json.gz',.44,1900,7,1.645,1.700),
-    ('BEARD','v740_beard_growth.json.gz',.43,6500,6,1.495,1.625),
+    ('BEARD','v740_beard_growth.json.gz',.43,BEARD_PER_SIDE,6,1.495,1.625),
 ]:
     surface_triangles = [t for t in mesh.loop_triangles
                          if all(z_low < coords[i,2] < z_high and coords[i,1] < -.025 for i in t.vertices)]
@@ -389,6 +392,7 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
     obj.matrix_basis = Matrix.Identity(4)
     obj['surface_attachment'] = 'V740 native face barycentric shape-key deformation plus DEF-Head parent'
     report[kind] = {'fiber_counts':counts,'vertices':len(points),'shape_keys':len(keys),
+                    'requested_fibers_per_side': per_side,
                     'surface_length_fit': {'method': 'iterative_reprojection',
                                            'tolerance_fraction': .03,
                                            'rejected': length_fit_rejected},

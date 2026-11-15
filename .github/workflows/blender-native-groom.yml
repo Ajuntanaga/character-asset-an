@@ -57,6 +57,8 @@ jobs:
     env:
       UNDERCOAT_FEATHER_MM: ${{ inputs.undercoat_feather_mm || '0' }}
       CURL_BUNDLE_SCALE: ${{ inputs.curl_bundle_scale || '1' }}
+      # Denser coverage trial; baseline remains available at the previous revision.
+      BEARD_PER_SIDE: '9500'
       BEARD_LATERAL_LENGTH_SCALE: ${{ inputs.beard_lateral_length_scale || '1' }}
       OMP_NUM_THREADS: '2'
       OPENBLAS_NUM_THREADS: '2'
