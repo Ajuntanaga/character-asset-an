@@ -349,7 +349,9 @@ for p, n, root_uv in guides:
     # high-frequency kinks. All children share their guide's deformation.
     shape_phase = shape_rng.uniform(-math.pi, math.pi)
     radius_variation = 1.+.22*np.sin(math.tau*1.25*t+shape_phase)*np.sin(math.pi*t)
-    curl_envelope = emerge*(1-.15*t)*radius_variation
+    # Contract the later turns together instead of leaving a hollow tube.
+    # Shared guide/child envelope preserves coherent fibers and root placement.
+    curl_envelope = emerge*(1-.65*smooth((t-.25)/.75))*radius_variation
     # Resolved V747 crop shows repeated hollow circular locks. Vary their
     # normal cross-section coherently per lock, retaining roots and strands.
     normal_scale = section_rng.uniform(.40, .85)
@@ -511,6 +513,8 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'crown_extra_arch_mm': 0.,
           'axis_lateral_variation': [-.45, .45],
           'crown_axis_normal_coefficient': [.67, 1.17],
+          'curl_terminal_radius_scale': .35,
+          'curl_contraction_start_fraction': .25,
           'curl_radius_modulation_amplitude': .22,
           'curl_radius_modulation_cycles': 1.25,
           'side_curl_turns': [1.10, 1.65], 'crown_curl_turns': [1.60, 2.15],
