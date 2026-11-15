@@ -143,6 +143,10 @@ if args.mode == 'combined-build':
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from build_v554_combined_trial import build
     build(out, delit_face=args.delit_face)
+# Capture the assembled collar before preview-only visibility/pose changes.
+import runpy
+runpy.run_path(str(Path(__file__).with_name('inspect_native_head_join.py')),
+               init_globals={'OUTPUT_DIR': str(out)})
 scene = bpy.context.scene
 rig = bpy.data.objects.get('V357_CLOUDRIG_CONTROLS')
 if rig is None or rig.animation_data is None:
