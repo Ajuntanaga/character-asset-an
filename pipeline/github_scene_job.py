@@ -109,6 +109,8 @@ if args.mode == 'hand-build':
             cuff_report['sleeve_mask'] = mask_sleeve(cuff)
             if cuff_variant in ('sleeve-panel', 'aligned-sleeve-panel'):
                 from build_v744_sleeve_panel import build as build_panel
+                # Preserve the exact cut input even if panel topology validation fails.
+                (out / 'sleeve-panel-input.json').write_text(json.dumps(cuff_report, indent=2))
                 cuff_report['sleeve_panel'] = build_panel(
                     cuff, cuff_report['sleeve_mask']['mask_cut_interface'])
         if alignment is not None:

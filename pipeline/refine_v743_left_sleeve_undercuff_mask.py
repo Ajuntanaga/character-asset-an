@@ -132,6 +132,9 @@ def build(cuff, overlap=.006, radial_limit=.16):
             'classification': 'retained_jacket_edge_adjacent_to_removed_jacket_face',
             'space': 'world_m',
             'edges': interface_edges,
+            # Compare split-seam identity before and after posed smoothing.
+            'base_vertices_object_m': {str(i): list(body.data.vertices[i].co)
+                                       for i in interface_indices},
             'retained_surface_normals': {str(i): list(n.normalized()) for i, n in source_normals.items()},
             'retained_surface_inward': {str(i): list(v) for i, v in source_inward.items()},
             'vertices': {str(i): list(evaluated.matrix_world @ mesh.vertices[i].co)
