@@ -55,7 +55,7 @@ scene = bpy.data.scenes.new('V740_LIVE_PREVIEW')
 visibility, created, results, saved_props = {}, [], [], {}
 camera_records = {}
 world = None
-target = Vector((0, -.015, 1.640))
+target = Vector(globals().get('CAMERA_TARGET', (0, -.015, 1.640)))
 
 def add(name, data):
     obj = bpy.data.objects.new(name, data)
@@ -88,7 +88,7 @@ try:
         assert head_turn_evaluated > abs(head_turn)*.8, 'FK head turn did not reach evaluated head'
     camera = add('V740_PREVIEW_CAMERA', bpy.data.cameras.new('V740_PREVIEW_CAMERA'))
     camera.data.type = 'ORTHO'
-    camera.data.ortho_scale = .35
+    camera.data.ortho_scale = globals().get('ORTHO_SCALE', .35)
     scene.camera = camera
     for label, location, power, size in [('KEY',(-.5,-.7,2.15),65,.14),('FILL',(.55,-.5,1.72),25,.30),('RIM',(.4,.45,2),45,.25)]:
         light = add('V740_PREVIEW_'+label, bpy.data.lights.new('V740_PREVIEW_'+label, 'AREA'))

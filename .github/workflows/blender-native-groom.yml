@@ -197,6 +197,10 @@ jobs:
             results/*.json
             results/renders/*.png
           retention-days: 7
+      - name: Render native neck motion trial
+        if: ${{ inputs.expressions }}
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V755_neck_skinning_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v755_neck_motion.py
       - name: Render expression comparisons
         if: ${{ inputs.expressions }}
         run: |
