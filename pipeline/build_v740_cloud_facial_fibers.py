@@ -179,6 +179,8 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
         # Trial cheek line rises from the mouth corner toward the sideburn.
         # Photo darkness modulates density inside this envelope; it must not
         # turn lighting differences into bald patches or nose-side islands.
+        feather_rng = np.random.default_rng(754)
+        feather_rejected = 0
         for record in records:
             x, _, z = record['point']
             lateral = abs(x)
@@ -190,7 +192,12 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
                 fade = min(1., max(0., (edge-z)/.010))
                 fade = fade*fade*(3.-2.*fade)
                 photo = max(0., (threshold-record['luma'])/threshold)
-                record['density'] = fade*(.30+.70*photo)
+                # Thin the edge before fixed-count sampling. A small weight
+                # alone is not an inclusion probability when sampling most
+                # candidates without replacement; it can refill the fade.
+                keep = feather_rng.random() < fade
+                feather_rejected += int(not keep)
+                record['density'] = (.30+.70*photo) if keep else 0.
             elif z > 1.598:
                 # Historical dark samples include nose-side/under-eye islands.
                 # The moustache seed region ends here; central skin above it
@@ -203,6 +210,8 @@ for kind, sample_file, threshold, per_side, steps, z_low, z_high in [
         mask_report['cheek_envelope_trial'] = {
             'x_z_knots': [[.033, 1.585], [.050, 1.602], [.080, 1.625]],
             'feather_m': .010, 'photo_density_floor': .30,
+            'feather_method': 'bernoulli_eligibility_before_fixed_count_sampling',
+            'feather_rejected': feather_rejected,
             'eligible_by_side': {side: sum(r['side'] == side and r['density'] > 0
                                            for r in records) for side in ('L', 'R')},
         }
