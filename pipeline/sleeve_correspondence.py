@@ -51,7 +51,25 @@ def ordered_rim_points(rail, rim):
     for a, b in zip(rail, rail[1:]):
         source_lengths.append(source_lengths[-1]+dist(a, b))
     assert all(b > a for a, b in zip(source_lengths, source_lengths[1:]))
-    parameters = [unwrapped[0]+span*s/source_lengths[-1] for s in source_lengths]
+    linear = [unwrapped[0]+span*s/source_lengths[-1] for s in source_lengths]
+    # Preserve local proximity instead of sweeping uniformly around the rim.
+    # Weighted isotonic regression removes reversals without crossing rails.
+    sign = 1. if span > 0 else -1.
+    low, high = sign*unwrapped[0], sign*unwrapped[-1]
+    blocks = []
+    for i, value in enumerate(unwrapped):
+        weight = source_lengths[min(i+1, len(rail)-1)] - source_lengths[max(0, i-1)]
+        value = max(low, min(high, sign*value))
+        blocks.append([i, i+1, weight, weight*value])
+        while len(blocks) > 1 and blocks[-2][3]/blocks[-2][2] > blocks[-1][3]/blocks[-1][2]:
+            right = blocks.pop()
+            left = blocks.pop()
+            blocks.append([left[0], right[1], left[2]+right[2], left[3]+right[3]])
+    fitted = [0.] * len(rail)
+    for start, end, weight, total in blocks:
+        fitted[start:end] = [sign*total/weight] * (end-start)
+    # A small arc-length component keeps strictly positive cell widths.
+    parameters = [.9*a+.1*b for a, b in zip(fitted, linear)]
     mapped = []
     for parameter in parameters:
         distance = (parameter % 1.)*perimeter
@@ -59,7 +77,7 @@ def ordered_rim_points(rail, rim):
         t = (distance-cumulative[j])/(cumulative[j+1]-cumulative[j])
         a, b = edges[j]
         mapped.append([x+(y-x)*t for x, y in zip(a, b)])
-    return mapped, {'method': 'source_arc_length_between_unwrapped_endpoint_matches',
+    return mapped, {'method': 'monotone_nearest_rim_with_ten_percent_arc_length',
                     'rim_turn_span': span, 'rim_parameters_unwrapped': parameters}
 
 
