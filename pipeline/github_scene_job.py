@@ -109,7 +109,8 @@ if args.mode == 'hand-build':
             if cuff_variant == 'aligned-sleeve-panel':
                 from refine_v753_sleeve_surface import build as fair_sleeve
                 cuff_report['sleeve_fairing'] = fair_sleeve()
-            cuff_report['sleeve_mask'] = mask_sleeve(cuff)
+            cuff_report['sleeve_mask'] = mask_sleeve(
+                cuff, thumb_relief=cuff_variant == 'aligned-sleeve-panel')
             if cuff_variant in ('sleeve-panel', 'aligned-sleeve-panel'):
                 from build_v744_sleeve_panel import build as build_panel
                 # Preserve the exact cut input even if panel topology validation fails.

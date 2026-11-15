@@ -4,7 +4,7 @@ from collections import Counter
 from mathutils import Vector
 
 
-def build(cuff, overlap=.006, radial_limit=.16):
+def build(cuff, overlap=.006, radial_limit=.16, thumb_relief=False):
     body = bpy.data.objects['V416_BODY_CLEAN_JOIN']
     name = 'V743_KEEP_OUTSIDE_UNDERCUFF'
     assert body.vertex_groups.get(name) is None
@@ -35,6 +35,22 @@ def build(cuff, overlap=.006, radial_limit=.16):
         evaluated = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
         mesh = evaluated.to_mesh()
         assert len(mesh.vertices) == len(body.data.vertices)
+        # Source vertex localized from the visible thumb intrusion in sleeve125.
+        # Derive its direction in the evaluated pose, not fixed world coordinates.
+        relief_direction = None
+        if thumb_relief:
+            assert 219543 in candidates, 'Thumb relief requires the pinned body topology'
+            offset = evaluated.matrix_world @ mesh.vertices[219543].co - centers[0]
+            relief_direction = (offset - axis * offset.dot(axis)).normalized()
+
+        def axial_limit(offset):
+            if relief_direction is None:
+                return limit
+            radial = offset - axis * offset.dot(axis)
+            cosine = radial.normalized().dot(relief_direction) if radial.length else -1.
+            t = max(0., min(1., (cosine - .5) / .5))
+            return limit + .030 * t * t * (3. - 2. * t)
+
         # Diagnose the current evaluated sleeve, including vertices omitted by
         # the weight/material filters. Earlier rest-space sections are not
         # sufficient to explain the visible posed seam.
@@ -46,7 +62,7 @@ def build(cuff, overlap=.006, radial_limit=.16):
             axial = offset.dot(axis)
             radial = (offset - axial * axis).length
             if -.22 < axial < .12 and radial < .16:
-                inside = -.12 < axial < limit and radial < radial_limit
+                inside = -.12 < axial < axial_limit(offset) and radial < radial_limit
                 reason = ('outside_mask_volume' if not inside else
                           'selected' if i in candidates else
                           'shared_material' if i in other else 'weight_filter')
@@ -73,7 +89,7 @@ def build(cuff, overlap=.006, radial_limit=.16):
             offset = evaluated.matrix_world @ mesh.vertices[i].co - centers[0]
             axial = offset.dot(axis)
             radial = (offset - axial * axis).length
-            if -.12 < axial < limit and radial < radial_limit:
+            if -.12 < axial < axial_limit(offset) and radial < radial_limit:
                 removed.append(i)
         # Export the actual surviving jacket edge, not only axial summaries.
         # This small report supports a remote sleeve-transition repair without
@@ -188,6 +204,8 @@ def build(cuff, overlap=.006, radial_limit=.16):
             'mask_cut_interface': interface,
             'nearby_jacket_axial_bins_mm': radial_bins,
             'overlap_m': overlap, 'radial_limit_m': radial_limit,
+            'thumb_relief': {'enabled': thumb_relief, 'extension_m': .030,
+                             'direction': list(relief_direction) if relief_direction is not None else None},
             'selection_axis': list(axis),
             'shape_keys': [k.name for k in body.data.shape_keys.key_blocks],
             'source_topology_and_key_coordinates_modified': False,
