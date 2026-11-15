@@ -303,6 +303,11 @@ bundle_width_scale = float(os.environ.get('CURL_BUNDLE_SCALE', '1'))
 if not .5 <= bundle_width_scale <= 1.:
     raise ValueError('CURL_BUNDLE_SCALE must be between 0.5 and 1')
 
+# Optional silhouette trial: preserve roots and RNG, lift only crown lock bodies.
+crown_lift_mm = float(os.environ.get('CURL_CROWN_LIFT_MM', '0'))
+if not 0. <= crown_lift_mm <= 12.:
+    raise ValueError('CURL_CROWN_LIFT_MM must be between 0 and 12')
+
 t = np.linspace(0, 1, 44)
 emerge, bundle = smooth(t/.20), smooth(t/.30)
 strands, radii, uvs = [], [], []
@@ -378,6 +383,8 @@ for p, n, root_uv in guides:
     # projection below enforces clearance for the final guide.
     guide = (p+n*(.00016+(radius*(normal_scale+.15)+.0006)*emerge[:, None])
              +axis*length*t[:, None]+sweep+bend+helix)
+    if crown_lift_mm:
+        guide += n*(crown_lift_mm*.001*top*emerge)[:, None]
     for j in range(1, len(t)):
         hit, normal, _, _ = scalp.find_nearest(Vector(guide[j]))
         if hit is not None:
@@ -511,6 +518,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
           'revision': 'bent_parent_axes_v37',
+          'crown_lift_mm': crown_lift_mm,
           'parent_axis_bend_radius_scale': [.55, .85],
           'parent_axis_bend_envelope': 'sin_pi_t',
           'parent_axis_bend_turns': .5,
