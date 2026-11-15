@@ -25,7 +25,13 @@ jobs:
           test "$(stat -c %s hair-assets/bystedt-hair.blend)" = 28612482
           cp licenses/hair-asset-sources.md hair-assets/SOURCES.md
           find hair-assets -type f -name '*.blend' -exec sha256sum {} + > results/hair-assets/source-sha256.txt
+      - uses: actions/cache@v4
+        id: blender-cache
+        with:
+          path: /tmp/blender-5.2.2-linux-x64
+          key: blender-linux-5.2.2-84098912789d
       - name: Install pinned Blender
+        if: steps.blender-cache.outputs.cache-hit != 'true'
         run: |
           curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
           echo '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168  /tmp/blender.tar.xz' | sha256sum -c -
@@ -43,6 +49,7 @@ jobs:
           path: results/hair-assets
           retention-days: 7
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: licensed-hair-donors
           path: hair-assets

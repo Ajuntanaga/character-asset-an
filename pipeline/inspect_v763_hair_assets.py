@@ -60,7 +60,12 @@ for obj in bpy.data.objects:
              'show_render': mod.show_render, 'show_viewport': mod.show_viewport}
         if mod.type == 'NODES' and mod.node_group:
             m['node_group'] = mod.node_group.name
-            m['values'] = {k: value(mod[k]) for k in mod.keys() if not k.endswith('_attribute_name')}
+            # Some legacy node modifiers have no IDProperty storage after versioning.
+            try:
+                keys = list(mod.keys())
+            except TypeError:
+                keys = []
+            m['values'] = {k: value(mod[k]) for k in keys if not k.endswith('_attribute_name')}
             m['interface'] = [
                 {'name': s.name, 'identifier': s.identifier, 'in_out': s.in_out}
                 for s in mod.node_group.interface.items_tree if s.item_type == 'SOCKET']
