@@ -1,7 +1,7 @@
 """Reversible open sleeve panel; fit through the actual armature deformation."""
 import bpy
 import math
-from mathutils import Vector, Matrix
+from mathutils import Vector, Matrix, Quaternion
 from pathlib import Path
 import runpy
 
@@ -37,6 +37,19 @@ def build(cuff, interface):
     n = len(cuff.data.vertices) // 5
     rim = [cuff.matrix_world @ v.co for v in cuff.data.vertices[4*n:5*n]]
     center = sum(rim, Vector()) / n
+    elbow = source_mod.object.matrix_world @ source_mod.object.pose.bones['DEF-Forearm_2.L'].head
+    axis = (elbow - center).normalized()
+
+    def curved_span(start, end, t):
+        # Follow the forearm circumference instead of cutting a flat chord
+        # through it. Preserve both cut-rail and cuff endpoints exactly.
+        a, b = start - center, end - center
+        za, zb = a.dot(axis), b.dot(axis)
+        ra, rb = a - axis * za, b - axis * zb
+        assert min(ra.length, rb.length) > .001, 'Sleeve rail crosses forearm axis'
+        angle = math.atan2(axis.dot(ra.cross(rb)), ra.dot(rb))
+        radial = Quaternion(axis, angle * t) @ ra.normalized()
+        return center + axis * ((1-t)*za + t*zb) + radial * ((1-t)*ra.length + t*rb.length)
     mapper = runpy.run_path(str(Path(__file__).with_name('sleeve_correspondence.py')))
     mapped, correspondence = mapper['ordered_rim_points'](
         [list(points[i]) for i in rail], [list(p) for p in rim])
@@ -78,7 +91,7 @@ def build(cuff, interface):
             inner = inner + (center - inner).normalized() * .0015
             direction = inner - outer
             p = (outer + overlap[i] if t < 0
-                 else outer.lerp(fair_points[i], min(1., t * direction.length / .012)).lerp(inner, t))
+                 else curved_span(outer.lerp(fair_points[i], min(1., t * direction.length / .012)), inner, t))
             target.append(p)
             w = {name: value * (1-blend) for name, value in weights[i].items()
                  if name.startswith('DEF-') and value > 0}
@@ -170,6 +183,7 @@ def build(cuff, interface):
     return {'status': 'TRIAL_REQUIRES_WRIST_RENDER_REVIEW', 'object': panel.name,
             'rail_vertices': width, 'rows': len(rows), 'bind_max_error_m': error,
             'correspondence': correspondence,
+            'surface_interpolation': 'forearm_cylindrical_endpoint_preserving',
             'source_fairing_radius_m': .012,
             'longitudinal_target_spacing_m': .005,
             'seam_transition_distance_m': .012,
