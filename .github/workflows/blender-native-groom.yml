@@ -60,6 +60,7 @@ jobs:
       CURL_CHILDREN_PER_GUIDE: '288'
       # Crown-volume trial; zero remains the generator default.
       CURL_CROWN_LIFT_MM: '12'
+      CURL_CROWN_LIFT_PROFILE: 'returning_arch'
       CURL_BUNDLE_SCALE: ${{ inputs.curl_bundle_scale || '1' }}
       # Denser coverage trial; baseline remains available at the previous revision.
       BEARD_PER_SIDE: '9500'
