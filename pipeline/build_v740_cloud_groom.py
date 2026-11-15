@@ -311,6 +311,7 @@ corrections, max_correction = 0, 0.
 length_rng = np.random.default_rng(74012)
 shape_rng = np.random.default_rng(74031)
 section_rng = np.random.default_rng(74041)
+subclump_rng = np.random.default_rng(74051)
 for p, n, root_uv in guides:
     top = float(smooth((p[2]-top_start)/top_span))
     # The front fringe curls outward and forward; sides sweep back from the part.
@@ -383,7 +384,10 @@ for p, n, root_uv in guides:
     curl_radial /= np.linalg.norm(curl_radial, axis=1)[:, None]
     curl_binormal = np.cross(path_tangent, curl_radial)
     curl_binormal /= np.linalg.norm(curl_binormal, axis=1)[:, None]
-    for _ in range(96):
+    # Trial: eight coherent sublocks vary the synchronized cable without sampling
+    # the broad annular radii that previously produced concentric discs.
+    subclump_phases = subclump_rng.uniform(-.45, .45, 8)
+    for child_index in range(96):
         angle, radial = rng.random()*math.tau, math.sqrt(rng.random())
         root_offset = radial*.0017*(math.cos(angle)*root_u+math.sin(angle)*root_v)
         hit = attachment(p+root_offset)
@@ -406,8 +410,10 @@ for p, n, root_uv in guides:
         tip_clump = 1-.92*smooth((t/end_fraction-.80)/.20)
         clump_width = bundle*(1-.30*smooth((t-.35)/.65))*tip_clump
         path = guide+(q-guide[0])[None, :]*(1-bundle[:, None])+packed*clump_width[:, None]
-        # Preserve phase coherence, guide spacing, count and root spread.
-        child_theta = theta + rng.uniform(-.10, .10)*emerge
+        # Root displacement remains zero; each 12-strand group fans gently
+        # through the middle of the curl, then converges toward the guide.
+        subclump_phase = subclump_phases[child_index // 12]*np.sin(math.pi*t)
+        child_theta = theta + rng.uniform(-.10, .10)*emerge + subclump_phase
         # Keep children in a coherent lock; broad annular radii fill a disc.
         child_radius = radius*rng.uniform(.90, 1.10)
         child_helix = child_radius*curl_envelope[:, None]*(
@@ -487,7 +493,7 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'guide_collision_corrections': corrections, 'max_correction_mm': max_correction*1000,
           'native_uv_roots': True, 'deform_curves_on_surface': True,
           'rig_drivers': len(rig.animation_data.drivers), 'production_unchanged': production == bpy.data.filepath,
-          'revision': 'tapered_curl_bundle_tips_v34',
+          'revision': 'phase_subclumps_v36',
           'curl_part_surface_clearance_mm': 2.,
           'part_path_rejections': part_rejections,
           'cranial_mapping': {'start_z': 1.665, 'old_reduction_m': .055,
@@ -523,6 +529,9 @@ report = {'head': head.name, 'head_keys': len(head.data.shape_keys.key_blocks),
           'child_tip_clump_multiplier': .08,
           'child_tip_clump_start_fraction': .80,
           'child_phase_offset_radians': [-.10, .10],
+          'subclumps_per_guide': 8,
+          'subclump_phase_range_radians': [-.45, .45],
+          'subclump_phase_envelope': 'sin_pi_t',
           'child_radius_scale': [.90, 1.10],
           'child_radius_distribution': 'uniform_coherent_lock',
           'curl_bundle_width_scale': bundle_width_scale,
