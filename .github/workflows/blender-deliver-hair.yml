@@ -1,0 +1,47 @@
+name: Preserve licensed hair checkpoint
+on:
+  workflow_dispatch:
+    inputs:
+      fit_run:
+        description: Successful fitting run
+        type: string
+        required: true
+      library_run:
+        description: Successful donor extraction run
+        type: string
+        required: true
+permissions:
+  actions: read
+  contents: write
+jobs:
+  preserve:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      FIT_RUN: ${{ inputs.fit_run }}
+      LIBRARY_RUN: ${{ inputs.library_run }}
+    steps:
+      - name: Preserve scene, reusable strand library and actual previews
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$FIT_RUN" =~ ^[0-9]+$ && "$LIBRARY_RUN" =~ ^[0-9]+$ ]]
+          test "$(gh run view "$FIT_RUN" --json conclusion --jq .conclusion)" = success
+          test "$(gh run view "$LIBRARY_RUN" --json conclusion --jq .conclusion)" = success
+          gh run download "$FIT_RUN" --name licensed-hair-checkpoint --dir checkpoint
+          gh run download "$FIT_RUN" --name hair-fitting-preview --dir preview
+          gh run download "$LIBRARY_RUN" --name licensed-hair-library --dir hair-library
+          mkdir release
+          cp checkpoint/results/V764_licensed_hair_trial.blend release/
+          cp checkpoint/licenses/hair-asset-sources.md release/
+          cp preview/renders/v764*.png release/
+          cp preview/v764*.json release/
+          tar -czf release/licensed-hair-library.tar.gz hair-library
+          target=$(gh run view "$FIT_RUN" --json headSha --jq .headSha)
+          cd release
+          sha256sum -- * > SHA256SUMS
+          gh release create "licensed-hair-$FIT_RUN" ./* --target "$target" --prerelease \
+            --title "Licensed hair fitting $FIT_RUN" \
+            --notes "Fitted Bystedt curly hair and Einar facial hair, reusable strand library, licenses, and actual Blender previews. Working character checkpoint; not a claim of final character quality. Fit run $FIT_RUN; extraction run $LIBRARY_RUN."

@@ -16,10 +16,12 @@ rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
 mesh = head.data
 assert len(mesh.vertices) == 18024 and len(mesh.shape_keys.key_blocks) == 52
 assert len(rig.animation_data.drivers) == 1957
-assert np.allclose(np.asarray(head.matrix_world), np.eye(4))
 head.add_rest_position_attribute = True
 coords = np.empty((len(mesh.vertices), 3), dtype=np.float32)
 mesh.shape_keys.key_blocks['Basis'].data.foreach_get('co', coords.ravel())
+# The native face stores anatomical coordinates in mesh space. Its object
+# transform is inherited by the new child curves, rather than applied twice.
+assert 1.70 < float(coords[:, 2].max()) < 1.85
 original_keys = {k.name: float(k.value) for k in mesh.shape_keys.key_blocks}
 mesh.calc_loop_triangles()
 parts = json.loads((ROOT / 'v740_native_regions.json').read_text())['parts']
@@ -28,6 +30,8 @@ kept = [i for i in range(len(mesh.polygons) + len(removed)) if i not in removed]
 scalp_faces = set(parts['Scalp']['faces'])
 report = {'source': bpy.data.filepath, 'grooms': {}, 'preserved_shape_keys': len(original_keys),
           'preserved_rig_drivers': len(rig.animation_data.drivers),
+          'head_matrix_world': [list(row) for row in head.matrix_world],
+          'head_local_bounds': [coords.min(0).tolist(), coords.max(0).tolist()],
           'license_file': 'licenses/hair-asset-sources.md'}
 
 
