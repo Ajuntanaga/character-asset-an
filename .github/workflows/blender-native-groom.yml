@@ -85,6 +85,17 @@ jobs:
       - name: Bind brows and beard to native facial keys
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/build_v740_cloud_facial_fibers.py
+      - name: Build separate native neck skinning trial
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/build_v755_neck_skinning_trial.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-neck-skinning-trial
+          path: |
+            results/V755_neck_skinning_trial.blend
+            results/v755-neck-skinning-report.json
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         id: artifact_1
         continue-on-error: true
