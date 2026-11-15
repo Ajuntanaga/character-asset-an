@@ -9,12 +9,17 @@ def build(body):
     assert body.modifiers.get(name) is None, 'Mask already present'
     assert body.data.attributes.get(name) is None, 'Mask attribute already present'
     materials = [m.name if m else '' for m in body.data.materials]
-    protected = {'V379_DARK_COTTON_JACKET', 'V425_Reference_Scale_Botanical_Shirt',
+    jacket_names = {'V379_DARK_COTTON_JACKET', 'V561_MATTE_CHARCOAL_CHECK_JACKET'}
+    assert len(jacket_names & set(materials)) == 1, 'Unexpected jacket material layout'
+    protected = {'V425_Reference_Scale_Botanical_Shirt',
                  'V379_DARK_COTTON_PANTS', 'V426_Scaled_Collar'}
     assert protected <= set(materials), 'Unexpected clothing material layout'
+    protected |= jacket_names & set(materials)
     head_materials = {'V365_LID_SKIN', 'V370_DARK_HAIR_UNDERLAY',
                       'V371_DARK_HAIR_UNDERLAY', 'V372_FACE_SKIN',
-                      'V377_REFERENCE_PHOTO_SKIN'}
+                      'V377_REFERENCE_PHOTO_SKIN', 'V548_FEATHERED_HAIRLINE',
+                      'V549_REFERENCE_PHOTO_SKIN_BALANCED',
+                      'V563_DIRECT_FRONT_PHOTO_SKIN', 'V569_CONTINUOUS_FACE_LID_SKIN'}
     keys = body.data.shape_keys
     basis = keys.key_blocks['Basis'].data if keys else body.data.vertices
     world = [body.matrix_world @ v.co for v in basis]

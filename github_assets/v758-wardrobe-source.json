@@ -1,0 +1,49 @@
+{
+  "source": "/home/ajuntanaga/Projects/Blender/Character Asset_An/production_v585_combined_reference/run-42728493754/Character_An_combined_reference_TRIAL_v554.blend",
+  "materials": [
+    "tripo_material_d1b7f249-d40b-4b1f-843d-2d35c6ac59b8.001",
+    "V365_LID_SKIN",
+    "V370_DARK_HAIR_UNDERLAY",
+    "V371_DARK_HAIR_UNDERLAY",
+    "V372_FACE_SKIN",
+    "V377_REFERENCE_PHOTO_SKIN",
+    "V561_MATTE_CHARCOAL_CHECK_JACKET",
+    "V425_Reference_Scale_Botanical_Shirt",
+    "V379_DARK_COTTON_PANTS",
+    "V426_Scaled_Collar",
+    "V548_FEATHERED_HAIRLINE",
+    "V549_REFERENCE_PHOTO_SKIN_BALANCED",
+    "V563_DIRECT_FRONT_PHOTO_SKIN",
+    "V569_CONTINUOUS_FACE_LID_SKIN"
+  ],
+  "shape_keys": [
+    "Basis",
+    "JawOpen",
+    "Blink.L",
+    "Blink.R",
+    "BrowInnerUp",
+    "Smile.L",
+    "Smile.R",
+    "BrowDown.L",
+    "BrowDown.R",
+    "BrowOuterUp.L",
+    "BrowOuterUp.R",
+    "BlinkArc.L",
+    "BlinkArc.R",
+    "V560_ReferenceCentralFace",
+    "MouthPucker",
+    "V565_ReferenceJacketCollar",
+    "V584_RearCollarFlatten"
+  ],
+  "vertices": 231743,
+  "faces": 445895,
+  "modifiers": [
+    {
+      "name": "CloudRig body skin",
+      "type": "ARMATURE"
+    }
+  ],
+  "sha256": "b435cb2456b1f6fb1548e37fc85ebf660730f96c14f59a035d74b86e16b0dc5e",
+  "export_blender": "5.3.0",
+  "cloud_5_2_compatibility": "pending"
+}

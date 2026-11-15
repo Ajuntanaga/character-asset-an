@@ -10,7 +10,7 @@ from mask_v757_legacy_head import build
 rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
 body_name = 'V416_BODY_CLEAN_JOIN'
 assert bpy.data.objects.get(body_name) is None, 'Unexpected existing body'
-with bpy.data.libraries.load(str(Path('scenes/current-v544.blend').resolve()), link=False) as (source, target):
+with bpy.data.libraries.load(str(Path('scenes/V585_wardrobe_body.blend').resolve()), link=False) as (source, target):
     assert body_name in source.objects
     target.objects = [body_name]
 body = target.objects[0]
