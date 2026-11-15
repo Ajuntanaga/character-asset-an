@@ -58,6 +58,8 @@ jobs:
       UNDERCOAT_FEATHER_MM: ${{ inputs.undercoat_feather_mm || '0' }}
       # Density comparison preserves baseline guides and their first 96 fibers.
       CURL_CHILDREN_PER_GUIDE: '288'
+      # Crown-volume trial; zero remains the generator default.
+      CURL_CROWN_LIFT_MM: '12'
       CURL_BUNDLE_SCALE: ${{ inputs.curl_bundle_scale || '1' }}
       # Denser coverage trial; baseline remains available at the previous revision.
       BEARD_PER_SIDE: '9500'
@@ -111,6 +113,9 @@ jobs:
       - name: Render scalp shape and coverage
         run: |
           /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v740_cloud_groom.py
+      - name: Render crown trial with fitted comparison camera
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/V740_cloud_groom_trial.blend --threads 2 --python-exit-code 1 --python pipeline/render_v761_fitted_camera.py
       - name: Publish scalp previews immediately
         uses: actions/upload-artifact@v4
         id: artifact_2
