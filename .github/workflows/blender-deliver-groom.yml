@@ -1,0 +1,20 @@
+name: Deliver saved groom to Kaggle
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Transfer completed groom checkpoint
+        run: |
+          gh run download 43751367525 --name native-groom-checkpoint --dir checkpoint
+          cd checkpoint
+          sha256sum V740_cloud_groom_trial.blend > SHA256SUMS
+          gh release create groom-trial-43751367525 V740_cloud_groom_trial.blend SHA256SUMS --target "$GITHUB_SHA" --prerelease --title 'Saved groom trial 43751367525' --notes 'Unaccepted visual trial for GPU rendering. Source build 43751367525.'
