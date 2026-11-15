@@ -100,7 +100,10 @@ if args.mode == 'hand-build':
             from refine_v752_wrist_alignment import build as align_wrist
             alignment = align_wrist()
         from build_v742_wrist_fitted_cuff import build as build_cuff
-        cuff, cuff_report = build_cuff(forearm_directed=cuff_variant in ('forearm-directed', 'sleeve-panel'))
+        # Wrist alignment rotates the hand, not the forearm. Extend the cuff
+        # toward the forearm so the sleeve mask does not cut across the arm.
+        cuff, cuff_report = build_cuff(forearm_directed=cuff_variant in (
+            'forearm-directed', 'sleeve-panel', 'aligned-sleeve-panel'))
         if cuff_variant in ('sleeve-masked', 'forearm-directed', 'sleeve-panel', 'aligned-sleeve-masked', 'aligned-sleeve-panel'):
             from refine_v743_left_sleeve_undercuff_mask import build as mask_sleeve
             if cuff_variant == 'aligned-sleeve-panel':
