@@ -1,0 +1,53 @@
+name: Refine character hair highlights
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: character-blender-processing
+  cancel-in-progress: false
+jobs:
+  hair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        id: blender-cache
+        with:
+          path: /tmp/blender-5.2.2-linux-x64
+          key: blender-linux-5.2.2-84098912789d
+      - name: Install pinned Blender
+        if: steps.blender-cache.outputs.cache-hit != 'true'
+        run: |
+          curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
+          echo '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168  /tmp/blender.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/blender.tar.xz -C /tmp
+      - name: Download compact V767 checkpoint
+        run: |
+          mkdir -p results
+          curl --fail --location --retry 2 -o results/source.blend https://github.com/Ajuntanaga/character-asset-an/releases/download/compact-face-43782294005/V767_repaired_albedo_trial.blend
+          echo '9245d0d8ee674789e0ae2e7037e73af8ef0c791b5cf75b8780add0d27a24b97d  results/source.blend' | sha256sum -c -
+      - name: Reapply reviewed eyelids and compare hair shading
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/source.blend --threads 2 --python-exit-code 1 --python-expr "import runpy; runpy.run_path('pipeline/build_v768_upper_lids.py', init_globals={'RENDER': False}); runpy.run_path('pipeline/build_v769_hair_shading.py')"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hair-highlight-preview
+          path: |
+            results/v768*.json
+            results/v769*.json
+            results/renders/v769*.png
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: hair-highlight-checkpoints
+          path: |
+            results/V768_upper_lid_trial.blend
+            results/V769_hair_shading_trial.blend
+          retention-days: 14
