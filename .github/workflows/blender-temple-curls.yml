@@ -1,0 +1,72 @@
+name: Fit independent character temple curls
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Visually reviewed scalp scattering run
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: character-blender-processing
+  cancel-in-progress: false
+jobs:
+  hair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_RUN: ${{ inputs.source_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        id: blender-cache
+        with:
+          path: /tmp/blender-5.2.2-linux-x64
+          key: blender-linux-5.2.2-84098912789d
+      - name: Install pinned Blender
+        if: steps.blender-cache.outputs.cache-hit != 'true'
+        run: |
+          curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
+          echo '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168  /tmp/blender.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/blender.tar.xz -C /tmp
+      - name: Download reviewed scalp checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
+          test "$(gh run view "$SOURCE_RUN" --json conclusion --jq .conclusion)" = success
+          test "$(gh run view "$SOURCE_RUN" --json workflowName --jq .workflowName)" = 'Compare character scalp hair scattering'
+          gh run download "$SOURCE_RUN" --name scalp-huang-checkpoint --dir source
+          mkdir -p results
+          mv source/V777_scalp_huang_trial.blend results/source.blend
+      - name: Fetch licensed curl library
+        run: |
+          curl --fail --location --retry 2 -o /tmp/licensed-hair.tar.gz https://github.com/Ajuntanaga/character-asset-an/releases/download/licensed-hair-43770919141/licensed-hair-library.tar.gz
+          echo '1d0c18fa0be2f16bada50d3f0edfc8cbf59e1ec1449d9388e4ddd3ba8a244c03  /tmp/licensed-hair.tar.gz' | sha256sum -c -
+          mkdir -p assets/licensed-hair-library
+          tar -xzf /tmp/licensed-hair.tar.gz -C assets/licensed-hair-library --strip-components=1
+          test -f assets/licensed-hair-library/bystedt_curls.npz
+      - name: Fit and render temple coverage in three views
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/source.blend --threads 2 --python-exit-code 1 --python pipeline/build_v779_temple_curls.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: temple-curls-preview
+          path: |
+            results/v779*.json
+            results/renders/v779*.png
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: temple-curls-checkpoint
+          path: |
+            results/V779_temple_coverage_trial.blend
+          retention-days: 14
