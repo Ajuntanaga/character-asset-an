@@ -1,0 +1,41 @@
+name: Preserve eyelid and hair checkpoints
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Successful hair highlight build run
+        type: string
+        required: true
+permissions:
+  actions: read
+  contents: write
+jobs:
+  preserve:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_RUN: ${{ inputs.source_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preserve compact scenes and actual previews
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
+          test "$(gh run view "$SOURCE_RUN" --json conclusion --jq .conclusion)" = success
+          test "$(gh run view "$SOURCE_RUN" --json workflowName --jq .workflowName)" = 'Refine character hair highlights'
+          gh run download "$SOURCE_RUN" --name hair-highlight-checkpoints --dir trial
+          gh run download "$SOURCE_RUN" --name hair-highlight-preview --dir preview
+          mkdir release
+          cp trial/V768_upper_lid_trial.blend trial/V769_hair_shading_trial.blend release/
+          cp preview/renders/v769*.png preview/v768*.json preview/v769*.json release/
+          cp licenses/hair-asset-sources.md release/
+          cp github_assets/v767/README.md release/albedo-provenance.md
+          target=$(gh run view "$SOURCE_RUN" --json headSha --jq .headSha)
+          cd release
+          sha256sum -- * > SHA256SUMS
+          gh release create "head-refinement-$SOURCE_RUN" ./* --target "$target" --prerelease \
+            --title "Eyelid and hair working checkpoints $SOURCE_RUN" \
+            --notes "V768 upper-lid and V769 hair-shading trials, actual Blender previews, build reports, and attribution. Shape keys and rig drivers retained. These are working checkpoints; likeness, crown shape, side coverage, beard boundary, neck seam and full animation validation remain unfinished."
