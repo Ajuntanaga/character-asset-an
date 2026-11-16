@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       source_run:
-        description: Successful visually reviewed surface scalp build
+        description: Successful visually reviewed V775, V776 or V777 groom build
         type: string
         required: true
 permissions:
@@ -25,12 +25,20 @@ jobs:
           set -euo pipefail
           [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
           test "$(gh run view "$SOURCE_RUN" --json conclusion --jq .conclusion)" = success
-          test "$(gh run view "$SOURCE_RUN" --json workflowName --jq .workflowName)" = 'Refine character scalp surface coverage'
-          gh run download "$SOURCE_RUN" --name surface-scalp-checkpoint --dir trial
-          gh run download "$SOURCE_RUN" --name surface-scalp-preview --dir preview
+          case "$(gh run view "$SOURCE_RUN" --json workflowName --jq .workflowName)" in
+            'Refine character scalp surface coverage')
+              artifact=surface-scalp; version=v775; scene=V775_surface_scalp_trial.blend ;;
+            'Refine character mustache density')
+              artifact=mustache-density; version=v776; scene=V776_mustache_trial.blend ;;
+            'Compare character scalp hair scattering')
+              artifact=scalp-huang; version=v777; scene=V777_scalp_huang_trial.blend ;;
+            *) echo 'Unsupported source workflow' >&2; exit 1 ;;
+          esac
+          gh run download "$SOURCE_RUN" --name "$artifact-checkpoint" --dir trial
+          gh run download "$SOURCE_RUN" --name "$artifact-preview" --dir preview
           mkdir release
-          cp trial/V775_surface_scalp_trial.blend release/
-          cp preview/renders/v775*.png preview/v775*.json release/
+          cp "trial/$scene" release/
+          cp preview/renders/"$version"*.png preview/"$version"*.json release/
           cp licenses/hair-asset-sources.md release/
           cp github_assets/v767/README.md release/albedo-provenance.md
           target=$(gh run view "$SOURCE_RUN" --json headSha --jq .headSha)
@@ -38,4 +46,4 @@ jobs:
           sha256sum -- * > SHA256SUMS
           gh release create "surface-groom-$SOURCE_RUN" ./* --target "$target" --prerelease \
             --title "Surface groom working checkpoint $SOURCE_RUN" \
-            --notes "V775 native scalp coverage and tighter licensed curls, including V774 surface-distributed beard. Actual Blender previews, reports and attribution included. Shape keys and rig drivers retained. This is a working checkpoint; likeness, hair shading, neck transition and full animation validation remain unfinished."
+            --notes "$version reviewed working groom checkpoint. Actual Blender previews, reports and attribution included. Shape keys and rig drivers retained. This is a working checkpoint; likeness, scalp coverage, neck transition and full animation validation remain unfinished."
