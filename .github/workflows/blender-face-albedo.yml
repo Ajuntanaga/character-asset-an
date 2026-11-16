@@ -1,0 +1,56 @@
+name: Repair character face albedo
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: character-blender-processing
+  cancel-in-progress: false
+jobs:
+  face:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        id: blender-cache
+        with:
+          path: /tmp/blender-5.2.2-linux-x64
+          key: blender-linux-5.2.2-84098912789d
+      - name: Install pinned Blender
+        if: steps.blender-cache.outputs.cache-hit != 'true'
+        run: |
+          curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
+          echo '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168  /tmp/blender.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/blender.tar.xz -C /tmp
+      - name: Download preserved licensed hair scene
+        run: |
+          mkdir -p results
+          curl --fail --location --retry 2 -o results/source.blend https://github.com/Ajuntanaga/character-asset-an/releases/download/licensed-hair-43777013818/V766_licensed_hair_trial.blend
+          echo '84ad39c79e240618e441abf925794b7ad4b6c1012a9e643a5719b72647395ae6  results/source.blend' | sha256sum -c -
+      - name: Build compact working copy and render albedo trial
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/source.blend --threads 2 --python-exit-code 1 --python pipeline/build_v767_albedo_trial.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: face-albedo-preview
+          path: |
+            results/v767*.json
+            results/renders/v767*.png
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: active-licensed-hair
+          path: results/V766_active_licensed_hair.blend
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: success() && hashFiles('results/V767_repaired_albedo_trial.blend') != ''
+        with:
+          name: repaired-albedo-checkpoint
+          path: results/V767_repaired_albedo_trial.blend
+          retention-days: 14
