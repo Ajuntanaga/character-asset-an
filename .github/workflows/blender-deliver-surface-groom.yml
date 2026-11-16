@@ -1,0 +1,41 @@
+name: Preserve surface groom checkpoint
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Successful visually reviewed surface scalp build
+        type: string
+        required: true
+permissions:
+  actions: read
+  contents: write
+jobs:
+  preserve:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_RUN: ${{ inputs.source_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preserve compact scenes and actual previews
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
+          test "$(gh run view "$SOURCE_RUN" --json conclusion --jq .conclusion)" = success
+          test "$(gh run view "$SOURCE_RUN" --json workflowName --jq .workflowName)" = 'Refine character scalp surface coverage'
+          gh run download "$SOURCE_RUN" --name surface-scalp-checkpoint --dir trial
+          gh run download "$SOURCE_RUN" --name surface-scalp-preview --dir preview
+          mkdir release
+          cp trial/V775_surface_scalp_trial.blend release/
+          cp preview/renders/v775*.png preview/v775*.json release/
+          cp licenses/hair-asset-sources.md release/
+          cp github_assets/v767/README.md release/albedo-provenance.md
+          target=$(gh run view "$SOURCE_RUN" --json headSha --jq .headSha)
+          cd release
+          sha256sum -- * > SHA256SUMS
+          gh release create "surface-groom-$SOURCE_RUN" ./* --target "$target" --prerelease \
+            --title "Surface groom working checkpoint $SOURCE_RUN" \
+            --notes "V775 native scalp coverage and tighter licensed curls, including V774 surface-distributed beard. Actual Blender previews, reports and attribution included. Shape keys and rig drivers retained. This is a working checkpoint; likeness, hair shading, neck transition and full animation validation remain unfinished."
