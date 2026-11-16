@@ -1,0 +1,44 @@
+name: Isolate character beard arc
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: character-blender-processing
+  cancel-in-progress: false
+jobs:
+  hair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        id: blender-cache
+        with:
+          path: /tmp/blender-5.2.2-linux-x64
+          key: blender-linux-5.2.2-84098912789d
+      - name: Install pinned Blender
+        if: steps.blender-cache.outputs.cache-hit != 'true'
+        run: |
+          curl --fail --location --retry 2 -o /tmp/blender.tar.xz https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2/blender-5.2.2-linux-x64.tar.xz
+          echo '84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168  /tmp/blender.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/blender.tar.xz -C /tmp
+      - name: Download reviewed V769
+        run: |
+          mkdir -p results
+          curl --fail --location --retry 2 -o results/source.blend https://github.com/Ajuntanaga/character-asset-an/releases/download/head-refinement-43788190382/V769_hair_shading_trial.blend
+          echo '8afa37046f0b081126cf1a29fc0201e1db74a330d4e3969b2b9b06da20f8b0fc  results/source.blend' | sha256sum -c -
+      - name: Render skin, hair and attachment isolation
+        run: |
+          /tmp/blender-5.2.2-linux-x64/blender --background --disable-autoexec results/source.blend --threads 2 --python-exit-code 1 --python pipeline/diagnose_v773_beard_arc.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: beard-arc-isolation
+          path: |
+            results/v773*
+            results/renders/v773*.png
+          retention-days: 14
