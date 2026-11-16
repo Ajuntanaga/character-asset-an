@@ -1,0 +1,42 @@
+name: Preserve compact face checkpoints
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Successful face albedo build run
+        type: string
+        required: true
+permissions:
+  actions: read
+  contents: write
+jobs:
+  preserve:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_RUN: ${{ inputs.source_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preserve compact scenes and actual previews
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
+          test "$(gh run view "$SOURCE_RUN" --json conclusion --jq .conclusion)" = success
+          test "$(gh run view "$SOURCE_RUN" --json workflowName --jq .workflowName)" = 'Repair character face albedo'
+          gh run download "$SOURCE_RUN" --name active-licensed-hair --dir baseline
+          gh run download "$SOURCE_RUN" --name repaired-albedo-checkpoint --dir trial
+          gh run download "$SOURCE_RUN" --name face-albedo-preview --dir preview
+          mkdir release
+          cp baseline/V766_active_licensed_hair.blend trial/V767_repaired_albedo_trial.blend release/
+          cp preview/renders/v767*.png preview/v767*.json release/
+          cp licenses/hair-asset-sources.md release/
+          cp github_assets/v767/README.md release/albedo-provenance.md
+          target=$(gh run view "$SOURCE_RUN" --json headSha --jq .headSha)
+          cd release
+          sha256sum -- * > SHA256SUMS
+          gh release create "compact-face-$SOURCE_RUN" ./* --target "$target" --prerelease \
+            --title "Compact face working checkpoints $SOURCE_RUN" \
+            --notes "Compact licensed-hair baseline and repaired face-albedo trial, actual Blender previews, build reports, and attribution. Shape keys and rig drivers retained. Working trial: likeness, eyes, hair, neck seam and broader animation validation remain unfinished. Full original retained in licensed-hair-43777013818."
