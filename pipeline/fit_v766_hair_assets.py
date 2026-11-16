@@ -9,8 +9,12 @@ from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
 ROOT = Path(__file__).resolve().parent
-LIBRARY = Path('results/hair-library')
-OUT = Path('results')
+LIBRARY = Path(globals().get('LIBRARY_DIR', 'results/hair-library'))
+OUT = Path(globals().get('OUTPUT_DIR', 'results'))
+OUT.mkdir(parents=True, exist_ok=True)
+SCALP_ONLY = globals().get('SCALP_ONLY', False)
+TIP_SPREAD = float(globals().get('TIP_ROOT_SPREAD', .20))
+assert 0. <= TIP_SPREAD <= 1.
 head = bpy.data.objects['V740_NATIVE_FACE']
 rig = bpy.data.objects['V357_CLOUDRIG_CONTROLS']
 mesh = head.data
@@ -108,30 +112,35 @@ def smooth(value):
     return value*value*(3.-2.*value)
 
 
-material = bpy.data.materials.new('V766_DARK_NATURAL_HAIR')
-material.use_nodes = True
-material.node_tree.nodes.clear()
-shader = material.node_tree.nodes.new('ShaderNodeBsdfHairPrincipled')
-shader.model = 'CHIANG'
-shader.parametrization = 'MELANIN'
-for name, value in {'Melanin': .99, 'Melanin Redness': .10, 'Roughness': .27,
-                    'Radial Roughness': .32, 'Coat': .12,
-                    'Random Color': .03, 'Random Roughness': .10}.items():
-    if name in shader.inputs:
-        shader.inputs[name].default_value = value
-output = material.node_tree.nodes.new('ShaderNodeOutputMaterial')
-material.node_tree.links.new(shader.outputs[0], output.inputs['Surface'])
-group = bpy.data.node_groups.new('V766_UV_FACIAL_HAIR_ATTACHMENT', 'GeometryNodeTree')
-group.interface.new_socket(name='Geometry', in_out='INPUT', socket_type='NodeSocketGeometry')
-group.interface.new_socket(name='Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
-inp = group.nodes.new('NodeGroupInput')
-deform = group.nodes.new('GeometryNodeDeformCurvesOnSurface')
-set_material = group.nodes.new('GeometryNodeSetMaterial')
-set_material.inputs['Material'].default_value = material
-out = group.nodes.new('NodeGroupOutput')
-group.links.new(inp.outputs['Geometry'], deform.inputs['Curves'])
-group.links.new(deform.outputs['Curves'], set_material.inputs['Geometry'])
-group.links.new(set_material.outputs['Geometry'], out.inputs['Geometry'])
+if SCALP_ONLY:
+    old_scalp = bpy.data.objects['V766_ASSET_SCALP']
+    material = bpy.data.materials['V766_DARK_NATURAL_HAIR']
+    group = old_scalp.modifiers['Follow native face and FACS'].node_group
+else:
+    material = bpy.data.materials.new('V766_DARK_NATURAL_HAIR')
+    material.use_nodes = True
+    material.node_tree.nodes.clear()
+    shader = material.node_tree.nodes.new('ShaderNodeBsdfHairPrincipled')
+    shader.model = 'CHIANG'
+    shader.parametrization = 'MELANIN'
+    for name, value in {'Melanin': .99, 'Melanin Redness': .10, 'Roughness': .27,
+                        'Radial Roughness': .32, 'Coat': .12,
+                        'Random Color': .03, 'Random Roughness': .10}.items():
+        if name in shader.inputs:
+            shader.inputs[name].default_value = value
+    output = material.node_tree.nodes.new('ShaderNodeOutputMaterial')
+    material.node_tree.links.new(shader.outputs[0], output.inputs['Surface'])
+    group = bpy.data.node_groups.new('V766_UV_FACIAL_HAIR_ATTACHMENT', 'GeometryNodeTree')
+    group.interface.new_socket(name='Geometry', in_out='INPUT', socket_type='NodeSocketGeometry')
+    group.interface.new_socket(name='Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
+    inp = group.nodes.new('NodeGroupInput')
+    deform = group.nodes.new('GeometryNodeDeformCurvesOnSurface')
+    set_material = group.nodes.new('GeometryNodeSetMaterial')
+    set_material.inputs['Material'].default_value = material
+    out = group.nodes.new('NodeGroupOutput')
+    group.links.new(inp.outputs['Geometry'], deform.inputs['Curves'])
+    group.links.new(deform.outputs['Curves'], set_material.inputs['Geometry'])
+    group.links.new(set_material.outputs['Geometry'], out.inputs['Geometry'])
 installed = []
 
 
@@ -150,8 +159,18 @@ def install(name, paths, uvs, radius, attribution):
     data.surface_uv_map = 'UVMap'
     data.surface_collision_distance = .00015
     data.materials.append(material)
+    previous = bpy.data.objects.get(name) if SCALP_ONLY else None
+    collections = list(previous.users_collection) if previous else [bpy.context.scene.collection]
     obj = bpy.data.objects.new(name, data)
-    bpy.context.scene.collection.objects.link(obj)
+    for collection in collections:
+        collection.objects.link(obj)
+    if previous is not None:
+        previous_data = previous.data
+        bpy.data.objects.remove(previous, do_unlink=True)
+        if previous_data.users == 0:
+            bpy.data.hair_curves.remove(previous_data)
+        obj.name = name
+        data.name = name
     obj.parent = head
     obj.matrix_parent_inverse = Matrix.Identity(4)
     obj.matrix_basis = Matrix.Identity(4)
@@ -242,7 +261,7 @@ max_root_displacement = 0.
 t = np.linspace(0., 1., 23)
 # Roots remain at their own UVs; the bundle gathers over its first half rather
 # than teleporting every root onto a guide. Keep a small natural residual.
-root_spread = (1.-.80*smooth(t/.50))[:, None]
+root_spread = (1.-(1.-TIP_SPREAD)*smooth(t/.50))[:, None]
 residual_weight = (.06*smooth(t/.25))[:, None]
 for child_id, (p, normal, uv) in enumerate(attached_roots):
     guide_id = int(assignments[child_id])
@@ -275,79 +294,81 @@ report['scalp_rejected_outside_reference_hairline'] = scalp_rejected
 report['scalp_transport'] = {
     'guide_count': len(guide_ids), 'guide_coverage_radius_m': .0065,
     'shared_curve_phase_direction_and_scale': True, 'child_shape_residual': .06,
-    'tip_root_spread_fraction': .20, 'root_part_width_m': .0026,
+    'tip_root_spread_fraction': TIP_SPREAD, 'root_part_width_m': .0026,
     'side_arc_length_m': .018, 'crown_arc_length_m': .070,
     'root_attachment_max_displacement_m': max_root_displacement,
     'guide_member_counts': [int(np.count_nonzero(assignments == i)) for i in guide_ids],
 }
 
 
-einar_tree = donor_surface('einar_head')
-for kind, source_parts, radius in [
-    ('BROWS', ('eyebrows',), .000035),
-    ('BEARD', ('beard', 'beard.messy'), .000042),
-    ('MUSTACHE', ('mustache', 'mustache.messy'), .000038),
-    ('LASHES', ('eyelashes',), .000023),
-]:
-    paths, uvs = [], []
-    rejected = 0
-    for part in source_parts:
-        data = donor('einar_' + part)
-        for first, last in zip(data['offsets'][:-1], data['offsets'][1:]):
-            source = data['points'][first:last].astype(np.float64)
-            root = source[0]
-            guess = root.copy()
-            if kind == 'BROWS':
-                guess[0] *= 1.02
-                guess[2] = 1.664 + (root[2]-1.687)*.70
-                length = .0060
-            elif kind == 'LASHES':
-                guess[0] *= 1.38
-                guess[2] = 1.649 + (root[2]-1.673)*1.50
-                length = .0026
-            elif kind == 'MUSTACHE':
-                guess[0] *= .70
-                guess[2] = 1.585 + (root[2]-1.621)*.65
-                length = .0040
-            else:
-                guess[0] *= .96
-                guess[2] = float(np.interp(root[2], [1.50, 1.56, 1.61, 1.67], [1.520, 1.545, 1.580, 1.635]))
-                length = .0020 + .0020*(1-smooth((guess[2]-1.54)/.06))
-            attached = surface.attach(guess, front=True)
-            if attached is None:
-                rejected += 1
-                continue
-            p, normal, uv = attached
-            if kind == 'BEARD':
-                lateral = abs(p[0])
-                edge = float(np.interp(lateral, [.0, .025, .035, .050, .080], [1.562, 1.565, 1.585, 1.609, 1.640]))
-                if p[2] > edge or p[2] < 1.513:
+if not SCALP_ONLY:
+    einar_tree = donor_surface('einar_head')
+    for kind, source_parts, radius in [
+        ('BROWS', ('eyebrows',), .000035),
+        ('BEARD', ('beard', 'beard.messy'), .000042),
+        ('MUSTACHE', ('mustache', 'mustache.messy'), .000038),
+        ('LASHES', ('eyelashes',), .000023),
+    ]:
+        paths, uvs = [], []
+        rejected = 0
+        for part in source_parts:
+            data = donor('einar_' + part)
+            for first, last in zip(data['offsets'][:-1], data['offsets'][1:]):
+                source = data['points'][first:last].astype(np.float64)
+                root = source[0]
+                guess = root.copy()
+                if kind == 'BROWS':
+                    guess[0] *= 1.02
+                    guess[2] = 1.664 + (root[2]-1.687)*.70
+                    length = .0060
+                elif kind == 'LASHES':
+                    guess[0] *= 1.38
+                    guess[2] = 1.649 + (root[2]-1.673)*1.50
+                    length = .0026
+                elif kind == 'MUSTACHE':
+                    guess[0] *= .70
+                    guess[2] = 1.585 + (root[2]-1.621)*.65
+                    length = .0040
+                else:
+                    guess[0] *= .96
+                    guess[2] = float(np.interp(root[2], [1.50, 1.56, 1.61, 1.67], [1.520, 1.545, 1.580, 1.635]))
+                    length = .0020 + .0020*(1-smooth((guess[2]-1.54)/.06))
+                attached = surface.attach(guess, front=True)
+                if attached is None:
                     rejected += 1
                     continue
-            elif kind == 'MUSTACHE':
-                if p[2] < 1.578 or p[2] > 1.599 or (p[2] > 1.590 and abs(p[0]) < .020):
-                    rejected += 1
+                p, normal, uv = attached
+                if kind == 'BEARD':
+                    lateral = abs(p[0])
+                    edge = float(np.interp(lateral, [.0, .025, .035, .050, .080], [1.562, 1.565, 1.585, 1.609, 1.640]))
+                    if p[2] > edge or p[2] < 1.513:
+                        rejected += 1
+                        continue
+                elif kind == 'MUSTACHE':
+                    if p[2] < 1.578 or p[2] > 1.599 or (p[2] > 1.590 and abs(p[0]) < .020):
+                        rejected += 1
+                        continue
+                _, donor_normal, _, _ = einar_tree.find_nearest(Vector(root))
+                if donor_normal is None:
                     continue
-            _, donor_normal, _, _ = einar_tree.find_nearest(Vector(root))
-            if donor_normal is None:
-                continue
-            rotate = rotation(np.asarray(donor_normal), normal)
-            path = trim(p + ((source-root)*.80) @ rotate.T, length)
-            # Facial fibers are short: keep tips above the local skin tangent.
-            clearance = (path-p) @ normal
-            path += np.maximum(.00008-clearance, 0)[:, None]*normal
-            paths.append(path)
-            uvs.append(uv)
-    install('V766_ASSET_' + kind, paths, uvs, radius,
-            'Einar Rig (CC-BY 4.0) Blender Foundation | studio.blender.org; adapted ' + kind.lower())
-    report['grooms']['V766_ASSET_' + kind]['rejected'] = rejected
+                rotate = rotation(np.asarray(donor_normal), normal)
+                path = trim(p + ((source-root)*.80) @ rotate.T, length)
+                # Facial fibers are short: keep tips above the local skin tangent.
+                clearance = (path-p) @ normal
+                path += np.maximum(.00008-clearance, 0)[:, None]*normal
+                paths.append(path)
+                uvs.append(uv)
+        install('V766_ASSET_' + kind, paths, uvs, radius,
+                'Einar Rig (CC-BY 4.0) Blender Foundation | studio.blender.org; adapted ' + kind.lower())
+        report['grooms']['V766_ASSET_' + kind]['rejected'] = rejected
 
 
 old_names = ['V740_NATIVE_CURLS', 'V740_NATIVE_UNDERCOAT', 'V740_BROW_FIBERS', 'V740_BEARD_FIBERS']
 for name in old_names:
-    bpy.data.objects[name].hide_render = True
-    bpy.data.objects[name].hide_set(True)
-inspection = bpy.data.scenes['V739_NATIVE_FACE_INSPECTION']
+    if name in bpy.data.objects:
+        bpy.data.objects[name].hide_render = True
+        bpy.data.objects[name].hide_set(True)
+inspection = bpy.data.scenes.get('V739_NATIVE_FACE_INSPECTION', bpy.context.scene)
 for name in installed + [head.name]:
     obj = bpy.data.objects[name]
     if name not in inspection.objects:
@@ -357,8 +378,9 @@ for name in installed + [head.name]:
     for layer in inspection.view_layers:
         if name in layer.objects:
             obj.hide_set(False, view_layer=layer)
-notice = bpy.data.texts.new('V766_LICENSED_HAIR_SOURCES')
-notice.write((ROOT.parent / 'licenses/hair-asset-sources.md').read_text())
+if 'V766_LICENSED_HAIR_SOURCES' not in bpy.data.texts:
+    notice = bpy.data.texts.new('V766_LICENSED_HAIR_SOURCES')
+    notice.write((ROOT.parent / 'licenses/hair-asset-sources.md').read_text())
 assert {k.name: float(k.value) for k in mesh.shape_keys.key_blocks} == original_keys
 bpy.context.view_layer.update()
 report['installed_objects'] = installed
@@ -369,18 +391,20 @@ for name in installed:
     materials = [m.name if m else None for m in evaluated.data.materials]
     assert material.name in materials, (name, materials)
     report['evaluated_materials'][name] = materials
-(OUT / 'v766_hair_fit.json').write_text(json.dumps(report, indent=2))
-bpy.ops.wm.save_as_mainfile(filepath=str((OUT / 'V766_licensed_hair_trial.blend').resolve()), compress=True)
+(OUT / globals().get('REPORT_FILE', 'v766_hair_fit.json')).write_text(json.dumps(report, indent=2))
+if globals().get('SAVE', True):
+    bpy.ops.wm.save_as_mainfile(filepath=str((OUT / 'V766_licensed_hair_trial.blend').resolve()), compress=True)
 
-camera = json.loads((ROOT.parent / 'references/derived/photoreal_facebuilder_v1/fitted_camera_v761.json').read_text())
-base = {'EXTRA_OBJECTS': installed, 'EXCLUDE_OBJECTS': old_names,
-        'PRESERVE_MATERIALS': True, 'RESOLUTION': tuple(camera['size']),
-        'SAMPLES': 128, 'ADAPTIVE_THRESHOLD': .02, 'DENOISE': True}
-runpy.run_path(str(ROOT / 'render_v740_cloud_groom.py'), init_globals={
-    **base, 'TAG': 'v766_asset_hair', 'VIEWS': ['reference_orientation'], 'CAMERA_RECORD': camera})
-runpy.run_path(str(ROOT / 'render_v740_cloud_groom.py'), init_globals={
-    **base, 'TAG': 'v766_asset_hair_front', 'VIEWS': ['front']})
-runpy.run_path(str(ROOT / 'render_v740_cloud_groom.py'), init_globals={
-    **base, 'TAG': 'v766_asset_hair_motion', 'VIEWS': ['reference_orientation'], 'CAMERA_RECORD': camera,
-    'HEAD_TURN_DEGREES': 12., 'POSE': {'Blink.L': .65, 'Blink.R': .65}})
+if globals().get('RENDER', True):
+    camera = json.loads((ROOT.parent / 'references/derived/photoreal_facebuilder_v1/fitted_camera_v761.json').read_text())
+    base = {'EXTRA_OBJECTS': installed, 'EXCLUDE_OBJECTS': old_names,
+            'PRESERVE_MATERIALS': True, 'RESOLUTION': tuple(camera['size']),
+            'SAMPLES': 128, 'ADAPTIVE_THRESHOLD': .02, 'DENOISE': True}
+    runpy.run_path(str(ROOT / 'render_v740_cloud_groom.py'), init_globals={
+        **base, 'TAG': 'v766_asset_hair', 'VIEWS': ['reference_orientation'], 'CAMERA_RECORD': camera})
+    runpy.run_path(str(ROOT / 'render_v740_cloud_groom.py'), init_globals={
+        **base, 'TAG': 'v766_asset_hair_front', 'VIEWS': ['front']})
+    runpy.run_path(str(ROOT / 'render_v740_cloud_groom.py'), init_globals={
+        **base, 'TAG': 'v766_asset_hair_motion', 'VIEWS': ['reference_orientation'], 'CAMERA_RECORD': camera,
+        'HEAD_TURN_DEGREES': 12., 'POSE': {'Blink.L': .65, 'Blink.R': .65}})
 print('ASSET_HAIR_TRIAL_COMPLETE', installed, flush=True)
