@@ -47,17 +47,34 @@ changes = {'Aspect Ratio': .70, 'Roughness': .35, 'Random Color': .03,
            'Secondary Reflection': 1.}
 for name, value in changes.items():
     shader.inputs[name].default_value = value
+original_group = bpy.data.objects['V766_ASSET_SCALP'].modifiers['Follow native face and FACS'].node_group
+scalp_group = original_group.copy()
+scalp_group.name = 'V777_SCALP_HAIR_ATTACHMENT'
+material_nodes = [node for node in scalp_group.nodes
+                  if node.bl_idname == 'GeometryNodeSetMaterial']
+assert len(material_nodes) == 1
+assert not material_nodes[0].inputs['Material'].is_linked
+material_nodes[0].inputs['Material'].default_value = material
 for name in ('V766_ASSET_SCALP', 'V775_SCALP_UNDERCOAT'):
-    materials = bpy.data.objects[name].data.materials
+    obj = bpy.data.objects[name]
+    materials = obj.data.materials
     assert len(materials) == 1 and materials[0] == original
     materials[0] = material
+    modifier = obj.modifiers['Follow native face and FACS']
+    assert modifier.node_group == original_group
+    modifier.node_group = scalp_group
 assert all(fingerprint(name) == before[name] for name in grooms)
 assert all(bpy.data.objects[name].data.materials[0] == original
            for name in grooms if name not in ('V766_ASSET_SCALP', 'V775_SCALP_UNDERCOAT'))
+assert all(bpy.data.objects[name].modifiers['Follow native face and FACS'].node_group == original_group
+           for name in grooms if name not in ('V766_ASSET_SCALP', 'V775_SCALP_UNDERCOAT'))
+assert next(node for node in original_group.nodes
+            if node.bl_idname == 'GeometryNodeSetMaterial').inputs['Material'].default_value == original
 head['v777_scalp_huang'] = True
 report = {'source': bpy.data.filepath, 'model': 'HUANG', 'changes': changes,
           'all_groom_geometry_roots_and_uvs_unchanged': True,
           'facial_groom_materials_unchanged': True,
+          'scalp_material_assignment': 'dedicated Geometry Nodes Set Material override and data slots',
           'face_shape_keys': 52, 'rig_drivers': 1957,
           'documentation': 'https://docs.blender.org/manual/en/5.0/render/shader_nodes/shader/hair_principled.html',
           'license': 'licenses/hair-asset-sources.md'}
@@ -68,7 +85,7 @@ camera = json.loads((ROOT.parent / 'references/derived/photoreal_facebuilder_v1/
 base = {'EXTRA_OBJECTS': grooms,
         'EXCLUDE_OBJECTS': ['V740_NATIVE_CURLS', 'V740_NATIVE_UNDERCOAT', 'V740_BROW_FIBERS', 'V740_BEARD_FIBERS'],
         'PRESERVE_MATERIALS': True, 'RESOLUTION': tuple(camera['size']),
-        'SAMPLES': 256, 'ADAPTIVE_THRESHOLD': .01, 'DENOISE': True}
+        'SAMPLES': 128, 'ADAPTIVE_THRESHOLD': .02, 'DENOISE': True}
 for tag, view, options in [
         ('v777_hair', 'front', {}),
         ('v777_hair', 'reference_orientation', {'CAMERA_RECORD': camera}),
