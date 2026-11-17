@@ -49,7 +49,7 @@ radii = values(data.attributes['radius'].data, 'value')
 uvs = values(data.attributes['surface_uv_coordinate'].data, 'vector', 2)
 counts = np.array([len(curve.points) for curve in data.curves], np.int32)
 offsets = np.r_[0, np.cumsum(counts)]
-assert counts.min() >= 4
+assert counts.min() >= 2
 roots = old[offsets[:-1]]
 # Fuller chin/jaw, lighter cheeks and a feathered neck boundary.
 factors = 1. + (.35 + .80 * smooth((1.602 - roots[:, 2]) / .065)) * smooth((roots[:, 2] - 1.514) / .012)
@@ -63,6 +63,10 @@ minimum_clearance = float('inf')
 for i, (start, end) in enumerate(zip(offsets[:-1], offsets[1:])):
     path = old[start:end].astype(np.float64)
     lengths_before.append(np.linalg.norm(np.diff(path, axis=0), axis=1).sum())
+    # The three two-point donor strands have no tip beyond the retained segment.
+    if len(path) == 2:
+        lengths_after.append(lengths_before[-1])
+        continue
     arc = np.r_[0., np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))]
     blend = smooth((arc - arc[1]) / max(arc[-1] - arc[1], 1e-9))
     path += (path - path[0]) * ((factors[i] - 1.) * blend[:, None])
@@ -97,6 +101,7 @@ head['v787_short_beard'] = True
 beard['v787_adaptation'] = 'Licensed Einar paths lengthened toward the chin; roots, first segments, UVs and radii retained.'
 bpy.context.view_layer.update()
 report = {'source': bpy.data.filepath, 'beard_curves': len(counts),
+          'two_point_strands_retained': int(np.count_nonzero(counts == 2)),
           'length_percentiles_mm_before': (np.percentile(lengths_before, [0, 10, 50, 90, 100]) * 1000).tolist(),
           'length_percentiles_mm_after': (np.percentile(lengths_after, [0, 10, 50, 90, 100]) * 1000).tolist(),
           'roots_first_segments_uvs_radii_unchanged': True, 'other_six_grooms_unchanged': True,
