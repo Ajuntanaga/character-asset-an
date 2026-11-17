@@ -46,7 +46,7 @@ def render(tag, **settings):
 
 if RENDER:
     render('v785_baseline')
-    render('v785_baseline_front', VIEWS=['front'], CAMERA_RECORD=None)
+    render('v785_baseline_front', VIEWS=['front'], CAMERA_RECORD={})
 
 # Mesh-edge distance prevents influence crossing the open eye. The existing
 # blink field separates upper/lower surfaces and tapers the change to the canthi.
@@ -175,9 +175,9 @@ report['checkpoint'] = str((OUT / 'V785_neutral_eye_aperture_trial.blend').resol
 bpy.ops.wm.save_as_mainfile(filepath=report['checkpoint'], compress=True)
 if RENDER:
     render('v785_candidate')
-    render('v785_candidate_front', VIEWS=['front'], CAMERA_RECORD=None)
-    render('v785_half_blink', VIEWS=['front'], CAMERA_RECORD=None, POSE={'Blink.L': .5, 'Blink.R': .5},
+    render('v785_candidate_front', VIEWS=['front'], CAMERA_RECORD={})
+    render('v785_half_blink', VIEWS=['front'], CAMERA_RECORD={}, POSE={'Blink.L': .5, 'Blink.R': .5},
            RESOLUTION=(960, 1200), BORDER=(.18, .82, .42, .65))
-    render('v785_closed', VIEWS=['front'], CAMERA_RECORD=None, POSE={'Blink.L': 1., 'Blink.R': 1.},
+    render('v785_closed', VIEWS=['front'], CAMERA_RECORD={}, POSE={'Blink.L': 1., 'Blink.R': 1.},
            RESOLUTION=(960, 1200), BORDER=(.18, .82, .42, .65))
 print('NEUTRAL_EYE_APERTURE_COMPLETE', json.dumps(report), flush=True)
