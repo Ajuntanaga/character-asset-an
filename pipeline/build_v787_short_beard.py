@@ -60,6 +60,7 @@ surface = BVHTree.FromPolygons(coords.tolist(), triangles, all_triangles=True)
 updated = old.copy()
 lengths_before, lengths_after, corrections = [], [], []
 minimum_clearance = float('inf')
+retained_for_clearance = 0
 for i, (start, end) in enumerate(zip(offsets[:-1], offsets[1:])):
     path = old[start:end].astype(np.float64)
     lengths_before.append(np.linalg.norm(np.diff(path, axis=0), axis=1).sum())
@@ -70,26 +71,36 @@ for i, (start, end) in enumerate(zip(offsets[:-1], offsets[1:])):
     arc = np.r_[0., np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))]
     blend = smooth((arc - arc[1]) / max(arc[-1] - arc[1], 1e-9))
     path += (path - path[0]) * ((factors[i] - 1.) * blend[:, None])
+    strand_margin, strand_corrections = float('inf'), []
     for j in range(2, len(path)):
         point = Vector(path[j])
         original = point.copy()
         clearance = float(radii[start+j, 0]) + .00003
-        for _ in range(3):
+        # Near jaw triangle boundaries the nearest face can change after a push.
+        for _ in range(24):
             hit, normal, _, _ = surface.find_nearest(point)
             signed = (point - hit).dot(normal)
             if signed >= clearance - 1e-7:
                 break
-            point += normal * (clearance - signed)
+            point += normal * (clearance - signed + .000002)
         hit, normal, _, _ = surface.find_nearest(point)
-        minimum_clearance = min(minimum_clearance, (point - hit).dot(normal) - clearance)
+        strand_margin = min(strand_margin, (point - hit).dot(normal) - clearance)
         path[j] = point
-        corrections.append((point - original).length)
+        strand_corrections.append((point - original).length)
+    if strand_margin < -2e-6 or max(strand_corrections) > .001:
+        # Preserve the complete original path instead of forcing it around a crease.
+        retained_for_clearance += 1
+        lengths_after.append(lengths_before[-1])
+        continue
+    minimum_clearance = min(minimum_clearance, strand_margin)
+    corrections.extend(strand_corrections)
     updated[start:end] = path
     lengths_after.append(np.linalg.norm(np.diff(path, axis=0), axis=1).sum())
 assert np.isfinite(updated).all()
 assert np.array_equal(updated[offsets[:-1]], old[offsets[:-1]])
 assert np.array_equal(updated[offsets[:-1] + 1], old[offsets[:-1] + 1])
 assert minimum_clearance >= -2e-6, minimum_clearance
+assert retained_for_clearance <= len(counts) * .01, retained_for_clearance
 assert max(lengths_after) < .011, max(lengths_after)
 data.position_data.foreach_set('vector', updated.ravel())
 data.update_tag()
@@ -102,6 +113,7 @@ beard['v787_adaptation'] = 'Licensed Einar paths lengthened toward the chin; roo
 bpy.context.view_layer.update()
 report = {'source': bpy.data.filepath, 'beard_curves': len(counts),
           'two_point_strands_retained': int(np.count_nonzero(counts == 2)),
+          'original_strands_retained_for_clearance': retained_for_clearance,
           'length_percentiles_mm_before': (np.percentile(lengths_before, [0, 10, 50, 90, 100]) * 1000).tolist(),
           'length_percentiles_mm_after': (np.percentile(lengths_after, [0, 10, 50, 90, 100]) * 1000).tolist(),
           'roots_first_segments_uvs_radii_unchanged': True, 'other_six_grooms_unchanged': True,
